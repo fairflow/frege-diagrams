@@ -121,7 +121,7 @@ let sel = null;                         // {k:'state'|'label'|'edge', ...}
 let typingErr = null;
 let lastNudge = null;
 let checked = null;
-let lineOffset = 0, usesCache = {}, lintItems = [];
+let lineOffset = 0, usesCache = {}, lintItems = [], staleItems = [];
 const opts = {links:false, hideBound:false, nameDy:0};
 const $ = id => document.getElementById(id);
 
@@ -218,6 +218,10 @@ async function renderB(){
   const v=$("viewB"); v.classList.remove("stale");
   v.innerHTML = r.ok ? (r.b || '<p class="muted">This figure has only a sketch (views A).</p>') : `<p class="muted">${esc(r.error)}</p>`;
   const svg=v.querySelector("svg"); if(svg){ scaleSvg(svg,1.5); decorateB(svg); }
+  staleItems = (r.ok&&r.stale?r.stale:[]).map(x=>({sev:"error", sel:`link:${x}`,
+    msg:`The route of ${x} no longer fits the layout (its notch or its states moved), so it is drawn routed automatically.`,
+    fix:{kind:"route",name:x,polys:null}, fixLabel:"Route automatically again"}));
+  renderProblems();
 }
 async function renderTex(){ if(!fig) return; const r=await lean({op:"body",text:cur,fig}); $("tex").textContent=r.ok?r.tex:""; }
 function scaleSvg(svg,k){ const w=+svg.getAttribute("width"), h=+svg.getAttribute("height"); svg.setAttribute("width",w*k); svg.setAttribute("height",h*k); }
@@ -231,12 +235,97 @@ function decorateB(svg){
     g.appendChild(r); g.setAttribute("tabindex","0"); g.setAttribute("role","button"); g.style.cursor="pointer";
     g.setAttribute("aria-label",`Notch of ${g.dataset.name} (${g.dataset.kind==="all"?"for all":"there is"}), opens ${g.dataset.up==="1"?"up":"down"}, ${g.dataset.fixed?"fixed":"chosen by the router"}`);
   }
+  for(const g of svg.querySelectorAll('g[data-k="link"]')){
+    for(const pl of [...g.querySelectorAll("polyline")]){ const c=pl.cloneNode(); c.setAttribute("stroke","transparent"); c.setAttribute("stroke-width","9"); c.removeAttribute("stroke-dasharray"); c.classList.add("lhit"); c.style.pointerEvents="stroke"; g.appendChild(c); }
+    g.setAttribute("tabindex","0"); g.setAttribute("role","button"); g.style.cursor="pointer";
+    g.setAttribute("aria-label",`Links of ${g.dataset.name}, ${g.dataset.pinned==="1"?"pinned":"routed automatically"}`);
+  }
   drawSelection();
-  if(sel&&sel.key.startsWith("notch:")) renderInspector();
+  if(sel&&(sel.key.startsWith("notch:")||sel.key.startsWith("link:"))) renderInspector();
+}
+
+/* ---------- editing a binder's links (view B) ----------
+   The links of one binder as a graph: points, and segments that are each
+   horizontal or vertical. Ends (degree 1) are the terminals: the notch and
+   the bound states; they never move. Moving a coordinate of a point moves it
+   along every segment that shares that coordinate (a y along horizontal
+   segments, an x along vertical ones); a terminal reached that way gets a
+   short jog instead. */
+const JOG=6;
+function linkModel(g){
+  const V=[], S=[];
+  const vid=(x,y)=>{ for(let i=0;i<V.length;i++) if(Math.abs(V[i].x-x)<0.01&&Math.abs(V[i].y-y)<0.01) return i; V.push({x,y}); return V.length-1; };
+  for(const pl of g.querySelectorAll("polyline:not(.lhit)")){
+    const pts=pl.getAttribute("points").trim().split(/\s+/).map(t=>t.split(",").map(Number));
+    for(let k=0;k+1<pts.length;k++){ const a=vid(pts[k][0],pts[k][1]), b=vid(pts[k+1][0],pts[k+1][1]); if(a===b) continue;
+      S.push({a,b,h:Math.abs(V[a].y-V[b].y)<0.01}); }
+  }
+  return {V,S};
+}
+const cloneM=M=>({V:M.V.map(v=>({...v})),S:M.S.map(t=>({...t}))});
+const degree=(M,v)=>M.S.filter(t=>t.a===v||t.b===v).length;
+const isEnd=(M,v)=>degree(M,v)===1;
+function jog(M,s,v,w,ax,val){
+  M.S.splice(M.S.indexOf(s),1);
+  const W=M.V[w], Vv=M.V[v];
+  if(ax==="y"){ const sg=Math.sign(Vv.x-W.x)||1, J=Math.min(JOG,Math.abs(Vv.x-W.x)/2), xj=W.x+sg*J;
+    M.V.push({x:xj,y:val},{x:xj,y:W.y}); const a=M.V.length-2,b=M.V.length-1;
+    M.S.push({a:v,b:a,h:true},{a,b,h:false},{a:b,b:w,h:true}); }
+  else { const sg=Math.sign(Vv.y-W.y)||1, J=Math.min(JOG,Math.abs(Vv.y-W.y)/2), yj=W.y+sg*J;
+    M.V.push({x:val,y:yj},{x:W.x,y:yj}); const a=M.V.length-2,b=M.V.length-1;
+    M.S.push({a:v,b:a,h:false},{a,b,h:true},{a:b,b:w,h:false}); }
+}
+function setCoord(M,v,ax,val,from=null,seen=new Set()){
+  if(seen.has(v)) return; seen.add(v);
+  M.V[v][ax]=val;
+  for(const t of [...M.S]){
+    if(t===from||(t.a!==v&&t.b!==v)||!M.S.includes(t)) continue;
+    if(!(ax==="y"?t.h:!t.h)) continue;          // only segments that share this coordinate
+    const w=t.a===v?t.b:t.a;
+    if(Math.abs(M.V[w][ax]-val)<1e-9) continue;
+    if(isEnd(M,w)) jog(M,t,v,w,ax,val); else setCoord(M,w,ax,val,t,seen);
+  }
+}
+/* maximal paths through points of degree 2, collinear points dropped, whole units */
+function toPolys(M){
+  const S=M.S.filter(t=>Math.hypot(M.V[t.a].x-M.V[t.b].x,M.V[t.a].y-M.V[t.b].y)>0.01);
+  const adj=new Map(); for(const t of S){ for(const v of [t.a,t.b]){ if(!adj.has(v)) adj.set(v,[]); } adj.get(t.a).push(t); adj.get(t.b).push(t); }
+  const used=new Set(), out=[];
+  const ends=[...adj.keys()].filter(v=>adj.get(v).length!==2);
+  for(const e of ends) for(const t0 of adj.get(e)){
+    if(used.has(t0)) continue; let path=[e], v=e, t=t0;
+    while(t&&!used.has(t)){ used.add(t); const w=t.a===v?t.b:t.a; path.push(w); v=w; if(adj.get(v).length!==2) break; t=adj.get(v).find(u=>!used.has(u)); }
+    out.push(path);
+  }
+  return out.map(path=>{
+    const pts=path.map(i=>[Math.round(M.V[i].x),Math.round(M.V[i].y)]);
+    const keep=[pts[0]];
+    for(let i=1;i<pts.length-1;i++){ const a=keep[keep.length-1], b=pts[i], c=pts[i+1];
+      if((a[0]===b[0]&&b[0]===c[0])||(a[1]===b[1]&&b[1]===c[1])) continue; keep.push(b); }
+    keep.push(pts[pts.length-1]);
+    return keep.filter((q,i)=>i===0||q[0]!==keep[i-1][0]||q[1]!==keep[i-1][1]);
+  }).filter(p=>p.length>=2);
+}
+function drawLinkHandles(g, M){
+  const host=g.parentNode, col=(g.querySelector("polyline")||{getAttribute:()=>"#2457a6"}).getAttribute("stroke");
+  const o=document.createElementNS(SVGNS,"g"); o.setAttribute("class","selmark"); host.appendChild(o);
+  const mk=(tag,attrs)=>{ const e=document.createElementNS(SVGNS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); o.appendChild(e); return e; };
+  if(M){ // preview while dragging
+    g.style.opacity="0.25";
+    for(const t of M.S){ const a=M.V[t.a], b=M.V[t.b]; mk("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:col,"stroke-width":"1.9"}); }
+  } else g.style.opacity="";
+  const Mo=M||linkModel(g);
+  Mo.S.forEach((t,i)=>{ const a=Mo.V[t.a], b=Mo.V[t.b]; if(Math.hypot(a.x-b.x,a.y-b.y)<10) return;
+    const r=mk("rect",{x:(a.x+b.x)/2-3,y:(a.y+b.y)/2-3,width:6,height:6,fill:"white",stroke:"#2457a6","stroke-width":"1.2"});
+    r.dataset.lseg=i; r.style.cursor=t.h?"ns-resize":"ew-resize"; });
+  Mo.V.forEach((v,i)=>{ const d=degree(Mo,i); if(d===0) return;
+    if(d===1){ mk("circle",{cx:v.x,cy:v.y,r:2,fill:"#2457a6"}).style.pointerEvents="none"; return; }
+    const c=mk("circle",{cx:v.x,cy:v.y,r:3.4,fill:"white",stroke:"#2457a6","stroke-width":"1.2"}); c.dataset.lpt=i; c.style.cursor="move"; });
 }
 function keyOf(g){
   const k=g.dataset.k;
   if(k==="notch") return `notch:${g.dataset.name}`;
+  if(k==="link") return `link:${g.dataset.name}`;
   if(k==="edge") return `edge:${g.dataset.src}>${g.dataset.tgt}#${g.dataset.occ}/${g.dataset.panel}`;
   return `${g.dataset.part==="label"?"label":"state"}:${g.dataset.name}/${g.dataset.panel}`;
 }
@@ -256,12 +345,14 @@ function decorate(){
   }
   drawSelection();
 }
-function findSel(){ if(!sel) return null; const svg=$(sel.key.startsWith("notch:")?"paperB":"paperA"); if(!svg) return null; return [...svg.querySelectorAll("g[data-k]")].find(g=>keyOf(g)===sel.key)||null; }
+function findSel(){ if(!sel) return null; const svg=$(sel.key.startsWith("notch:")||sel.key.startsWith("link:")?"paperB":"paperA"); if(!svg) return null; return [...svg.querySelectorAll("g[data-k]")].find(g=>keyOf(g)===sel.key)||null; }
 function nodeG(name,panel){ return [...($("paperA")?.querySelectorAll('g[data-k="state"][data-part="dot"]')||[])].find(g=>g.dataset.name===name&&g.dataset.panel===String(panel)); }
 function drawSelection(){
   document.querySelectorAll(".selmark").forEach(e=>e.remove());
+  document.querySelectorAll('#paperB g[data-k="link"]').forEach(e=>e.style.opacity="");
   const g=findSel(); if(!g) return;
   const svg=g.ownerSVGElement;
+  if(g.dataset.k==="link"){ drawLinkHandles(g,null); return; }
   const b=g.getBBox(), r=document.createElementNS(SVGNS,"rect");
   r.setAttribute("x",b.x-3); r.setAttribute("y",b.y-3); r.setAttribute("width",b.width+6); r.setAttribute("height",b.height+6);
   r.setAttribute("rx","3"); r.setAttribute("fill","none"); r.setAttribute("stroke","#2457a6"); r.setAttribute("stroke-width","1.2"); r.setAttribute("stroke-dasharray","3,2");
@@ -339,11 +430,45 @@ $("viewA").addEventListener("pointerup", async ev=>{
   const n=d.g.dataset, label = d.kind==="state"?`Move ${n.name}`: d.kind==="label"?`Move the name of ${n.name}`:`Bend ${n.src}→${n.tgt}`;
   push(d.text,label); explain(label,d.base,d.text,"Layout hint only; the formula is unchanged.");
 });
+let ldrag=null;
+function layoutPt(ev,g){ const p=$("paperB").createSVGPoint(); p.x=ev.clientX; p.y=ev.clientY; return p.matrixTransform(g.parentNode.getScreenCTM().inverse()); }
 $("viewB").addEventListener("pointerdown", ev=>{
-  const g=ev.target.closest('g[data-k="notch"]');
-  if(!g){ if(sel&&sel.key.startsWith("notch:")){ sel=null; drawSelection(); renderInspector(); } return; }
+  const t=ev.target;
+  if(t.dataset&&(t.dataset.lseg!==undefined||t.dataset.lpt!==undefined)){
+    const g=findSel(); if(!g) return;
+    ldrag={g, name:g.dataset.name, M0:linkModel(g), seg:t.dataset.lseg!==undefined?+t.dataset.lseg:null, pt:t.dataset.lpt!==undefined?+t.dataset.lpt:null, moved:false, M:null};
+    if(ldrag.seg!==null){ const s0=ldrag.M0.S[ldrag.seg]; if(isEnd(ldrag.M0,s0.a)&&isEnd(ldrag.M0,s0.b)){ ldrag=null; explain("Cannot move this segment",null,null,"It joins two fixed ends (the notch and a state); move a neighbouring segment or point instead."); return; } }
+    $("viewB").setPointerCapture(ev.pointerId); ev.preventDefault(); return;
+  }
+  const g=t.closest('g[data-k="notch"], g[data-k="link"]');
+  if(!g){ if(sel&&(sel.key.startsWith("notch:")||sel.key.startsWith("link:"))){ sel=null; drawSelection(); renderInspector(); } return; }
   sel={key:keyOf(g)}; drawSelection(); renderInspector(); describeSel();
 });
+$("viewB").addEventListener("pointermove", ev=>{
+  if(!ldrag) return; const p=layoutPt(ev,ldrag.g), M=cloneM(ldrag.M0);
+  if(ldrag.seg!==null){ const s0=M.S[ldrag.seg], val=Math.round(s0.h?p.y:p.x), ax=s0.h?"y":"x";
+    const v=isEnd(M,s0.a)?s0.b:s0.a; setCoord(M,v,ax,val); }
+  else { const v=ldrag.pt; setCoord(M,v,"x",Math.round(p.x)); setCoord(M,v,"y",Math.round(p.y)); }
+  ldrag.moved=true; ldrag.M=M;
+  document.querySelectorAll(".selmark").forEach(e=>e.remove()); drawLinkHandles(ldrag.g,M);
+});
+$("viewB").addEventListener("pointerup", async ()=>{
+  if(!ldrag) return; const d=ldrag; ldrag=null;
+  if(!d.moved||!d.M){ drawSelection(); return; }
+  await pinRoute(d.name, toPolys(d.M), `Move the links of ${d.name}`);
+});
+/* pin a binder's links: every notch not yet fixed is fixed as drawn (the layout, and so the pin, depends on them) */
+async function pinRoute(name, polys, label){
+  const before=cur; let t=cur;
+  for(const n of document.querySelectorAll('#paperB g[data-k="notch"]')){
+    if(n.dataset.fixed) continue;
+    const r=await lean({op:"edit",text:t,fig,edit:{kind:"notch",name:n.dataset.name,dir:n.dataset.up==="1"?"up":"down"}});
+    if(!r.ok){ explain("Not applied",null,null,r.error); return; } t=r.text;
+  }
+  const r=await lean({op:"edit",text:t,fig,edit:{kind:"route",name,polys}});
+  if(!r.ok){ explain("Not applied",null,null,r.error); return; }
+  push(r.text,label); explain(label,before,r.text,"The links of "+name+" are pinned (route hint); every notch is fixed as drawn, since the pin depends on the layout. The other binders are routed around it.");
+}
 $("viewB").addEventListener("focusin", ev=>{ const g=ev.target.closest('g[data-k="notch"]'); if(!g) return; if(!sel||sel.key!==keyOf(g)){ sel={key:keyOf(g)}; drawSelection(); renderInspector(); describeSel(); } });
 $("viewA").addEventListener("focusin", ev=>{ const g=ev.target.closest("g[data-k]"); if(!g) return; if(!sel||sel.key!==keyOf(g)){ sel={key:keyOf(g)}; drawSelection(); renderInspector(); describeSel(); } });
 
@@ -355,6 +480,10 @@ document.addEventListener("keydown", ev=>{
   if(inField) return;
   if(ev.key==="Escape"&&sel){ sel=null; drawSelection(); renderInspector(); return; }
   const k={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[ev.key];
+  if(sel&&sel.key.startsWith("link:")&&["Delete","Backspace"].includes(ev.key)){
+    const g=findSel(); if(!g||g.dataset.pinned!=="1") return; ev.preventDefault();
+    enqueue(()=>commitEdit({kind:"route",name:g.dataset.name,polys:null},`Route the links of ${g.dataset.name} automatically again`)); return;
+  }
   if(sel&&sel.key.startsWith("notch:")&&["ArrowUp","ArrowDown","Delete","Backspace"].includes(ev.key)){
     const g=findSel(); if(!g) return; ev.preventDefault();
     const dir = ev.key==="ArrowUp"?"up": ev.key==="ArrowDown"?"down": null;
@@ -377,6 +506,7 @@ function setNotch(name, dir){
 }
 function describeSel(){
   const g=findSel(); if(!g){ return; } const d=g.dataset;
+  if(d.k==="link"){ explain(`Links of ${d.name} (Frege view)`,null,null,`${d.pinned==="1"?"Pinned by the hint route "+d.name+".":"Routed automatically."} Drag a square to move a segment sideways, a round handle to move a bend or a branch point; the ends at the notch and the states stay. On release the links are pinned and every notch is fixed as drawn.`); return; }
   if(d.k==="notch"){ explain(`Notch of ${d.name} (Frege view)`,null,null,`Opens ${d.up==="1"?"up":"down"}, ${d.fixed?"fixed by the hint notch "+d.name+" "+d.fixed:"chosen by the router"}. ↑ fixes it up, ↓ down, Delete gives it back to the router. With links on, the links are routed again (a few seconds).`); return; }
   if(d.k==="edge") explain(`Arrow ${d.src}→${d.tgt}${d.occ!=="1"?" #"+d.occ:""}`,null,null,"Drag the square handle to bend it, or ↑/↓; ←/→ moves its notch. Hint: edge "+d.src+">"+d.tgt+".");
   else if(d.part==="label") explain(`Name of ${d.name}`,null,null,"Drag it, or use the arrow keys. Changes the label offset of the state's position hint.");
@@ -398,6 +528,14 @@ function renderInspector(){
     return;
   }
   const d=g.dataset;
+  if(d.k==="link"){
+    el.innerHTML=`<h2>Links of ${esc(d.name)}, Frege view</h2>
+    <p>${d.pinned==="1"?`Pinned: the hint <code>route ${esc(d.name)} …</code> holds them; the router routes the other binders around them.`:"Routed automatically."}</p>
+    <div class="r"><button id="unroute" ${d.pinned==="1"?"":"disabled"} data-help="Remove the hint route ${esc(d.name)}: the router routes these links again. The notch hints stay.">Route automatically again</button></div>
+    <p class="muted">Drag a square handle to move a segment sideways (its neighbours stretch); drag a round handle to move a bend or a branch point (the segments through it move with it, keeping their direction). The ends at the notch and at the states stay; where one would have to move, a short jog is added. <kbd>Delete</kbd> routes automatically again.</p>
+    <p class="muted">A pin holds for the layout it was made on. If a later change moves the notch or the states, it is reported under Problems and the links are routed automatically until it is removed or redone.</p>`;
+    return;
+  }
   if(d.k==="notch"){
     const cur=d.fixed||"auto";
     el.innerHTML=`<h2>Notch of ${esc(d.name)} (${d.kind==="all"?"∀":"∃"}), Frege view</h2>
@@ -440,13 +578,14 @@ document.addEventListener("change", async ev=>{
 document.addEventListener("click", ev=>{
   const t=ev.target.closest("button"); if(!t) return; const g=findSel(), d=g?g.dataset:null;
   if(t.id==="undoBtn") undo(); else if(t.id==="redoBtn") redo();
+  else if(t.id==="unroute"){ commitEdit({kind:"route",name:d.name,polys:null},`Route the links of ${d.name} automatically again`); }
   else if(t.dataset.notchdir){ const v=t.dataset.notchdir; setNotch(d.name, v==="auto"?null:v); }
   else if(t.id==="unlabel") commitEdit({kind:"node",name:d.name,panel:+d.panel,x:+d.x,y:+d.y,label:null},`Reset the name offset of ${d.name}`);
   else if(t.id==="unnode") commitEdit({kind:"unnode",name:d.name,panel:+d.panel},`Remove the position hint of ${d.name}`);
   else if(t.id==="checkBtn") runCheck();
   else if(t.id==="saveBtn") save();
-  else if(t.dataset.lintshow!==undefined){ const p=lintItems[+t.dataset.lintshow]; sel={key:p.sel}; drawSelection(); renderInspector(); const g=findSel(); if(g){ g.focus({preventScroll:false}); describeSel(); } }
-  else if(t.dataset.lintfix!==undefined){ const p=lintItems[+t.dataset.lintfix]; commitEdit(p.fix, p.fixLabel); }
+  else if(t.dataset.lintshow!==undefined){ const p=allItems()[+t.dataset.lintshow]; sel={key:p.sel}; drawSelection(); renderInspector(); const g=findSel(); if(g){ g.focus({preventScroll:false}); describeSel(); } }
+  else if(t.dataset.lintfix!==undefined){ const p=allItems()[+t.dataset.lintfix]; commitEdit(p.fix, p.fixLabel); }
   else if(t.dataset.hist) { const i=+t.dataset.hist; const a=cur; hi=i; lastNudge=null; setCur(hist[i].text); $("src").value=cur; explain(`Back to: ${hist[i].label}`,a,cur); }
 });
 document.addEventListener("mouseover", ev=>{ const h=ev.target.closest("[data-help]"); if(h&&!drag) $("explain").innerHTML=`<b>${esc(h.textContent.trim().split("\n")[0].slice(0,60)||"")}</b> <span class="muted">${esc(h.dataset.help)}</span>`; });
@@ -476,10 +615,11 @@ async function runCheck(){
   $("probs").innerHTML='<li class="note">Routing the Frege view with links, names shown and hidden…</li>';
   const r=await lean({op:"check",text:cur,fig,opts}); checked=r; renderProblems();
 }
+const allItems=()=>lintItems.concat(staleItems);
 function renderProblems(){
-  const ul=$("probs");
-  let h = lintItems.length
-    ? lintItems.map((p,i)=>`<li class="${p.sev}"><b>${p.sev==="error"?"Error":"Warning"}.</b> ${esc(p.msg)}
+  const ul=$("probs"); const items=allItems();
+  let h = items.length
+    ? items.map((p,i)=>`<li class="${p.sev}"><b>${p.sev==="error"?"Error":"Warning"}.</b> ${esc(p.msg)}
         <span style="display:inline-flex;gap:4px;margin-left:4px">${p.sel?`<button data-lintshow="${i}" data-help="Select the object in the sketch.">Show</button>`:""}${p.fix?`<button data-lintfix="${i}" data-help="${esc(p.fixLabel)}: a change to one hint, shown in the strip above; undo restores it.">${esc(p.fixLabel)}</button>`:""}</span></li>`).join("")
     : '<li class="pass">Hints and sketch: no problems.</li>';
   if(!checked) h += '<li class="note">Layout checks of the Frege view have not run (Run checks).</li>';

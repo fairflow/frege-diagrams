@@ -110,6 +110,9 @@ structure Hints where
   /-- view B: binders whose notch is fixed to open upwards (`true`) or
   downwards (`false`); the router does not turn these over -/
   notches : List (String × Bool) := []
+  /-- view B with links: binders whose links are pinned to these polylines
+  (in the tree's own coordinates, whole units) instead of being routed -/
+  routes : List (String × List (List (Int × Int))) := []
 deriving BEq, DecidableEq, Repr, Inhabited
 
 /-- A figure: `fig NAME [hints] = form`. -/
@@ -137,7 +140,7 @@ def isIdentChar (c : Char) : Bool :=
 def reserved : List String := ["fig", "all", "ex", "not", "if", "then", "R"]
 
 /-- Words with a fixed meaning at the start of a hint. -/
-def hintWords : List String := ["size", "views", "edge", "loop", "text", "namedy", "notch"]
+def hintWords : List String := ["size", "views", "edge", "loop", "text", "namedy", "notch", "route"]
 
 def isIdent (s : String) : Bool :=
   match s.toList with
@@ -171,7 +174,8 @@ def Hints.WellFormed (h : Hints) : Bool :=
   h.edges.all (fun e => isIdent e.src && isIdent e.tgt) &&
   h.loops.all (·.key.WellFormed) &&
   h.texts.all (isTextOK ·.s) &&
-  h.notches.all (isIdent ·.1)
+  h.notches.all (isIdent ·.1) &&
+  h.routes.all (fun (x, ps) => isIdent x && !ps.isEmpty && ps.all (·.length ≥ 2))
 
 def Fig.WellFormed (d : Fig) : Bool := isIdent d.name && d.hints.WellFormed && d.body.WellFormed
 

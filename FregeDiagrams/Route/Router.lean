@@ -403,9 +403,57 @@ def routeBinder (sc : Scene) (g : Grid) (b : Binder) (others : Array Polyline) (
   let (polys, junctions) := toPolylines segs keep
   return { polys, junctions, cost := cost - cConn * (b.tgts.size.toFloat + fOne) }
 
-/-- Route every binder: in turn, then `rounds` rounds of rip-up and reroute. -/
+/-- A pinned route (the `route` hint) made to meet binder `b`'s terminals
+exactly: an end within reach of the notch point, or of the place where a link
+meets a bound state (`NODE_R + 1` from its centre, on one of four sides), is
+moved onto it with a small jog, so that segments stay horizontal or vertical
+and points shared with other polylines do not move.  `none` when a segment is
+neither horizontal nor vertical or some terminal is met by no end: the pin
+was made for another layout. -/
+def fitPin (b : Binder) (ps : Array Polyline) : Option Routed := Id.run do
+  let tol : Float := 1.5
+  let reach : Float := NODE_R + fOne
+  for p in ps do
+    if p.size < 2 then return none
+    for i in [0:p.size - 1] do
+      let a := p[i]!; let c := p[i+1]!
+      if (a.x - c.x).abs > 0.01 && (a.y - c.y).abs > 0.01 then return none
+  -- the exact terminal an end stands for, if any
+  let termFor (e : P) : Option P :=
+    if (e - b.notch).len ≤ tol then some b.notch
+    else b.tgts.findSome? fun t =>
+      let d := e - t
+      if (d.len - reach).abs ≤ tol then
+        let u : P := if d.x.abs ≥ d.y.abs then ⟨if d.x ≥ 0.0 then 1.0 else -1.0, 0.0⟩
+                     else ⟨0.0, if d.y ≥ 0.0 then 1.0 else -1.0⟩
+        some (t + u * reach)
+      else none
+  -- replace an end by its terminal, joined to the next point by a jog
+  let snapStart (q : Polyline) : Polyline :=
+    match termFor q[0]! with
+    | none => q
+    | some t =>
+      let e := q[0]!; let nx := q[1]!
+      let m : P := if (e.x - nx.x).abs ≤ 0.01 then ⟨nx.x, t.y⟩ else ⟨t.x, nx.y⟩
+      let rest := q.extract 1 q.size
+      if (m - t).len < 0.01 || (m - nx).len < 0.01 then #[t] ++ rest else #[t, m] ++ rest
+  let out := ps.map fun p => (snapStart (snapStart p).reverse).reverse
+  -- every terminal met
+  let ends := out.foldl (fun acc p => acc.push p[0]! |>.push p.back!) #[]
+  if !(ends.any fun e => (e - b.notch).len < 0.01) then return none
+  for t in b.tgts do
+    if !(ends.any fun e => ((e - t).len - reach).abs < 0.01) then return none
+  -- junctions: ends shared by two or more polylines
+  let mut junctions : Array P := #[]
+  for e in ends do
+    let n := (ends.filter fun f => (f - e).len < 0.01).size
+    if n ≥ 2 && !(junctions.any fun j => (j - e).len < 0.01) then junctions := junctions.push e
+  return some { polys := out, junctions, cost := 0.0 }
+
+/-- Route every binder: in turn, then `rounds` rounds of rip-up and reroute.
+Pinned binders (`pinned`) keep their routes; the others route around them. -/
 def routeAll (sc : Scene) (g : Grid) (bs : Array Binder) (rounds : Nat) (reverse : Bool := false)
-    (given : Option (Array Nat) := none) : Array Routed := Id.run do
+    (given : Option (Array Nat) := none) (pinned : Array (Option Routed) := #[]) : Array Routed := Id.run do
   -- innermost scopes first, so that they take the tracks nearest the tree
   -- and the outer binders route round them
   let order := ((List.range bs.size).toArray.qsort fun i j =>
@@ -413,9 +461,10 @@ def routeAll (sc : Scene) (g : Grid) (bs : Array Binder) (rounds : Nat) (reverse
   let maxD := bs.foldl (fun m b => max m b.depth) 0
   let order := if reverse then order.reverse else order
   let order := given.getD order
-  let mut rs : Array Routed := Array.replicate bs.size {}
+  let mut rs : Array Routed := (List.range bs.size).toArray.map fun i => (pinned[i]?.bind id).getD {}
   for r in [0:rounds + 1] do
     for i in order do
+      if (pinned[i]?.bind id).isSome then continue
       let others := (List.range bs.size).foldl (fun acc j => if j == i then acc else acc ++ rs[j]!.polys) #[]
       let _ := r
       rs := rs.set! i (routeBinder sc g bs[i]! others (maxD - bs[i]!.depth))
@@ -575,6 +624,9 @@ structure Rendered where
   nTree : Nat := 0
   nesting : Array (String × String × String) := #[]
   names : Array String := #[]
+  /-- binders with a `route` pin that does not fit the layout (routed
+  automatically instead) -/
+  stalePins : Array String := #[]
 
 /-! ## Rendering -/
 
@@ -584,6 +636,8 @@ def TreeDiagram.render (d : TreeDiagram) (o : DrawOpts := {}) : Rendered := Id.r
   -- with links, every choice of flipped notches (up to four binders) is
   -- routed once; the three cheapest are routed again with more rounds
   let bs := d.tree.binders.filter fun b => (o.fixedNotches.lookup b).isNone
+  let pinsFor (binders : Array Binder) : Array (Option Routed) :=
+    binders.map fun b => (o.pinned.lookup b.name).bind (fitPin b)
   let flipSets : List (List String) :=
     if !o.links || bs.length > 4 then [[]]
     else (List.range (2 ^ bs.length)).map fun m =>
@@ -595,7 +649,7 @@ def TreeDiagram.render (d : TreeDiagram) (o : DrawOpts := {}) : Rendered := Id.r
     let binders := sc.binders
     if binders.isEmpty then (cFlip * fs.length.toFloat, sc, binders, #[]) else
     let g := Grid.build sc binders
-    let rs := routeAll sc g binders rounds
+    let rs := routeAll sc g binders rounds (pinned := pinsFor binders)
     (score sc rs + cFlip * fs.length.toFloat, sc, binders, rs)
   let mut ranked : Array (Float × List String) := #[]
   for fs in flipSets do
@@ -617,7 +671,7 @@ def TreeDiagram.render (d : TreeDiagram) (o : DrawOpts := {}) : Rendered := Id.r
       if binders.size ≤ 4 then (perms (List.range binders.size)).map (some ·.toArray)
       else [none, some ((List.range binders.size).toArray.reverse)]
     for ord in orders do
-      let rs := routeAll sc g binders 2 false ord
+      let rs := routeAll sc g binders 2 false ord (pinsFor binders)
       let c := score sc rs + cFlip * fs.length.toFloat
       if best.all (c < ·.1) then best := some (c, sc, binders, rs)
   let some (_, sc, binders, rs) := best | return { svg := "" }
@@ -627,13 +681,18 @@ def TreeDiagram.render (d : TreeDiagram) (o : DrawOpts := {}) : Rendered := Id.r
   -- links: each binder its own pastel colour, its name in Morse as the dashes
   let mut linkSvg : Array String := #[]
   let mut links : Array Polyline := #[]
+  let pins := pinsFor binders
   for i in [0:binders.size] do
     let colr := linkPalette[i % linkPalette.size]!
+    -- for the editor: one group per binder's links
+    if o.annotate then
+      linkSvg := linkSvg.push s!"<g data-k=\"link\" data-name=\"{xmlEsc binders[i]!.name}\" data-pinned=\"{if (pins[i]?.bind id).isSome then 1 else 0}\">"
     for pl in rs[i]!.polys do
       links := links.push pl
       linkSvg := linkSvg.push (Shape.poly pl colr "1.9" s!" stroke-linejoin=\"round\" stroke-dasharray=\"{morseDash binders[i]!.name}\"").svg
     for j in rs[i]!.junctions do
       linkSvg := linkSvg.push (Shape.circle j 2.4 colr).svg
+    if o.annotate then linkSvg := linkSvg.push "</g>"
   let names := placeNames sc links
   -- the canvas: everything drawn, with a margin
   let sc' := { sc with curves := sc.curves ++ links, cboxes := sc.cboxes ++ links.map bbox,
@@ -659,7 +718,9 @@ def TreeDiagram.render (d : TreeDiagram) (o : DrawOpts := {}) : Rendered := Id.r
   return { svg := svgDoc (x1 - x0 + 2.0 * m).toUInt64.toNat (y1 - y0 + 2.0 * m).toUInt64.toNat body,
            problems := probs, nLink, nTree,
            nesting := if o.links then nestingViolations sc binders rs else #[],
-           names := if o.links then nameViolations sc names links else #[] }
+           names := if o.links then nameViolations sc names links else #[],
+           stalePins := if !o.links then #[] else
+             (o.pinned.filter fun (x, _) => (binders.zip pins).any fun (b, p) => b.name == x && p.isNone).toArray.map (·.1) }
 
 def TreeDiagram.svg (d : TreeDiagram) (o : DrawOpts := {}) : String := (d.render o).svg
 

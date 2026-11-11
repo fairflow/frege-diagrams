@@ -38,7 +38,7 @@ starts a labelled relation, not a comment).
 
 Reserved words, which cannot be names: `fig`, `all`, `ex`, `not`, `if`,
 `then`, `R`. The words that begin hints (`size`, `views`, `edge`, `loop`,
-`text`, `namedy`, `notch`) are names elsewhere but cannot be given a position hint,
+`text`, `namedy`, `notch`, `route`) are names elsewhere but cannot be given a position hint,
 since a hint starting with one of them is read as that hint.
 
 Unicode beyond the characters above can be used in strings, labels and
@@ -94,6 +94,7 @@ hint          ::= size-hint
                 | loop-hint
                 | namedy-hint
                 | notch-hint
+                | route-hint
                 | text-hint
 size-hint     ::= "size" pair
 views-hint    ::= "views" ( "A" | "B" )
@@ -103,6 +104,8 @@ edge-option   ::= "bend" int | "side" ( "+" | "-" ) | "at" decimal
 loop-hint     ::= "loop" key int
 namedy-hint   ::= "namedy" int
 notch-hint    ::= "notch" name ( "up" | "down" )
+route-hint    ::= "route" name polyline ( ";" polyline )*
+polyline      ::= pair pair+
 text-hint     ::= "text" pair text-option* string
 text-option   ::= "black"
                 | "red"
@@ -344,6 +347,7 @@ change what a figure says. Each may be given at most once per object; for
 | `loop s A` | the direction, in degrees, of a self-loop on `s` |
 | `namedy N` | this figure's bound-name offset in the notches, both views (overrides `--notch-name-offset`) |
 | `notch x up`, `notch x down` | view B: the notch of the binder `x` always opens up (or down); without it the side is the default (∀ up, ∃ down) or, with links, the router's choice |
+| `route x (X,Y) (X,Y) …; (X,Y) …` | view B with links: the links of binder `x` are pinned to these polylines (in the tree's own coordinates, whole units, every segment horizontal or vertical) instead of being routed; the other binders are routed around them. Written by the editor. A pin holds for the layout it was made on: if the notch or the states have moved, it is reported and the links are routed automatically |
 | `text (X,Y) …"caption"` | a caption: optional colour `black`, `red` or `grey` (default grey), size, `middle`, `italic`, in any order, then the text |
 
 A hint that names nothing in the picture has no effect; `framediag --check`

@@ -127,6 +127,7 @@ which is enough for a first look. View B needs no hints.
 | `loop s ANGLE` | the direction, in degrees, of a self-loop |
 | `namedy N` | this figure's bound-name offset in its notches (signed integer, both views); overrides `--notch-name-offset` |
 | `notch x up`, `notch x down` | view B: binder `x`'s notch always opens up (down); the link router routes around it and does not turn it over |
+| `route x (X,Y) (X,Y) …; …` | view B with links: binder `x`'s links pinned to these polylines (written by the editor); see section 2a |
 | `text (X,Y) red 11 middle italic "…"` | a caption: colour `black`/`red`/`grey` (default grey), size, `middle`, `italic` |
 
 ## 2. Drawing
@@ -258,6 +259,18 @@ string is refused.
 * Frege view: click a notch (or Tab to it) to select it; the inspector sets
   its side to *automatic*, *up* or *down* (the hint `notch x up|down`); ↑,
   ↓ and Delete do the same. With links on, the links are routed again.
+* Frege view, links: click a binder's links to select them. Square handles
+  move a segment sideways (its neighbours stretch); round handles move a bend
+  or a branch point (the segments through it move with it, keeping their
+  direction). The ends at the notch and the states stay; where one would
+  have to move, a short jog is added. On release the links are **pinned**:
+  the hint `route x …` holds them, and every notch is fixed as drawn
+  (`notch … up|down`), since the pin depends on the layout. The router
+  routes the other binders around a pin. *Route automatically again* (or
+  Delete) removes it. A pin holds for the layout it was made on (the
+  formula, the notches, `--hide-bound`, `--spacing`, the notch-name offset);
+  when the notch or a bound state has moved, Problems and `--check` report it
+  and the links are routed automatically until the pin is removed or redone.
 * Problems lists the checks of `Diagrams/Lint` after every redraw (hints that
   match nothing, notches in the wrong place, overlaps, states off the
   canvas), each with Show and, where possible, a fix; Run checks adds the
@@ -265,7 +278,7 @@ string is refused.
 * The toolbar options (links, hidden names, notch-name offset) are the
   command-line flags; they are not stored in the file.
 
-Not yet: editing the routes of the links. The plan is `docs/design/EDITOR.md`.
+The plan is `docs/design/EDITOR.md`.
 
 ## 3. Using the output in LaTeX
 
