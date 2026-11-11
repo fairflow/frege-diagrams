@@ -56,9 +56,13 @@ Two kinds of error, treated differently:
 
 ### 1b. Unicode, ASCII, Greek, roman and numeric names
 
-* Names are identifiers in Lean's sense: any Unicode letter (Greek included),
-  digits, `_`, `′`, subscripts. `s`, `σ`, `t₁`, `x12`, `u′` all work today.
-  The display name is the name, except that ASCII `'` displays as `′`.
+* *Corrected 2026-11-11:* this said that any Unicode letter, Greek
+  included, may begin a name; the parser accepts only ASCII letters and `_`
+  (then also digits, `'`, `′`, `₀`–`₉`). `s`, `t₁`, `x12`, `u′` work; `σ`
+  does not. Unicode of any kind is fine in labels, strings and comments
+  (`-[≡ᵣ]-`, `"σ ⊨ φ"`). Greek letters in names are a planned small change
+  (see docs/LANGUAGE.md for the rule in force). The display name is the
+  name, except that ASCII `'` displays as `′`.
 * Relation symbols get an ASCII spelling and a display form (`<=` is `≤`,
   `~>` is `⇝`). In the editor's text pane, typing Lean's abbreviations
   (`\le`, `\sqsubseteq`, `\a`) inserts the Unicode, as in VS Code.

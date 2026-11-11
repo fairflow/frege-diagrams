@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+* docs/LANGUAGE.md: the figure language, with its grammar in EBNF and syntax diagrams generated from one source (docs/tools/grammar.py); CI checks the EBNF and that the examples parse.
+* CONTRIBUTING.md: documentation is updated in the same pull request as any visible or design change.
+
 What exists in 0.1.0-dev:
 
 * the figure language: syntax, lexer, parser and printer, with line and column in errors;
