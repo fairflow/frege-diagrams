@@ -57,6 +57,9 @@ structure DrawOpts where
   /-- internal: the binders whose notch is drawn flipped (`⊔` for `∀`, `∧`
   for `∃`), chosen by the link router where that saves crossings -/
   flips : List String := []
+  /-- binders whose notch is fixed (the `notch NAME up|down` hint): `true`
+  opens upwards; these are never turned over by the router -/
+  fixedNotches : List (String × Bool) := []
   /-- a factor on every clearance of the links: row gaps, tracks, channels,
   the room kept around states and names (`--spacing`) -/
   spacing : Float := 1.0
@@ -207,7 +210,9 @@ def bare (s : String) : String := String.ofList (s.toList.reverse.dropWhile (· 
 
 /-- Does this notch open upwards (`⊓`, or a flipped `∨`)? -/
 def notchUp (o : DrawOpts) (kind : Quant) (var : String) : Bool :=
-  (kind == .all) != o.flips.contains var
+  match o.fixedNotches.lookup var with
+  | some up => up
+  | none => (kind == .all) != o.flips.contains var
 
 /-- `(width, above, below)`: the extent of a tree around its stroke. -/
 partial def measure (o : DrawOpts := {}) : Tree → Float × Float × Float
@@ -325,6 +330,10 @@ partial def draw (t : Tree) (x y : Float) (col : String)
     let x1 := x + STUB + g + 4.0
     let (svg, lo, hi) := notch #[⟨x, y⟩, ⟨x1, y⟩] (STUB + g / 2.0) kind shown col [.R]
       (some (if upw then -1.0 else 1.0)) o.nameDy
+    -- for the editor: the notch as one element carrying its binder
+    let svg := if !o.annotate then svg else
+      #[Shape.raw s!"<g data-k=\"notch\" data-name=\"{xmlEsc var}\" data-kind=\"{if kind == .all then "all" else "ex"}\" data-up=\"{if upw then 1 else 0}\" data-fixed=\"{match o.fixedNotches.lookup var with | some true => "up" | some false => "down" | none => ""}\">"] ++
+        svg ++ #[Shape.raw "</g>"]
     -- the new binder's rail starts under the notch
     let nb : Bind := { name := var, path := #[⟨x + STUB + g / 2.0, y⟩], lane := env.length, free := false,
                        notchDy := if upw then -h else h, notchHw := g / 2.0,

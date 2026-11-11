@@ -216,10 +216,16 @@ def Fig.toDiagram (d : Fig) (o : DrawOpts := {}) : Diagram := Id.run do
   let (w, ht) := h.size.getD ((maxX + 40).toNat, (maxY + 40).toNat)
   return { g with w, h := ht, nameDy := o.nameDy, annotate := o.annotate }
 
+/-- The drawing options of a figure: its `namedy` and `notch` hints over the
+options of the run. -/
+def Fig.drawOpts (d : Fig) (o : DrawOpts) : DrawOpts :=
+  let o := match d.hints.nameDy with | some v => { o with nameDy := Float.ofInt v } | none => o
+  { o with fixedNotches := d.hints.notches }
+
 /-- The pictures of a figure: `(file stem, SVG)`.  With both views, view A is
 `NAME` and view B `NAME_B`. -/
 def Fig.pictures (d : Fig) (o : DrawOpts := {}) : List (String × String) :=
-  let o := match d.hints.nameDy with | some v => { o with nameDy := Float.ofInt v } | none => o
+  let o := d.drawOpts o
   let a := (d.name, (d.toDiagram o).svg)
   let b := ({ name := d.name, tree := d.body.toTree : TreeDiagram }).svg o
   match d.hints.views with

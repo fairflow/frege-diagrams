@@ -38,7 +38,7 @@ starts a labelled relation, not a comment).
 
 Reserved words, which cannot be names: `fig`, `all`, `ex`, `not`, `if`,
 `then`, `R`. The words that begin hints (`size`, `views`, `edge`, `loop`,
-`text`, `namedy`) are names elsewhere but cannot be given a position hint,
+`text`, `namedy`, `notch`) are names elsewhere but cannot be given a position hint,
 since a hint starting with one of them is read as that hint.
 
 Unicode beyond the characters above can be used in strings, labels and
@@ -93,6 +93,7 @@ hint          ::= size-hint
                 | edge-hint
                 | loop-hint
                 | namedy-hint
+                | notch-hint
                 | text-hint
 size-hint     ::= "size" pair
 views-hint    ::= "views" ( "A" | "B" )
@@ -101,6 +102,7 @@ edge-hint     ::= "edge" name ">" name ( "#" int )? ( "/" int )? edge-option*
 edge-option   ::= "bend" int | "side" ( "+" | "-" ) | "at" decimal
 loop-hint     ::= "loop" key int
 namedy-hint   ::= "namedy" int
+notch-hint    ::= "notch" name ( "up" | "down" )
 text-hint     ::= "text" pair text-option* string
 text-option   ::= "black"
                 | "red"
@@ -341,6 +343,7 @@ change what a figure says. Each may be given at most once per object; for
 | `edge a>b` + options | the arrow from `a` to `b`, named by the direction of its step in the formula; `#2` for the second such arrow (in the order of the formula), `/2` for panel 2. Options, in any order: `bend N` (signed, in units; positive curves to the right of the direction as drawn, negative to the left), `side +` or `side -` (which side its notch opens to), `at D` (where the notch sits, as a fraction of the arrow, default 0.35) |
 | `loop s A` | the direction, in degrees, of a self-loop on `s` |
 | `namedy N` | this figure's bound-name offset in the notches, both views (overrides `--notch-name-offset`) |
+| `notch x up`, `notch x down` | view B: the notch of the binder `x` always opens up (or down); without it the side is the default (∀ up, ∃ down) or, with links, the router's choice |
 | `text (X,Y) …"caption"` | a caption: optional colour `black`, `red` or `grey` (default grey), size, `middle`, `italic`, in any order, then the text |
 
 A hint that names nothing in the picture has no effect; `framediag --check`

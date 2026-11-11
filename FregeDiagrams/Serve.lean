@@ -24,7 +24,7 @@ Requests (`op`):
 
 `edit` objects (`kind`): `node {name, panel, x, y, label: [dx,dy] | null}`,
 `unnode {name, panel}`, `edge {src, tgt, occ, panel, bend, side: "+"|"-"|null, at}`,
-`size {w, h}`, `namedy {v}`, `loop {name, panel, angle}` (`null` removes).
+`size {w, h}`, `namedy {v}`, `loop {name, panel, angle}`, `notch {name, dir: "up"|"down"}` (`null` removes).
 -/
 import Lean.Data.Json
 import FregeDiagrams.View
@@ -84,6 +84,13 @@ def decodeEdit (j : Json) : Except String Edit := do
   | "size" => return .size (← getNat j "w") (← getNat j "h")
   | "namedy" => return .nameDy (← getOpt j "v")
   | "loop" => return .loop (← keyOf j) (← getOpt j "angle")
+  | "notch" =>
+    let up ← match ← getOpt (α := String) j "dir" with
+      | some "up" => pure (some true)
+      | some "down" => pure (some false)
+      | none => pure none
+      | some s => throw s!"dir must be up or down, not {s}"
+    return .notch (← getStr j "name") up
   | k => throw s!"unknown edit kind {k}"
 
 def optJson {α} [ToJson α] : Option α → Json
@@ -104,6 +111,8 @@ def encodeEdit : Edit → Json
   | .size w h => Json.mkObj [("kind", "size"), ("w", w), ("h", h)]
   | .nameDy v => Json.mkObj [("kind", "namedy"), ("v", optJson v)]
   | .loop k a => Json.mkObj ([("kind", ("loop" : Json))] ++ keyFields k ++ [("angle", optJson a)])
+  | .notch x up => Json.mkObj [("kind", "notch"), ("name", x),
+      ("dir", match up with | some true => "up" | some false => "down" | none => Json.null)]
 
 def optsOf (j : Json) : DrawOpts :=
   let o := (j.getObjVal? "opts").toOption.getD (Json.mkObj [])
@@ -133,12 +142,12 @@ def handle (j : Json) : Except String Json := do
   | "render" =>
     let f ← findFig text (← getStr j "fig")
     let o := optsOf j
-    let o := match f.hints.nameDy with | some v => { o with nameDy := Float.ofInt v } | none => o
+    let o := f.drawOpts o
     let only := (getStr j "only").toOption.getD ""
     let a : Json := if f.hints.views == .b || only == "b" then .null
       else (f.toDiagram { o with annotate := true }).svg
     let b : Json := if f.hints.views == .a || only == "a" then .null
-      else ({ name := f.name, tree := f.body.toTree : TreeDiagram }).svg o
+      else ({ name := f.name, tree := f.body.toTree : TreeDiagram }).svg { o with annotate := true }
     return okWith [("a", a), ("b", b)]
   | "edit" =>
     let e ← decodeEdit (← j.getObjVal? "edit")
@@ -157,7 +166,7 @@ def handle (j : Json) : Except String Json := do
     let f ← findFig text (← getStr j "fig")
     if f.hints.views == .a then return okWith [("problems", Json.arr #[]), ("notes", Json.arr #[])]
     let o := optsOf j
-    let o := match f.hints.nameDy with | some v => { o with nameDy := Float.ofInt v } | none => o
+    let o := f.drawOpts o
     let mut probs : Array Json := #[]
     let mut notes : Array Json := #[]
     for hb in [false, true] do

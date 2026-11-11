@@ -107,6 +107,9 @@ structure Hints where
   texts : List TextHint := []
   /-- this figure's notch-name offset, overriding `--notch-name-offset` -/
   nameDy : Option Int := none
+  /-- view B: binders whose notch is fixed to open upwards (`true`) or
+  downwards (`false`); the router does not turn these over -/
+  notches : List (String × Bool) := []
 deriving BEq, DecidableEq, Repr, Inhabited
 
 /-- A figure: `fig NAME [hints] = form`. -/
@@ -134,7 +137,7 @@ def isIdentChar (c : Char) : Bool :=
 def reserved : List String := ["fig", "all", "ex", "not", "if", "then", "R"]
 
 /-- Words with a fixed meaning at the start of a hint. -/
-def hintWords : List String := ["size", "views", "edge", "loop", "text"]
+def hintWords : List String := ["size", "views", "edge", "loop", "text", "namedy", "notch"]
 
 def isIdent (s : String) : Bool :=
   match s.toList with
@@ -167,7 +170,8 @@ def Hints.WellFormed (h : Hints) : Bool :=
   h.nodes.all (fun n => n.key.WellFormed && !hintWords.contains n.key.name) &&
   h.edges.all (fun e => isIdent e.src && isIdent e.tgt) &&
   h.loops.all (·.key.WellFormed) &&
-  h.texts.all (isTextOK ·.s)
+  h.texts.all (isTextOK ·.s) &&
+  h.notches.all (isIdent ·.1)
 
 def Fig.WellFormed (d : Fig) : Bool := isIdent d.name && d.hints.WellFormed && d.body.WellFormed
 

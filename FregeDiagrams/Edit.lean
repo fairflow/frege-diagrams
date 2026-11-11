@@ -27,6 +27,9 @@ inductive Edit where
   | nameDy (v : Option Int)
   /-- set or remove a loop's angle -/
   | loop (k : Key) (angle : Option Int)
+  /-- fix a binder's notch in view B to open up (`true`) or down (`false`), or
+  leave it to the router (`none`) -/
+  | notch (x : String) (up : Option Bool)
 deriving Repr, Inhabited
 
 /-- What an edit does to the text of the hints. -/
@@ -73,6 +76,12 @@ def Edit.apply (h : Hints) : Edit → Hints × Act
     | none, some a =>
       let l : LoopHint := { key := k, angle := a }
       ({ h with loops := h.loops ++ [l] }, .add l.print)
+    | none, none => (h, .nothing)
+  | .notch x up =>
+    match h.notches.findIdx? (·.1 == x), up with
+    | some i, some u => ({ h with notches := h.notches.set i (x, u) }, .replace (.notch i) (notchPrint (x, u)))
+    | some i, none => ({ h with notches := h.notches.eraseIdx i }, .delete (.notch i))
+    | none, some u => ({ h with notches := h.notches ++ [(x, u)] }, .add (notchPrint (x, u)))
     | none, none => (h, .nothing)
 
 def splice (cs : List Char) (a b : Nat) (ins : String) : List Char :=

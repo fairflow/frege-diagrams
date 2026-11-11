@@ -3,6 +3,7 @@
 ## Unreleased
 
 * docs/LANGUAGE.md: the figure language, with its grammar in EBNF and syntax diagrams generated from one source (docs/tools/grammar.py); CI checks the EBNF and that the examples parse.
+* View B: the hint `notch x up|down` fixes the side a binder's notch opens to; the link router routes around it instead of turning it over. In framedit, notches in the Frege view can be selected and set to automatic, up or down.
 * docs/NOTATION.md: how to read view A and view B, and where the notation departs from Frege's; its pictures are drawn from docs/notation.fgd and the examples by docs/tools/images.sh, checked in CI.
 * The key to view A (`legend.svg`): wider, so the captions no longer run into the right-hand column; a row for labelled relations.
 * Names may contain Greek letters (`Α`–`Ω`, `α`–`ω`), also as first letter; set in LaTeX as their macros, linked in Greek Morse code.

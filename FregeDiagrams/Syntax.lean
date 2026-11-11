@@ -23,7 +23,7 @@ hint   ::= "size" "(" NAT "," NAT ")" | "views" ("A" | "B")
          | key "@" "(" INT "," INT ")" ("label" "(" INT "," INT ")")?
          | "edge" NAME ">" NAME ("#" NAT)? ("/" NAT)?
              ("bend" INT | "side" ("+" | "-") | "at" DEC)*        any order
-         | "loop" key INT | "namedy" INT
+         | "loop" key INT | "namedy" INT | "notch" NAME ("up" | "down")
          | "text" "(" INT "," INT ")"
              ("black" | "red" | "grey" | NAT | "middle" | "italic")* STRING
 key    ::= NAME ("/" NAT)?                        state NAME of panel NAT
@@ -204,6 +204,8 @@ def TextHint.print (t : TextHint) : String :=
     (if t.middle then " middle" else "") ++ (if t.italic then " italic" else "") ++
     s!" \"{t.s}\""
 
+def notchPrint (n : String × Bool) : String := s!"notch {n.1} {if n.2 then "up" else "down"}"
+
 def Hints.print (h : Hints) : List String :=
   (match h.size with | some (w, ht) => [s!"size {printPair w ht}"] | none => []) ++
   (match h.views with | .both => [] | .a => ["views A"] | .b => ["views B"]) ++
@@ -211,6 +213,7 @@ def Hints.print (h : Hints) : List String :=
   h.edges.map EdgeHint.print ++
   h.loops.map LoopHint.print ++
   (match h.nameDy with | some v => [s!"namedy {v}"] | none => []) ++
+  h.notches.map notchPrint ++
   h.texts.map TextHint.print
 
 /-- The canonical text of a figure. -/
@@ -401,6 +404,13 @@ def hint (h : Hints) : Parser Hints := do
   | some (.ident "namedy") =>
     discard next
     return { h with nameDy := some (← int) }
+  | some (.ident "notch") =>
+    discard next
+    let x ← name
+    let up ← if ← isWord "up" then do discard next; pure true
+      else if ← isWord "down" then do discard next; pure false
+      else fail "expected 'up' or 'down'"
+    return { h with notches := h.notches ++ [(x, up)] }
   | some (.ident "loop") =>
     discard next
     let k ← key
@@ -437,7 +447,7 @@ breaks, the order of hints) as it was. -/
 /-- Which hint a span holds: an index into the list of its kind. -/
 inductive HintRef where
   | size | views | namedy
-  | node (i : Nat) | edge (i : Nat) | loop (i : Nat) | text (i : Nat)
+  | node (i : Nat) | edge (i : Nat) | loop (i : Nat) | text (i : Nat) | notch (i : Nat)
 deriving BEq, Repr, Inhabited
 
 structure FigSpans where
@@ -466,6 +476,7 @@ def hintS (h : Hints) : Parser (Hints × HintRef × Span) := do
     | some (.ident "edge") => .edge h.edges.length
     | some (.ident "loop") => .loop h.loops.length
     | some (.ident "text") => .text h.texts.length
+    | some (.ident "notch") => .notch h.notches.length
     | _ => .node h.nodes.length
   let h' ← hint h
   return (h', r, ⟨a, (← get).prevEnd⟩)

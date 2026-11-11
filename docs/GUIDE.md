@@ -126,6 +126,7 @@ which is enough for a first look. View B needs no hints.
 | `edge a>b at 0.3` | the notch at that fraction of the arrow (at most two decimals; default 0.35) |
 | `loop s ANGLE` | the direction, in degrees, of a self-loop |
 | `namedy N` | this figure's bound-name offset in its notches (signed integer, both views); overrides `--notch-name-offset` |
+| `notch x up`, `notch x down` | view B: binder `x`'s notch always opens up (down); the link router routes around it and does not turn it over |
 | `text (X,Y) red 11 middle italic "…"` | a caption: colour `black`/`red`/`grey` (default grey), size, `middle`, `italic` |
 
 ## 2. Drawing
@@ -254,10 +255,17 @@ string is refused.
   formula changed, listing where each changed figure is used (`fig_of%`,
   `\diag`, `\formula` in the repository's `.lean` and `.tex`
   files). The inspector shows the same list for the current figure.
+* Frege view: click a notch (or Tab to it) to select it; the inspector sets
+  its side to *automatic*, *up* or *down* (the hint `notch x up|down`); ↑,
+  ↓ and Delete do the same. With links on, the links are routed again.
+* Problems lists the checks of `Diagrams/Lint` after every redraw (hints that
+  match nothing, notches in the wrong place, overlaps, states off the
+  canvas), each with Show and, where possible, a fix; Run checks adds the
+  layout checks of the Frege view.
 * The toolbar options (links, hidden names, notch-name offset) are the
   command-line flags; they are not stored in the file.
 
-Not yet: warnings for hints that match nothing, editing of view B. The plan is `docs/design/EDITOR.md`.
+Not yet: editing the routes of the links. The plan is `docs/design/EDITOR.md`.
 
 ## 3. Using the output in LaTeX
 
