@@ -49,7 +49,8 @@ draws the same example figures built into the library.
 
 ## Documentation
 
-* [docs/GUIDE.md](docs/GUIDE.md): the language, the tools, LaTeX, giving a figure a meaning in Lean.
+* [docs/LANGUAGE.md](docs/LANGUAGE.md): the figure language, with its grammar (EBNF and syntax diagrams).
+* [docs/GUIDE.md](docs/GUIDE.md): the tools, LaTeX, giving a figure a meaning in Lean.
 * [docs/design/](docs/design/): design notes, the editor's plan, and the plan for further documents.
 
 ## Status
@@ -59,6 +60,10 @@ on the examples and on 2000 pseudo-random figures), not proved. The layout
 checks (no empty bigons or monogons in the routed links, no misplaced names)
 are tested on the examples, not proved. Automatic layout, a proof of the round
 trip and further output formats are proposals, not built.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md): documentation is updated in the same pull request as the change it describes.
 
 ## Licence
 

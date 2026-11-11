@@ -1,0 +1,35 @@
+# Contributing
+
+## Documentation moves with the code
+
+**Any change that alters the design, or that a user can see (the language,
+an option, an output, the editor, a message), updates the documentation in
+the same pull request.** A pull request that changes behaviour and leaves the
+documents describing the old behaviour is not finished.
+
+Where each thing is documented:
+
+| change | update |
+|---|---|
+| the figure language (lexer, parser, printer) | `docs/tools/grammar.py`, then regenerate the EBNF block of `docs/LANGUAGE.md` (`--ebnf`) and the diagrams (`--svg docs/diagrams`); the prose and examples of `docs/LANGUAGE.md` |
+| what the pictures show, or how they are drawn | `docs/GUIDE.md` (and `NOTATION.md` once it exists); the pictures in `docs/images/` if they changed |
+| a `framediag` option, an output file, a check | `docs/GUIDE.md` |
+| the editor (`tools/framedit/`) | `docs/GUIDE.md`, section on framedit; the help texts in the page itself |
+| a design decision, or a plan that changed | `docs/design/` (say what changed and when, rather than deleting the old reasoning) |
+| anything a user would notice | `CHANGELOG.md`, under "Unreleased" |
+
+CI checks the mechanical part: the EBNF in `docs/LANGUAGE.md` must equal the
+grammar, every example in it must parse, and the syntax diagrams must be
+regenerated. The rest is checked in review.
+
+## Checks before a pull request
+
+```bash
+lake build
+lake build FregeDiagrams.Test
+lake exe framediag _build/check --check
+python3 docs/tools/grammar.py --check docs/LANGUAGE.md
+```
+
+Default drawings of existing figures should stay byte-identical unless the
+change is meant to alter them; say so in the pull request when it is.

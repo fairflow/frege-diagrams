@@ -24,3 +24,14 @@ jobs:
           lake exe framediag _build/a --no-pdf
           lake exe framediag _build/b --fig examples/basic.fgd --no-pdf
           diff -r -x '*.tex' _build/a _build/b
+      - name: docs/LANGUAGE.md matches the grammar, and its examples parse
+        run: |
+          python3 docs/tools/grammar.py --check docs/LANGUAGE.md
+          python3 docs/tools/grammar.py --examples docs/LANGUAGE.md _build/lang.fgd
+          lake exe framediag _build/lang --fig _build/lang.fgd --no-pdf
+      - name: The syntax diagrams are up to date
+        run: |
+          pip install railroad-diagrams==3.0.1
+          rm -rf docs/diagrams
+          python3 docs/tools/grammar.py --svg docs/diagrams
+          git diff --exit-code -- docs/diagrams

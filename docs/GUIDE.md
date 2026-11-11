@@ -32,6 +32,9 @@ Lean core only, no Mathlib.
 
 ## 1. Writing a figure
 
+The full definition of the language, with its grammar, is
+[LANGUAGE.md](LANGUAGE.md); this section is a summary.
+
 ```
 fig NAME [hints] = formula
 ```
@@ -104,7 +107,7 @@ fig ex_composite [size (300,140),
 
 Without hints a figure is one line: `fig serial = all t. if s <= t then ex u. t R u°`.
 
-The grammar is in the header of `FregeDiagrams/Syntax.lean`.
+The grammar, with syntax diagrams, is in [LANGUAGE.md](LANGUAGE.md).
 
 ### Hints (view A layout, and `namedy`; optional)
 

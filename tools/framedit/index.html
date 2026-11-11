@@ -378,7 +378,7 @@ function renderInspector(){
     <p class="muted">${d.hinted==="1"?"":"No position hint yet: the first move adds one. "}Keys: arrows by 1, Shift by 10.</p>`;
   } else {
     el.innerHTML=`<h2>Arrow ${esc(d.src)}→${esc(d.tgt)}${d.occ!=="1"?" #"+d.occ:""}</h2>
-    <div class="r"><label data-help="bend N: signed sagitta in units; positive bends to the left of the arrow's direction; 0 removes it.">Bend <input type="number" id="eb" value="${d.bend||0}"></label></div>
+    <div class="r"><label data-help="bend N: signed sagitta in units; positive bends to the right of the arrow's direction as drawn; 0 removes it.">Bend <input type="number" id="eb" value="${d.bend||0}"></label></div>
     ${d.q?`<div class="r"><label data-help="at D: where the notch sits, as a fraction of the arrow (0.05 to 0.95, two decimals; default 0.35).">Notch at <input type="number" id="ea" step="0.01" min="0.05" max="0.95" value="${d.at===""?"":(+d.at/100).toFixed(2)}" placeholder="0.35"></label></div>
     <div class="r"><label data-help="side + or -: which side the notch opens to; default: ∀ above, ∃ below.">Notch side <select id="es"><option value="" ${d.side===""?"selected":""}>default</option><option value="+" ${d.side==="+"?"selected":""}>+</option><option value="-" ${d.side==="-"?"selected":""}>−</option></select></label></div>`:`<p class="muted">No notch on this arrow.</p>`}
     <p class="muted">The relation of an arrow is part of the formula; change it in the text. Keys: ↑/↓ bend${d.q?", ←/→ notch":""}.</p>`;

@@ -1,6 +1,10 @@
 /-
 FregeDiagrams.Syntax: the textual syntax of figures, a printer and a parser.
 
+The definition for users, with the tokens, the EBNF and syntax diagrams, is
+`docs/LANGUAGE.md` (generated from `docs/tools/grammar.py`); keep the three in
+step (CONTRIBUTING.md).  A summary:
+
 ```
 file   ::= figure*
 figure ::= "fig" NAME hints? "=" form
@@ -18,10 +22,10 @@ hints  ::= "[" (hint ("," hint)*)? "]"
 hint   ::= "size" "(" NAT "," NAT ")" | "views" ("A" | "B")
          | key "@" "(" INT "," INT ")" ("label" "(" INT "," INT ")")?
          | "edge" NAME ">" NAME ("#" NAT)? ("/" NAT)?
-             ("bend" INT)? ("side" ("+" | "-"))? ("at" DEC)?
+             ("bend" INT | "side" ("+" | "-") | "at" DEC)*        any order
          | "loop" key INT | "namedy" INT
-         | "text" "(" INT "," INT ")" ("black" | "red" | "grey")? NAT?
-             "middle"? "italic"? STRING
+         | "text" "(" INT "," INT ")"
+             ("black" | "red" | "grey" | NAT | "middle" | "italic")* STRING
 key    ::= NAME ("/" NAT)?                        state NAME of panel NAT
 ```
 
