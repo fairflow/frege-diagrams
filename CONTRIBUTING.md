@@ -12,15 +12,15 @@ Where each thing is documented:
 | change | update |
 |---|---|
 | the figure language (lexer, parser, printer) | `docs/tools/grammar.py`, then regenerate the EBNF block of `docs/LANGUAGE.md` (`--ebnf`) and the diagrams (`--svg docs/diagrams`); the prose and examples of `docs/LANGUAGE.md` |
-| what the pictures show, or how they are drawn | `docs/GUIDE.md` (and `NOTATION.md` once it exists); the pictures in `docs/images/` if they changed |
+| what the pictures show, or how they are drawn | `docs/NOTATION.md` and `docs/GUIDE.md`; regenerate the pictures with `sh docs/tools/images.sh` (CI checks they are current) |
 | a `framediag` option, an output file, a check | `docs/GUIDE.md` |
 | the editor (`tools/framedit/`) | `docs/GUIDE.md`, section on framedit; the help texts in the page itself |
 | a design decision, or a plan that changed | `docs/design/` (say what changed and when, rather than deleting the old reasoning) |
 | anything a user would notice | `CHANGELOG.md`, under "Unreleased" |
 
 CI checks the mechanical part: the EBNF in `docs/LANGUAGE.md` must equal the
-grammar, every example in it must parse, and the syntax diagrams must be
-regenerated. The rest is checked in review.
+grammar, every example in it must parse, and the syntax diagrams and the
+pictures in `docs/images/` must be regenerated. The rest is checked in review.
 
 ## Checks before a pull request
 

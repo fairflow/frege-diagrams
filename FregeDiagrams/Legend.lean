@@ -14,13 +14,14 @@ namespace FregeDiagrams
 open Rel Quant in
 /-- The legend of view A: a key to the drawing conventions, not a formula. -/
 def legend : Diagram := Id.run do
-  let mut g : Diagram := { name := "legend", w := 640, h := 214 }
+  let mut g : Diagram := { name := "legend", w := 720, h := 252 }
   let rows : List (Composite × String) :=
-    [([le], "a ≤ b"), ([R], "a R b"), ([reach], "a ⇝ b"), ([sqle, R], "a (⊑;R) b: bead = infallible middle"), ([eq], "a = b")]
+    [([le], "a ≤ b"), ([R], "a R b"), ([reach], "a ⇝ b"), ([sqle, R], "a (⊑;R) b: bead = infallible middle"), ([eq], "a = b"),
+     ([named "L" true], "a L b: a labelled relation")]
   for (i, (rel, lab)) in (List.range rows.length).zip rows do
     let y : Int := 22 + 38 * i
     g := g.node s!"a{i}" 20 y (label := "") |>.node s!"b{i}" 110 y (label := "")
-    g := g.edge { a := s!"a{i}", b := s!"b{i}", rel, head := rel != [eq] }
+    g := g.edge { a := s!"a{i}", b := s!"b{i}", rel, head := rel != [eq] && rel != [named "L" false] }
     g := g.text 122 (y + 4) lab
   -- (label, edge template, state flags inf/new/cross)
   let rows2 : List (String × Edge × Bool × Bool × Bool) :=
@@ -33,9 +34,9 @@ def legend : Diagram := Id.run do
      ("crossed state: no such state", { a := "", b := "", rel := [R], concl := true }, true, false, true)]
   for (i, (lab, e, inf, new, cross)) in (List.range rows2.length).zip rows2 do
     let y : Int := 22 + 38 * i
-    g := g.node s!"c{i}" 270 y (label := "") |>.node s!"d{i}" 370 y (label := "") (inf := inf) (new := new) (cross := cross)
+    g := g.node s!"c{i}" 360 y (label := "") |>.node s!"d{i}" 460 y (label := "") (inf := inf) (new := new) (cross := cross)
     g := g.edge { e with a := s!"c{i}", b := s!"d{i}" }
-    g := g.text 382 (y + 4) lab
+    g := g.text 472 (y + 4) lab
   return g
 
 end FregeDiagrams
