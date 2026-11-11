@@ -16,6 +16,8 @@ Run by `framediag --check` (errors fail it) and shown live by the editor.
   first stretch.  When they agree the place is free (same quantifiers
   commute).
 * **Notch hints on an arrow without a notch** (warning): no effect.
+* **A definition that is not `"D" {f}`** (error): `judgement definition` needs
+  the name it defines and its definiens.
 * **Overlapping states** (warning) and **states or names outside the canvas**
   (error for a state, warning for a name), from the positions as drawn.
 
@@ -57,14 +59,15 @@ def idShow (id : String) : String :=
 
 def edgeSel (src tgt : String) (occ panel : Nat) : String := s!"edge:{src}>{tgt}#{occ}/{panel}"
 
-/-- The checks of one figure (none for a figure without view A). -/
-def Fig.lint (d : Fig) : Array Lint := Id.run do
+/-- The checks of the pictures of one figure (for a figure without view A,
+only its notch hints). -/
+def Fig.lintPictures (d : Fig) : Array Lint := Id.run do
   if d.hints.views == .b then
     -- only the view-B hint can be checked
-    return (d.hints.notches.filter fun (x, _) => !d.body.bound.contains x).toArray.map fun (x, up) =>
+    return (d.hints.notches.filter fun (x, _) => !d.shown.bound.contains x).toArray.map fun (x, up) =>
       { sev := .error, msg := s!"The hint notch {x} {if up then "up" else "down"} names no quantified state, so it has no effect.",
         fix := some (.notch x none), fixLabel := "Remove the hint" }
-  let ((), fl) := (flatten d.body 1 true false).run {}
+  let ((), fl) := (flatten d.shown 1 true false).run {}
   let h := d.hints
   let edges := fl.items.filterMap fun | .edge e => some e | _ => none
   let loops := fl.items.filterMap fun | .loop p a _ _ => some (p, a) | _ => none
@@ -86,7 +89,7 @@ def Fig.lint (d : Fig) : Array Lint := Id.run do
                         msg := s!"The hint {l.print} names no loop of the picture, so it has no effect.",
                         fix := some (.loop l.key none), fixLabel := "Remove the hint" }
   -- view-B notch hints naming no binder
-  let bound := d.body.bound
+  let bound := d.shown.bound
   for (x, up) in h.notches do
     unless bound.contains x do
       out := out.push { sev := .error,
@@ -147,5 +150,17 @@ def Fig.lint (d : Fig) : Array Lint := Id.run do
         out := out.push { sev := .warning, sel := s!"label:{s.id}",
                           msg := s!"The name of {idShow s.id} is partly outside the canvas ({g.w}×{g.h})." }
   return out
+
+/-- A definition must have the form `"D" {f}`: the name it defines, and its
+definiens. -/
+def Fig.lintJudgement (d : Fig) : Array Lint :=
+  if d.hints.judgement == .definition && d.defines.isNone then
+    #[{ sev := .error,
+        msg := "A definition must be a text with its meaning, \"D\" {formula}: the name it defines and what it stands for.",
+        fix := some (.judgement .claim), fixLabel := "Make it a claim" }]
+  else #[]
+
+/-- The checks of one figure. -/
+def Fig.lint (d : Fig) : Array Lint := d.lintJudgement ++ d.lintPictures
 
 end FregeDiagrams

@@ -140,7 +140,7 @@ def main (args : List String) : IO UInt32 := do
     for f in figs do
       if f.hints.views == .a then continue
       for hb in [false, true] do
-        let t : TreeDiagram := { name := f.name, tree := f.body.toTree }
+        let t : TreeDiagram := f.toTreeDiagram
         let o := f.drawOpts opts
         let r := t.render { o with links := true, hideBound := hb }
         let tag := s!"{f.name}{if hb then " (names hidden)" else ""}"

@@ -17,6 +17,7 @@ relation to infallible targets, and a composite is written `({\sq};R;{\le})`.
 * Adjacent conjuncts that are chains, the second starting where the first
   ends, are written as one chain (`a ρ b ∧ b σ c` is `a ρ b σ c`).
 * A text leaf is typeset by its meaning; a text without one as `\text{…}`.
+* A definition (`judgement definition`, body `"D" {f}`) is `\text{D}\ :\equiv\ f`.
 * Quantifiers and implications extend as far right as possible; parentheses
   are added where that would capture too much.
 -/
@@ -192,6 +193,9 @@ partial def Form.tex (K : List String) : Form → String × Nat × List String
     (" \\vee ".intercalate parts, 1, K)
 
 /-- The formula of a figure, for an arbitrary infallible `s` (left implicit). -/
-def Fig.toLatex (d : Fig) : String := (d.body.tex ["s"]).1
+def Fig.toLatex (d : Fig) : String :=
+  match d.hints.judgement, d.body with
+  | .definition, .text s (some m) => "\\text{" ++ texEscape s ++ "}\\ :\\equiv\\ " ++ (m.tex ["s"]).1
+  | _, b => (b.tex ["s"]).1
 
 end FregeDiagrams
