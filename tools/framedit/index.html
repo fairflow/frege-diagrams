@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>framedit</title>
+<style>
+/* framedit v0.1: toolbar; sketch (editable) and Frege view side by side; inspector; source text, problems, history. */
+:root{
+  --bg:#f3f4f6; --panel:#fff; --ink:#1d2430; --muted:#5b6474; --line:#d5d9e0;
+  --accent:#2457a6; --accent-soft:#e3ecf9; --warn:#8a5a00; --warn-soft:#fdf3dc;
+  --err:#a8261b; --err-soft:#fbe7e4; --ok:#1f6b3a; --ok-soft:#e2f2e7; --ins:#dcefdc; --del:#f6dcdc;
+  --ui:system-ui,-apple-system,"Segoe UI",sans-serif; --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#14171c; --panel:#1d2128; --ink:#e4e7ec; --muted:#9aa3b2; --line:#343a45;
+  --accent:#8fb4ee; --accent-soft:#22324d; --warn:#f0c46a; --warn-soft:#3a2f17;
+  --err:#f19a90; --err-soft:#3d1f1c; --ok:#8ed3a5; --ok-soft:#183324; --ins:#1d3a24; --del:#432121; color-scheme:dark}}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--ui);margin:0;padding:10px 16px 30px}
+h1{font-size:16px;margin:0}
+h2{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+button,select,input,textarea{font:inherit;color:inherit}
+button{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:3px 10px;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.primary{background:var(--accent);color:var(--panel);border-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=number],input[type=text],select{background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:2px 5px}
+input[type=number]{width:70px}
+.bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin:8px 0}
+.grp{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.sep{width:1px;height:22px;background:var(--line)}
+.main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 300px;gap:10px}
+@media (max-width:1100px){.main{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.view{overflow:auto;position:relative}
+.view svg{background:#fff;border:1px solid var(--line);border-radius:3px;display:block;margin:0 auto;max-width:100%;height:auto;touch-action:none}
+.view.stale svg{opacity:.45}
+.badge{font-size:11.5px;border-radius:4px;padding:1px 7px;background:var(--warn-soft);color:var(--warn)}
+.muted{color:var(--muted);font-size:12.5px}
+.explain{border:1px solid var(--accent);background:var(--accent-soft);border-radius:8px;padding:7px 10px;margin:8px 0;min-height:44px}
+.diff{font-family:var(--mono);font-size:12px;white-space:pre-wrap;word-break:break-word;margin-top:3px}
+.diff del{background:var(--del)} .diff ins{background:var(--ins);text-decoration:none}
+.lower{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:10px;margin-top:10px}
+@media (max-width:1100px){.lower{grid-template-columns:minmax(0,1fr)}}
+textarea#src{width:100%;min-height:220px;font-family:var(--mono);font-size:12.5px;line-height:1.5;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px;tab-size:2}
+textarea#src.bad{border-color:var(--err)}
+.errline{color:var(--err);font-size:13px;margin-top:4px;font-family:var(--mono);white-space:pre}
+.insp .r{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:6px 0}
+.insp label{display:flex;gap:5px;align-items:center}
+ul.list{list-style:none;margin:0;padding:0;font-size:13px;display:flex;flex-direction:column;gap:4px}
+ul.list li{border-radius:5px;padding:4px 7px}
+li.error{background:var(--err-soft)} li.warning{background:var(--warn-soft)} li.pass{background:var(--ok-soft)} li.note{background:var(--bg)}
+#hist{max-height:180px;overflow:auto}
+#hist button{border:0;background:none;padding:1px 4px;text-align:left;width:100%}
+#hist li.cur button{font-weight:600;background:var(--accent-soft)}
+#hist li.future button{color:var(--muted)}
+.panel{border:1px solid var(--warn);background:var(--warn-soft);border-radius:8px;padding:8px 10px;margin:8px 0}
+.tex{font-family:var(--mono);font-size:12px;color:var(--muted);overflow-x:auto;white-space:nowrap}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+<div class="grp" style="justify-content:space-between">
+  <div class="grp"><h1>framedit</h1><span class="muted" id="filePath"></span></div>
+  <span class="muted">v0.1 · Lean draws everything you see; every change is a change to the text below</span>
+</div>
+
+<div class="bar" role="toolbar" aria-label="Editor">
+  <div class="grp"><label for="figSel">Figure</label><select id="figSel" data-help="Choose the figure to edit. The text holds all figures of the file."></select></div>
+  <div class="sep"></div>
+  <div class="grp">
+    <button id="undoBtn" data-help="Undo the last change: restores the previous text exactly (⌘Z / Ctrl+Z).">Undo</button>
+    <button id="redoBtn" data-help="Redo the undone change (⇧⌘Z / Ctrl+Shift+Z).">Redo</button>
+  </div>
+  <div class="sep"></div>
+  <div class="grp" role="group" aria-label="Drawing options (command-line flags; not stored in the file)">
+    <label data-help="--links: route binding links in the Frege view (about 2 s per figure). Not stored in the file."><input type="checkbox" id="optLinks"> Links</label>
+    <label data-help="--hide-bound: leave bound names out, both views. Not stored in the file."><input type="checkbox" id="optHide"> Hide bound names</label>
+    <label data-help="--notch-name-offset: move bound names away from the stroke in their notches, both views. A figure's namedy overrides it. Not stored in the file.">Notch-name offset <input type="number" id="optNno" value="0" step="0.5"></label>
+  </div>
+  <div class="sep"></div>
+  <div class="grp">
+    <button id="checkBtn" data-help="Run the layout checks of framediag --check on the Frege view of this figure (links, names shown and hidden). Takes a few seconds.">Run checks</button>
+    <button id="saveBtn" class="primary" data-help="Write the text to the file. Refused if it does not parse or if the file changed on disk; asks first if a formula changed.">Save</button>
+  </div>
+</div>
+
+<div class="explain" id="explain" aria-live="polite"><span class="muted">Hover over or focus a control to see what it does. Click a state, a name or an arrow in the sketch to select it; drag to move; arrow keys nudge by 1 (Shift: 10).</span></div>
+<div id="panel"></div>
+
+<div class="main">
+  <div class="card"><div class="grp" style="justify-content:space-between"><h2>Sketch (view A)</h2><span id="aState"></span></div><div class="view" id="viewA"></div></div>
+  <div class="card"><div class="grp" style="justify-content:space-between"><h2>Frege (view B)</h2><span id="bState"></span></div><div class="view" id="viewB"></div></div>
+  <aside class="card insp" id="insp" aria-label="Inspector"></aside>
+</div>
+
+<div class="lower">
+  <div class="card">
+    <div class="grp" style="justify-content:space-between"><h2>Source text</h2><span class="muted">typing re-parses after a pause; the file changes only on Save</span></div>
+    <textarea id="src" spellcheck="false" aria-label="Source text of the figures" data-help="The figure text. Edit it directly; Lean parses it after you pause. An error shows its line and column, and the pictures keep the last good version."></textarea>
+    <div class="errline" id="srcErr"></div>
+    <div class="tex" id="tex" title="The figure's formula as LaTeX (framediag NAME.tex)"></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+    <div class="card"><h2>Problems</h2><ul class="list" id="probs"><li class="note">Checks of the Frege view have not run (Run checks).</li></ul></div>
+    <div class="card"><h2>History</h2><ul class="list" id="hist"></ul></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ---------- state ---------- */
+let disk = {text:"", hash:""};         // the file as last read or written
+let hist = [], hi = -1;                 // history of texts; hist[hi] is current
+let cur = "";                           // current text (always parses)
+let figs = [], fig = null;
+let sel = null;                         // {k:'state'|'label'|'edge', ...}
+let typingErr = null;
+let lastNudge = null;
+let checked = null;
+let lineOffset = 0, usesCache = {}, lintItems = [];
+const opts = {links:false, hideBound:false, nameDy:0};
+const $ = id => document.getElementById(id);
+
+/* ---------- talking to Lean ---------- */
+let reqId = 0;
+async function lean(req){
+  req.id = ++reqId;
+  const r = await fetch("/api/lean",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(req)});
+  return r.json();
+}
+
+/* ---------- text diff for the explanation strip ---------- */
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function lineDiff(a,b){
+  const A=a.split("\n"),B=b.split("\n"),n=A.length,m=B.length;
+  if(n*m>400000) return {del:["(large change)"],ins:[]};
+  const L=Array.from({length:n+1},()=>new Int32Array(m+1));
+  for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)L[i][j]=A[i]===B[j]?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+  const del=[],ins=[];let i=0,j=0;
+  while(i<n&&j<m){if(A[i]===B[j]){i++;j++;}else if(L[i+1][j]>=L[i][j+1])del.push(A[i++]);else ins.push(B[j++]);}
+  while(i<n)del.push(A[i++]);while(j<m)ins.push(B[j++]);
+  return {del,ins};
+}
+function diffHtml(a,b){
+  const d=lineDiff(a,b);
+  if(!d.del.length&&!d.ins.length) return '<span class="muted">no change to the text</span>';
+  return d.del.map(l=>`<del>− ${esc(l.trim())}</del>`).concat(d.ins.map(l=>`<ins>+ ${esc(l.trim())}</ins>`)).join("\n");
+}
+function explain(title, before, after, more){
+  $("explain").innerHTML = `<b>${esc(title)}</b>${more?` <span class="muted">${esc(more)}</span>`:""}`+
+    (before!=null?`<div class="diff">${diffHtml(before,after)}</div>`:"");
+}
+
+/* ---------- history ---------- */
+function push(text, label, coalesceKey){
+  const now=Date.now();
+  if(coalesceKey && lastNudge && lastNudge.key===coalesceKey && now-lastNudge.t<1500 && hi===hist.length-1 && hi>0){
+    hist[hi]={text,label}; lastNudge.t=now;
+  } else {
+    hist=hist.slice(0,hi+1); hist.push({text,label}); hi=hist.length-1;
+    lastNudge=coalesceKey?{key:coalesceKey,t:now}:null;
+  }
+  setCur(text);
+}
+let lastRefresh=Promise.resolve();
+function setCur(text){
+  if(text!==cur) checked=null;
+  cur=text; typingErr=null;
+  if(document.activeElement!==$("src")) $("src").value=text;
+  $("src").classList.remove("bad"); $("srcErr").textContent="";
+  lastRefresh=refresh();
+}
+/* keyboard edits run one after another, each on the drawing the previous one produced */
+let queue=Promise.resolve();
+function enqueue(fn){ queue=queue.then(fn).then(()=>lastRefresh).catch(e=>console.error(e)); }
+function undo(){ if(hi<=0) return; const a=cur; hi--; lastNudge=null; setCur(hist[hi].text); $("src").value=cur; explain(`Undo: ${hist[hi+1].label}`,a,cur); }
+function redo(){ if(hi>=hist.length-1) return; const a=cur; hi++; lastNudge=null; setCur(hist[hi].text); $("src").value=cur; explain(`Redo: ${hist[hi].label}`,a,cur); }
+
+/* ---------- drawing ---------- */
+let renderSeqA=0, renderSeqB=0, bTimer=null;
+async function refresh(){
+  const p = await lean({op:"parse",text:cur});
+  if(!p.ok){ $("srcErr").textContent=p.error; return; }
+  figs=p.figs;
+  const s=$("figSel"); const names=figs.map(f=>f.name);
+  if(!names.includes(fig)) fig=names[0]||null;
+  s.innerHTML=names.map(n=>`<option ${n===fig?"selected":""}>${esc(n)}</option>`).join("");
+  scheduleB(); renderTex(); renderChrome();
+  await renderA();
+}
+async function renderA(){
+  if(!fig) return;
+  const my=++renderSeqA;
+  const r=await lean({op:"render",text:cur,fig,opts,only:"a"});
+  if(my!==renderSeqA) return;
+  const v=$("viewA"); v.classList.remove("stale");
+  if(!r.ok){ v.innerHTML=`<p class="muted">${esc(r.error)}</p>`; return; }
+  v.innerHTML = r.a || '<p class="muted">This figure has only a Frege view (views B).</p>';
+  decorate(); renderInspector();
+  const l=await lean({op:"lint",text:cur,fig}); if(my!==renderSeqA) return;
+  lintItems = l.ok ? l.items : []; renderProblems();
+}
+function scheduleB(){
+  clearTimeout(bTimer);
+  $("bState").innerHTML = opts.links?'<span class="badge">routing…</span>':"";
+  bTimer=setTimeout(renderB, opts.links?350:60);
+}
+async function renderB(){
+  if(!fig) return;
+  const my=++renderSeqB;
+  const r=await lean({op:"render",text:cur,fig,opts,only:"b"});
+  if(my!==renderSeqB) return;
+  $("bState").innerHTML="";
+  const v=$("viewB"); v.classList.remove("stale");
+  v.innerHTML = r.ok ? (r.b || '<p class="muted">This figure has only a sketch (views A).</p>') : `<p class="muted">${esc(r.error)}</p>`;
+  const svg=v.querySelector("svg"); if(svg) scaleSvg(svg,1.5);
+}
+async function renderTex(){ if(!fig) return; const r=await lean({op:"body",text:cur,fig}); $("tex").textContent=r.ok?r.tex:""; }
+function scaleSvg(svg,k){ const w=+svg.getAttribute("width"), h=+svg.getAttribute("height"); svg.setAttribute("width",w*k); svg.setAttribute("height",h*k); }
+
+function keyOf(g){
+  const k=g.dataset.k;
+  if(k==="edge") return `edge:${g.dataset.src}>${g.dataset.tgt}#${g.dataset.occ}/${g.dataset.panel}`;
+  return `${g.dataset.part==="label"?"label":"state"}:${g.dataset.name}/${g.dataset.panel}`;
+}
+function selKey(){ return sel?sel.key:null; }
+const SVGNS="http://www.w3.org/2000/svg";
+function decorate(){
+  const svg=$("viewA").querySelector("svg"); if(!svg) return;
+  svg.id="paperA"; scaleSvg(svg,2);
+  for(const g of svg.querySelectorAll("g[data-k]")){
+    const isEdge=g.dataset.k==="edge", part=g.dataset.part;
+    if(isEdge){ for(const pl of [...g.querySelectorAll("polyline")]){ const c=pl.cloneNode(); c.setAttribute("stroke","transparent"); c.setAttribute("stroke-width","10"); c.removeAttribute("stroke-dasharray"); c.style.pointerEvents="stroke"; g.appendChild(c);} }
+    else if(part==="dot"){ const c0=g.querySelector("circle"); const c=document.createElementNS(SVGNS,"circle"); c.setAttribute("cx",c0.getAttribute("cx")); c.setAttribute("cy",c0.getAttribute("cy")); c.setAttribute("r","10"); c.setAttribute("fill","transparent"); g.appendChild(c); }
+    else { const t=g.querySelector("text"); const b=t.getBBox(); const r=document.createElementNS(SVGNS,"rect"); r.setAttribute("x",b.x-2); r.setAttribute("y",b.y-2); r.setAttribute("width",b.width+4); r.setAttribute("height",b.height+4); r.setAttribute("fill","transparent"); g.appendChild(r); }
+    g.setAttribute("tabindex","0"); g.setAttribute("role","button");
+    g.style.cursor = isEdge?"pointer":"grab";
+    g.setAttribute("aria-label", isEdge?`Arrow ${g.dataset.src} to ${g.dataset.tgt}`: part==="label"?`Name of ${g.dataset.name}`:`State ${g.dataset.name} at ${g.dataset.x}, ${g.dataset.y}`);
+  }
+  drawSelection();
+}
+function findSel(){ const svg=$("paperA"); if(!svg||!sel) return null; return [...svg.querySelectorAll("g[data-k]")].find(g=>keyOf(g)===sel.key)||null; }
+function nodeG(name,panel){ return [...($("paperA")?.querySelectorAll('g[data-k="state"][data-part="dot"]')||[])].find(g=>g.dataset.name===name&&g.dataset.panel===String(panel)); }
+function drawSelection(){
+  const svg=$("paperA"); if(!svg) return;
+  svg.querySelectorAll(".selmark").forEach(e=>e.remove());
+  const g=findSel(); if(!g) return;
+  const b=g.getBBox(), r=document.createElementNS(SVGNS,"rect");
+  r.setAttribute("x",b.x-3); r.setAttribute("y",b.y-3); r.setAttribute("width",b.width+6); r.setAttribute("height",b.height+6);
+  r.setAttribute("rx","3"); r.setAttribute("fill","none"); r.setAttribute("stroke","#2457a6"); r.setAttribute("stroke-width","1.2"); r.setAttribute("stroke-dasharray","3,2");
+  r.setAttribute("class","selmark"); r.style.pointerEvents="none"; svg.appendChild(r);
+  if(g.dataset.k==="edge"){ // bend handle at the curve's middle
+    const A=nodeG(g.dataset.src,g.dataset.panel), B=nodeG(g.dataset.tgt,g.dataset.panel); if(!A||!B) return;
+    const geo=edgeGeo(g,A,B), h=document.createElementNS(SVGNS,"rect");
+    h.setAttribute("x",geo.m.x-4.5); h.setAttribute("y",geo.m.y-4.5); h.setAttribute("width",9); h.setAttribute("height",9);
+    h.setAttribute("fill","white"); h.setAttribute("stroke","#2457a6"); h.setAttribute("stroke-width","1.5"); h.setAttribute("class","selmark bendh"); h.style.cursor="move";
+    h.dataset.handle="bend"; svg.appendChild(h);
+  }
+}
+/* the arrow's geometry as Frame.lean draws it: quadratic Bézier with control point mid + perp·bend */
+function edgeGeo(g,A,B){
+  const ax=+A.dataset.x, ay=+A.dataset.y, bx=+B.dataset.x, by=+B.dataset.y, bend=+(g.dataset.bend||0);
+  const mx=(ax+bx)/2, my=(ay+by)/2, l=Math.hypot(bx-ax,by-ay)||1, px=-(by-ay)/l, py=(bx-ax)/l;
+  const cx=mx+px*bend, cy=my+py*bend;
+  return {mid:{x:mx,y:my}, perp:{x:px,y:py}, m:{x:(ax+2*cx+bx)/4, y:(ay+2*cy+by)/4}};
+}
+
+/* ---------- edits ---------- */
+async function edit(e, label, base=cur){
+  const r=await lean({op:"edit",text:base,fig,edit:e});
+  if(!r.ok){ explain("Not applied", null, null, r.error); return null; }
+  return r.text;
+}
+function stateEdit(g, x, y, lab){
+  const labelled = g.dataset.labelled==="1";
+  return {kind:"node", name:g.dataset.name, panel:+g.dataset.panel, x, y,
+          label: lab? lab : (labelled?[+g.dataset.lx,+g.dataset.ly]:null)};
+}
+function edgeEdit(g, ch){
+  const cur_ = {bend:g.dataset.bend===""?null:+g.dataset.bend, side:g.dataset.side||null, at:g.dataset.at===""?null:+g.dataset.at};
+  return Object.assign({kind:"edge",src:g.dataset.src,tgt:g.dataset.tgt,occ:+g.dataset.occ,panel:+g.dataset.panel},cur_,ch);
+}
+async function commitEdit(e, label, coalesce){
+  const before=cur; const t=await edit(e,label); if(t==null) return;
+  push(t,label,coalesce); explain(label,before,t,"Layout hint only; the formula is unchanged.");
+}
+
+/* ---------- pointer: select and drag ---------- */
+function svgPt(ev){ const svg=$("paperA"); const p=svg.createSVGPoint(); p.x=ev.clientX; p.y=ev.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+let drag=null, dragBusy=false, dragNext=null;
+$("viewA").addEventListener("pointerdown", ev=>{
+  const svg=$("paperA"); if(!svg) return;
+  if(ev.target.dataset && ev.target.dataset.handle==="bend"){ const g=findSel(); drag={kind:"bend",g:snapshot(g),p0:svgPt(ev),base:cur,text:cur}; $("viewA").setPointerCapture(ev.pointerId); ev.preventDefault(); return; }
+  const g=ev.target.closest("g[data-k]");
+  if(!g){ sel=null; drawSelection(); renderInspector(); return; }
+  sel={key:keyOf(g)}; drawSelection(); renderInspector();
+  if(g.dataset.k==="state"){ drag={kind:g.dataset.part==="label"?"label":"state", g:snapshot(g), p0:svgPt(ev), base:cur, text:cur, moved:false};
+    $("viewA").setPointerCapture(ev.pointerId); ev.preventDefault(); }
+  describeSel();
+});
+function snapshot(g){ return {dataset:{...g.dataset}}; }
+$("viewA").addEventListener("pointermove", ev=>{
+  if(!drag) return; const p=svgPt(ev), dx=Math.round(p.x-drag.p0.x), dy=Math.round(p.y-drag.p0.y);
+  const d=drag.g.dataset; let e;
+  if(drag.kind==="state") e=stateEdit(drag.g,+d.x+dx,+d.y+dy);
+  else if(drag.kind==="label") e=stateEdit(drag.g,+d.x,+d.y,[+d.lx+dx,+d.ly+dy]);
+  else { const A=nodeG(d.src,d.panel),B=nodeG(d.tgt,d.panel); if(!A||!B) return; const geo=edgeGeo({dataset:{bend:"0"}},A,B);
+    const b=Math.round(2*((p.x-geo.mid.x)*geo.perp.x+(p.y-geo.mid.y)*geo.perp.y)); e=edgeEdit(drag.g,{bend:b===0?null:b}); }
+  if(!drag.moved && Math.abs(dx)+Math.abs(dy)<1) return; drag.moved=true;
+  dragNext=e; pumpDrag();
+});
+async function pumpDrag(){
+  if(dragBusy||!dragNext||!drag) return; dragBusy=true; const e=dragNext; dragNext=null;
+  const t=await edit(e,"drag",drag.base);
+  if(t!=null && drag){ drag.text=t; cur=t; $("src").value=t; await renderA(); }
+  dragBusy=false; if(dragNext) pumpDrag();
+}
+$("viewA").addEventListener("pointerup", async ev=>{
+  if(!drag) return; const d=drag; drag=null;
+  while(dragBusy) await new Promise(r=>setTimeout(r,15));
+  if(!d.moved || d.text===d.base) return;
+  const n=d.g.dataset, label = d.kind==="state"?`Move ${n.name}`: d.kind==="label"?`Move the name of ${n.name}`:`Bend ${n.src}→${n.tgt}`;
+  push(d.text,label); explain(label,d.base,d.text,"Layout hint only; the formula is unchanged.");
+});
+$("viewA").addEventListener("focusin", ev=>{ const g=ev.target.closest("g[data-k]"); if(!g) return; if(!sel||sel.key!==keyOf(g)){ sel={key:keyOf(g)}; drawSelection(); renderInspector(); describeSel(); } });
+
+/* ---------- keyboard ---------- */
+document.addEventListener("keydown", ev=>{
+  const inField=!!(ev.target.matches && ev.target.matches("input,select,textarea")), mod=ev.metaKey||ev.ctrlKey;
+  if(mod&&ev.key.toLowerCase()==="z"&&!inField){ev.preventDefault(); ev.shiftKey?redo():undo(); return;}
+  if(mod&&ev.key.toLowerCase()==="y"&&!inField){ev.preventDefault(); redo(); return;}
+  if(inField) return;
+  if(ev.key==="Escape"&&sel){ sel=null; drawSelection(); renderInspector(); return; }
+  const k={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[ev.key];
+  if(!k||!sel) return; if(!findSel()) return; ev.preventDefault();
+  const s=ev.shiftKey?10:1, key=sel.key;
+  enqueue(async ()=>{
+    const g=findSel(); if(!g||sel.key!==key) return; const d=g.dataset;
+    if(d.k==="state"&&d.part==="dot") await commitEdit(stateEdit(g,+d.x+k[0]*s,+d.y+k[1]*s),`Move ${d.name} to (${+d.x+k[0]*s},${+d.y+k[1]*s})`,key);
+    else if(d.k==="state") await commitEdit(stateEdit(g,+d.x,+d.y,[+d.lx+k[0]*s,+d.ly+k[1]*s]),`Move the name of ${d.name} to offset (${+d.lx+k[0]*s},${+d.ly+k[1]*s})`,key);
+    else if(d.k==="edge"&&k[1]){ const b=(d.bend===""?0:+d.bend)-k[1]*s; await commitEdit(edgeEdit(g,{bend:b===0?null:b}),`Bend ${d.src}→${d.tgt} to ${b}`,key); }
+    else if(d.k==="edge"&&k[0]&&d.q){ const a=Math.max(5,Math.min(95,(d.at===""?35:+d.at)+k[0]*s)); await commitEdit(edgeEdit(g,{at:a}),`Move the notch on ${d.src}→${d.tgt} to ${(a/100).toFixed(2)}`,key+"at"); }
+  });
+});
+
+/* ---------- inspector ---------- */
+function describeSel(){
+  const g=findSel(); if(!g){ return; } const d=g.dataset;
+  if(d.k==="edge") explain(`Arrow ${d.src}→${d.tgt}${d.occ!=="1"?" #"+d.occ:""}`,null,null,"Drag the square handle to bend it, or ↑/↓; ←/→ moves its notch. Hint: edge "+d.src+">"+d.tgt+".");
+  else if(d.part==="label") explain(`Name of ${d.name}`,null,null,"Drag it, or use the arrow keys. Changes the label offset of the state's position hint.");
+  else explain(`State ${d.name}`,null,null,`Drag it, or use the arrow keys (Shift: 10). Changes the hint ${d.name}@(${d.x},${d.y}).`);
+}
+function renderInspector(){
+  const el=$("insp"); const g=findSel();
+  if(!g){
+    const f=figs.find(x=>x.name===fig)||{}; const svg=$("paperA");
+    const w=f.hasSize?f.w:(svg?+svg.getAttribute("width")/2:0), h=f.hasSize?f.h:(svg?+svg.getAttribute("height")/2:0);
+    const cm=v=>(v*0.75/28.3465).toFixed(1);
+    el.innerHTML=`<h2>Figure ${esc(fig||"")}</h2>
+    <div class="r"><label data-help="Canvas width (size hint).">W <input type="number" id="fw" value="${w}"></label><label data-help="Canvas height (size hint).">H <input type="number" id="fh" value="${h}"></label></div>
+    <p class="muted">${f.hasSize?"":"No size hint: the size is computed. "}Printed at scale 1: ${cm(w)} × ${cm(h)} cm.</p>
+    <div class="r"><label data-help="namedy N: this figure's bound-name offset, both views; overrides the toolbar option. Empty removes the hint.">namedy <input type="number" id="fnd" value="${f.namedy??""}" placeholder="none"></label></div>
+    <h2 style="margin-top:10px">Used in</h2><p id="usesP" class="muted">…</p>
+    <p class="muted">Select a state, a name or an arrow in the sketch to edit it. <kbd>Esc</kbd> comes back here.</p>`;
+    const name=fig; usesOf([name]).then(u=>{ const e=$("usesP"); if(e&&fig===name) e.innerHTML=usesHtml(u[name]); });
+    return;
+  }
+  const d=g.dataset;
+  if(d.k==="state"){
+    el.innerHTML=`<h2>State ${esc(d.name)}${d.panel!=="1"?" (panel "+d.panel+")":""}</h2>
+    <div class="r"><label data-help="x of the position hint ${esc(d.name)}@(x,y).">X <input type="number" id="nx" value="${d.x}"></label><label data-help="y of the position hint.">Y <input type="number" id="ny" value="${d.y}"></label></div>
+    <div class="r"><label data-help="Label offset: label (DX,DY) in the position hint.">Name DX <input type="number" id="lx" value="${d.lx}"></label><label>DY <input type="number" id="ly" value="${d.ly}"></label></div>
+    <div class="r"><button id="unlabel" ${d.labelled==="1"?"":"disabled"} data-help="Remove label (DX,DY): the name goes back to 10 above the state.">Reset name offset</button>
+    <button id="unnode" ${d.hinted==="1"?"":"disabled"} data-help="Remove the position hint: the state goes back to the automatic grid.">Remove position hint</button></div>
+    <p class="muted">${d.hinted==="1"?"":"No position hint yet: the first move adds one. "}Keys: arrows by 1, Shift by 10.</p>`;
+  } else {
+    el.innerHTML=`<h2>Arrow ${esc(d.src)}→${esc(d.tgt)}${d.occ!=="1"?" #"+d.occ:""}</h2>
+    <div class="r"><label data-help="bend N: signed sagitta in units; positive bends to the left of the arrow's direction; 0 removes it.">Bend <input type="number" id="eb" value="${d.bend||0}"></label></div>
+    ${d.q?`<div class="r"><label data-help="at D: where the notch sits, as a fraction of the arrow (0.05 to 0.95, two decimals; default 0.35).">Notch at <input type="number" id="ea" step="0.01" min="0.05" max="0.95" value="${d.at===""?"":(+d.at/100).toFixed(2)}" placeholder="0.35"></label></div>
+    <div class="r"><label data-help="side + or -: which side the notch opens to; default: ∀ above, ∃ below.">Notch side <select id="es"><option value="" ${d.side===""?"selected":""}>default</option><option value="+" ${d.side==="+"?"selected":""}>+</option><option value="-" ${d.side==="-"?"selected":""}>−</option></select></label></div>`:`<p class="muted">No notch on this arrow.</p>`}
+    <p class="muted">The relation of an arrow is part of the formula; change it in the text. Keys: ↑/↓ bend${d.q?", ←/→ notch":""}.</p>`;
+  }
+}
+document.addEventListener("change", async ev=>{
+  const t=ev.target, id=t.id, g=findSel(), d=g?g.dataset:null, v=t.value.trim(), num=v===""?null:Number(v);
+  if(["fw","fh","fnd","nx","ny","lx","ly","eb","ea","es"].includes(id) && v!=="" && id!=="es" && !Number.isFinite(num)){ t.style.borderColor="var(--err)"; return; }
+  if(id==="fw"||id==="fh"){ const w=+$("fw").value,h=+$("fh").value; if(!(w>=20&&h>=20)){t.style.borderColor="var(--err)";explain("Not applied",null,null,"Width and height must be at least 20.");return;} commitEdit({kind:"size",w,h},`Canvas ${w}×${h}`); }
+  else if(id==="fnd") commitEdit({kind:"namedy",v:num===null?null:Math.round(num)}, num===null?"Remove namedy":`namedy ${Math.round(num)}`);
+  else if(id==="nx"||id==="ny") commitEdit(stateEdit(g,Math.round(+$("nx").value),Math.round(+$("ny").value)),`Move ${d.name}`);
+  else if(id==="lx"||id==="ly") commitEdit(stateEdit(g,+d.x,+d.y,[Math.round(+$("lx").value),Math.round(+$("ly").value)]),`Move the name of ${d.name}`);
+  else if(id==="eb") commitEdit(edgeEdit(g,{bend:num?Math.round(num):null}),`Bend ${d.src}→${d.tgt}`);
+  else if(id==="ea"){ if(num!==null&&!(num>=0.05&&num<=0.95&&Math.abs(num*100-Math.round(num*100))<1e-9)){t.style.borderColor="var(--err)";explain("Not applied",null,null,"Between 0.05 and 0.95, at most two decimals.");return;} commitEdit(edgeEdit(g,{at:num===null?null:Math.round(num*100)}),`Notch on ${d.src}→${d.tgt} at ${v||"default"}`); }
+  else if(id==="es") commitEdit(edgeEdit(g,{side:v||null}),`Notch on ${d.src}→${d.tgt} opens to ${v||"its default side"}`);
+  else if(id==="figSel"){ fig=t.value; sel=null; checked=null; renderProblems(); renderA(); scheduleB(); renderTex(); }
+  else if(id==="optLinks"){ opts.links=t.checked; scheduleB(); }
+  else if(id==="optHide"){ opts.hideBound=t.checked; renderA(); scheduleB(); }
+  else if(id==="optNno"){ opts.nameDy=Number(t.value)||0; renderA(); scheduleB(); }
+});
+document.addEventListener("click", ev=>{
+  const t=ev.target.closest("button"); if(!t) return; const g=findSel(), d=g?g.dataset:null;
+  if(t.id==="undoBtn") undo(); else if(t.id==="redoBtn") redo();
+  else if(t.id==="unlabel") commitEdit({kind:"node",name:d.name,panel:+d.panel,x:+d.x,y:+d.y,label:null},`Reset the name offset of ${d.name}`);
+  else if(t.id==="unnode") commitEdit({kind:"unnode",name:d.name,panel:+d.panel},`Remove the position hint of ${d.name}`);
+  else if(t.id==="checkBtn") runCheck();
+  else if(t.id==="saveBtn") save();
+  else if(t.dataset.lintshow!==undefined){ const p=lintItems[+t.dataset.lintshow]; sel={key:p.sel}; drawSelection(); renderInspector(); const g=findSel(); if(g){ g.focus({preventScroll:false}); describeSel(); } }
+  else if(t.dataset.lintfix!==undefined){ const p=lintItems[+t.dataset.lintfix]; commitEdit(p.fix, p.fixLabel); }
+  else if(t.dataset.hist) { const i=+t.dataset.hist; const a=cur; hi=i; lastNudge=null; setCur(hist[i].text); $("src").value=cur; explain(`Back to: ${hist[i].label}`,a,cur); }
+});
+document.addEventListener("mouseover", ev=>{ const h=ev.target.closest("[data-help]"); if(h&&!drag) $("explain").innerHTML=`<b>${esc(h.textContent.trim().split("\n")[0].slice(0,60)||"")}</b> <span class="muted">${esc(h.dataset.help)}</span>`; });
+document.addEventListener("focusin", ev=>{ const h=ev.target.closest("[data-help]"); if(h) $("explain").innerHTML=`<span class="muted">${esc(h.dataset.help)}</span>`; });
+
+/* ---------- typing in the text ---------- */
+let typeTimer=null, typeBase=null;
+$("src").addEventListener("input", ()=>{
+  if(typeBase===null) typeBase=cur;
+  clearTimeout(typeTimer);
+  typeTimer=setTimeout(async ()=>{
+    const v=$("src").value; const p=await lean({op:"parse",text:v});
+    if(p.ok){ const b=typeBase; typeBase=null; push(v,"Edit the text","text"); explain("Text edited",b,v); }
+    else { typingErr=p.error; $("src").classList.add("bad"); $("srcErr").textContent=errWithCaret(v,p.error); $("viewA").classList.add("stale"); $("viewB").classList.add("stale");
+      $("aState").innerHTML='<span class="badge">out of date</span>'; }
+    renderChrome();
+  }, 300);
+});
+function errWithCaret(text,err){
+  const m=/^line (\d+), column (\d+): /.exec(err); if(!m) return err;
+  const line=text.split("\n")[+m[1]-1]??""; const fileLine=lineOffset?` (line ${+m[1]+lineOffset} of the file)`:"";
+  return `${err}${fileLine}\n  ${line}\n  ${" ".repeat(Math.max(0,+m[2]-1))}^`;
+}
+
+/* ---------- checks, problems ---------- */
+async function runCheck(){
+  $("probs").innerHTML='<li class="note">Routing the Frege view with links, names shown and hidden…</li>';
+  const r=await lean({op:"check",text:cur,fig,opts}); checked=r; renderProblems();
+}
+function renderProblems(){
+  const ul=$("probs");
+  let h = lintItems.length
+    ? lintItems.map((p,i)=>`<li class="${p.sev}"><b>${p.sev==="error"?"Error":"Warning"}.</b> ${esc(p.msg)}
+        <span style="display:inline-flex;gap:4px;margin-left:4px">${p.sel?`<button data-lintshow="${i}" data-help="Select the object in the sketch.">Show</button>`:""}${p.fix?`<button data-lintfix="${i}" data-help="${esc(p.fixLabel)}: a change to one hint, shown in the strip above; undo restores it.">${esc(p.fixLabel)}</button>`:""}</span></li>`).join("")
+    : '<li class="pass">Hints and sketch: no problems.</li>';
+  if(!checked) h += '<li class="note">Layout checks of the Frege view have not run (Run checks).</li>';
+  else if(!checked.ok) h += `<li class="error">${esc(checked.error)}</li>`;
+  else h += (checked.problems.length?checked.problems.map(p=>`<li class="error">${esc(p)}</li>`).join(""):'<li class="pass">Frege view: no empty bigons or monogons, no misplaced names.</li>')
+    + checked.notes.map(n=>`<li class="note">${esc(n)}</li>`).join("");
+  ul.innerHTML=h;
+}
+
+/* ---------- toolbar state, history list ---------- */
+function renderChrome(){
+  $("undoBtn").disabled=hi<=0; $("redoBtn").disabled=hi>=hist.length-1;
+  $("undoBtn").title=hi>0?`Undo: ${hist[hi].label}`:"Nothing to undo"; $("redoBtn").title=hi<hist.length-1?`Redo: ${hist[hi+1].label}`:"Nothing to redo";
+  const dirty=cur!==disk.text; const sb=$("saveBtn"); sb.disabled=!dirty||!!typingErr; sb.textContent=dirty?"Save":"Saved";
+  sb.title=typingErr?"The text does not parse; fix it first":"";
+  $("hist").innerHTML=hist.map((h,i)=>`<li class="${i===hi?"cur":i>hi?"future":""}"><button data-hist="${i}">${esc(h.label)}${i>hi?" (undone)":""}</button></li>`).join("");
+  if(!typingErr) $("aState").innerHTML="";
+}
+
+/* ---------- where figures are used ---------- */
+async function usesOf(names){
+  const need=names.filter(n=>!(n in usesCache));
+  if(need.length){ const r=await fetch("/api/uses",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({names:need})}); Object.assign(usesCache, await r.json()); }
+  const o={}; for(const n of names) o[n]=usesCache[n]||[]; return o;
+}
+function usesHtml(list){ return list.length? list.map(u=>`<code>${esc(u)}</code>`).join(", ") : '<span class="muted">nowhere outside this file</span>'; }
+
+/* ---------- save ---------- */
+async function bodies(text){
+  const p=await lean({op:"parse",text}); if(!p.ok) return null;
+  const out={}; for(const f of p.figs){ const b=await lean({op:"body",text,fig:f.name}); out[f.name]=b.body; } return out;
+}
+async function save(){
+  const a=await bodies(disk.text), b=await bodies(cur);
+  const changed=[]; if(b){ for(const n in b){ if(!a||!(n in a)) changed.push(`${n} (new)`); else if(a[n]!==b[n]) changed.push(n); } if(a) for(const n in a) if(!(n in b)) changed.push(`${n} (removed)`); }
+  if(changed.length){
+    const u=await usesOf(changed.map(c=>c.replace(/ \((new|removed)\)$/,"")));
+    $("panel").innerHTML=`<div class="panel" role="alertdialog" aria-labelledby="pt"><b id="pt">The formula changed in: ${esc(changed.join(", "))}.</b>
+      <p style="margin:4px 0">Layout hints never affect meaning, but these formulas did change. The Lean theorems and documents that use them may need updating; the build will say which.</p>
+      <ul style="margin:4px 0 8px">${Object.entries(u).map(([n,l])=>`<li><b>${esc(n)}</b> is used in: ${usesHtml(l)}</li>`).join("")}</ul>
+      <button class="primary" id="saveAnyway">Save anyway</button> <button id="saveCancel">Cancel</button></div>`;
+    $("saveAnyway").onclick=()=>{ $("panel").innerHTML=""; doSave(); }; $("saveCancel").onclick=()=>{ $("panel").innerHTML=""; };
+    $("saveAnyway").focus(); return;
+  }
+  doSave();
+}
+async function doSave(){
+  const r=await fetch("/api/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:cur,base:disk.hash})});
+  const j=await r.json();
+  if(r.status===409){
+    $("panel").innerHTML=`<div class="panel" role="alertdialog"><b>${esc(j.error)}</b><p style="margin:4px 0">Your text is kept here. Load the file's new version (your changes stay in the history and can be redone by hand), or keep editing.</p>
+      <button id="reload">Load the file's version</button> <button id="keep">Keep editing</button></div>`;
+    $("reload").onclick=()=>{ $("panel").innerHTML=""; disk={text:j.text,hash:j.hash}; push(j.text,"Loaded the file's new version"); };
+    $("keep").onclick=()=>{ $("panel").innerHTML=""; }; return;
+  }
+  if(!j.ok){ explain("Not saved",null,null,j.error); return; }
+  disk={text:cur,hash:j.hash}; explain("Saved",null,null,"The file now holds this text."); renderChrome();
+}
+
+/* ---------- start ---------- */
+(async ()=>{
+  const r=await fetch("/api/file"); const f=await r.json();
+  disk={text:f.text,hash:f.hash}; lineOffset=f.lineOffset||0;
+  $("filePath").textContent=`${f.path} · ${f.kind}${lineOffset?` (its line 1 is line ${lineOffset+1} of the file)`:""}`;
+  hist=[{text:f.text,label:"Opened the file"}]; hi=0; setCur(f.text); $("src").value=f.text;
+})();
+window.addEventListener("beforeunload", e=>{ if(cur!==disk.text){ e.preventDefault(); e.returnValue=""; } });
+</script>
+</body>
+</html>

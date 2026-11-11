@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="175" height="140" viewBox="0 0 175 140">
+<rect width="100%" height="100%" fill="white"/>
+<g transform="translate(-2.0,-5.9)">
+<polyline points="14.0,45.0 14.0,63.0" fill="none" stroke="#1b1b1b" stroke-width="2.0" stroke-linecap="round"/>
+<polyline points="24.0,54.0 24.0,40.0 37.2,40.0 37.2,54.0" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round"/>
+<text x="30.6" y="49.7" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="12" font-style="italic" text-anchor="middle" fill="#c0392b">y</text>
+<polyline points="14.0,54.0 24.0,54.0" fill="none" stroke="#c0392b" stroke-width="1.3" stroke-linecap="round"/>
+<polyline points="37.2,54.0 41.2,54.0" fill="none" stroke="#c0392b" stroke-width="1.3" stroke-linecap="round"/>
+<polyline points="41.2,54.0 51.2,54.0" fill="none" stroke="#c0392b" stroke-width="1.3" stroke-linecap="round"/>
+<polyline points="51.2,54.0 61.2,54.0" fill="none" stroke="#c0392b" stroke-width="1.3" stroke-linecap="round"/>
+<polyline points="61.2,54.0 77.2,48.0" fill="none" stroke="#c0392b" stroke-width="1.3" stroke-linecap="round"/>
+<polyline points="77.2,48.0 87.2,48.0" fill="none" stroke="#c0392b" stroke-width="1.3" stroke-linecap="round"/>
+<circle cx="95.2" cy="48.0" r="4.2" fill="#c0392b" stroke="#c0392b" stroke-width="1.4"/>
+<text x="95.2" y="39.0" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="12" font-style="italic" text-anchor="middle" fill="#c0392b">y</text>
+<polyline points="91.2,41.8 89.5,38.5 88.0,35.4 86.9,32.6 86.0,30.0 85.4,27.7 85.1,25.6 85.1,23.8 85.4,22.2 85.9,20.8 86.8,19.8 87.9,18.9 89.3,18.3 91.0,18.0 92.9,17.9 95.2,18.0 97.5,17.9 99.4,18.0 101.1,18.3 102.5,18.9 103.6,19.8 104.5,20.8 105.0,22.2 105.3,23.8 105.3,25.6 105.0,27.7 104.4,30.0 103.5,32.6 102.4,35.4 100.9,38.5 99.2,41.8" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round"/>
+<polygon points="99.2,41.8 99.3,33.0 105.9,36.1" fill="#c0392b"/>
+<polyline points="61.2,54.0 77.2,88.0" fill="none" stroke="#c0392b" stroke-width="1.3" stroke-linecap="round"/>
+<polyline points="77.2,88.0 87.2,88.0" fill="none" stroke="#c0392b" stroke-width="1.3" stroke-linecap="round"/>
+<circle cx="95.2" cy="88.0" r="4.2" fill="white" stroke="#c0392b" stroke-width="1.4"/>
+<text x="95.2" y="79.0" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="12" font-style="italic" text-anchor="middle" fill="#c0392b">s</text>
+<polyline points="101.4,88.0 101.5,88.0 102.7,88.4 103.9,89.1 105.2,88.8 106.5,87.2 107.7,85.5 108.9,85.8 110.2,87.6 111.5,89.7 112.7,90.6 114.0,89.6 115.2,87.5 116.4,85.7 117.7,85.6 118.9,87.2 120.2,89.4 121.4,90.6 122.7,89.9 123.9,87.9 125.2,86.0 126.4,85.5 127.7,86.8 128.9,89.0 130.2,90.2 131.4,89.7 132.7,88.2 133.9,87.1 135.2,87.0 136.4,87.6 137.7,88.1 138.9,88.0 139.0,88.0" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round"/>
+<polygon points="139.0,88.0 131.0,91.6 131.0,84.4" fill="#c0392b"/>
+<circle cx="145.2" cy="88.0" r="4.2" fill="#c0392b" stroke="#c0392b" stroke-width="1.4"/>
+<text x="145.2" y="79.0" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="12" font-style="italic" text-anchor="middle" fill="#c0392b">y</text>
+<circle cx="61.2" cy="54.0" r="2.2" fill="#c0392b"/>
+<polyline points="51.2,130.0 61.2,130.0" fill="none" stroke="#1b1b1b" stroke-width="1.3" stroke-linecap="round"/>
+<circle cx="69.2" cy="130.0" r="4.2" fill="white" stroke="#1b1b1b" stroke-width="1.4"/>
+<text x="69.2" y="121.0" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="12" font-style="italic" text-anchor="middle" fill="#1b1b1b">s</text>
+<polyline points="75.4,130.0 76.1,130.0 78.4,130.0 80.8,130.0 83.1,130.0 85.4,130.0 87.7,130.0 90.0,130.0 92.3,130.0 94.6,130.0 96.9,130.0 99.2,130.0 101.5,130.0 102.1,130.0" fill="none" stroke="#1b1b1b" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="5,3.2"/>
+<polyline points="102.1,130.0 103.8,130.0 106.2,130.0 108.5,130.0 110.8,130.0 113.1,130.0 115.4,130.0 117.7,130.0 120.0,130.0 122.3,130.0 124.6,130.0 127.0,130.0 128.7,130.0" fill="none" stroke="#1b1b1b" stroke-width="1.5" stroke-linecap="round"/>
+<polyline points="128.7,130.0 129.3,130.0 131.6,130.0 133.9,130.0 136.2,130.0 138.5,130.0 140.8,130.0 143.1,130.0 145.4,130.0 147.7,130.0 150.1,130.0 152.4,130.0 154.7,130.0 155.4,130.0" fill="none" stroke="#1b1b1b" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="5,3.2"/>
+<circle cx="102.1" cy="130.0" r="3.2" fill="white" stroke="#1b1b1b" stroke-width="1.3"/>
+<polygon points="155.4,130.0 147.4,133.6 147.4,126.4" fill="#1b1b1b"/>
+<circle cx="161.6" cy="130.0" r="4.2" fill="white" stroke="#1b1b1b" stroke-width="1.4"/>
+<text x="161.6" y="121.0" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="12" font-style="italic" text-anchor="middle" fill="#1b1b1b">y</text>
+<polyline points="51.2,54.0 51.2,130.0" fill="none" stroke="#1b1b1b" stroke-width="1.3" stroke-linecap="round"/>
+</g>
+</svg>

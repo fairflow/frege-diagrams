@@ -1,0 +1,65 @@
+/-
+FregeDiagrams.Examples: a small example source in the figure language.
+
+`exampleSource` is what `lake exe framediag` draws when no `--fig FILE` is
+given, and what `FregeDiagrams.Test` checks.  It holds the legends of view B
+(the key to the formula trees, with text leaves only), the three ways of
+bracketing an implication, and a few neutral illustrative frame conditions.
+None of them is attached to a theorem; a client that gives figures a meaning
+does so in its own library (see `docs/GUIDE.md`, section 4).
+
+Free state: `s` (an arbitrary infallible state, not drawn with a notch).
+-/
+namespace FregeDiagrams
+
+/-- The example figures, as text in the syntax of `FregeDiagrams.Syntax`. -/
+def exampleSource : String := r#"
+-- Legends of view B (no picture of view A, no meaning)
+fig legend_B [views B] = if "hypothesis 1", "hypothesis 2" then "conclusion"
+
+fig legend_B2 [views B] = all x. ex y. not ("part 1" & "part 2")
+
+fig legend_B3 [views B] = ex x. ("part 1" | "part 2")
+
+-- Bracketing: the comma is currying (one condition stroke per hypothesis);
+-- conjunction is only ever a fork; a nested antecedent hangs a whole tree.
+fig legend_curried [views B] = if "A", "B" then "C"
+fig legend_conj [views B] = if ("A" & "B") then "C"
+fig legend_nested [views B] = if (if "A" then "B") then "C"
+
+-- Transitivity of ≤ along two given steps
+fig ex_trans [size (300,150),
+    s@(30,115), u@(150,40), t@(270,115) label (12,4),
+    edge s>u side -, edge u>t side -, edge s>t bend 10] =
+  all u. all t. if s <= u, u <= t then s <= t
+
+-- Every ≤-successor has an infallible R-successor
+fig ex_serial [size (300,150),
+    s@(30,115), t@(150,115), u@(270,40) label (12,4),
+    edge s>t at 0.40, edge t>u side - at 0.45] =
+  all t. if s <= t then ex u. t R u°
+
+-- A composite relation, a self-loop and reachability
+fig ex_composite [size (300,140),
+    s@(30,100), y@(250,100) label (12,4),
+    edge s>y bend -40 at 0.17, edge s>y#2 bend 12, loop y -90] =
+  all y. if s <=°;R;<= y° then (y R y & s ~> y)
+
+-- A disjunction: one panel per disjunct, with a caption between them
+fig ex_or [size (440,140),
+    s@(30,100), t@(160,100) label (12,4),
+    s/2@(280,100) label (-10,-8), u/2@(410,100),
+    edge s>t side + at 0.40, edge s>u/2 side +,
+    text (220,70) black 14 middle italic "or",
+    text (345,132) red 11 middle "no other infallible ≤-successor"] =
+  (ex t. s R t° | not ex u. s <= u° != s)
+
+-- A text leaf with a meaning, used as a hypothesis
+fig ex_text [size (300,150),
+    s@(40,110), u@(150,45), t@(260,110) label (12,4),
+    edge s>u side -, edge u>t side -,
+    text (150,142) grey 11 middle "(for each such u)"] =
+  all u. if s <= u°, "u is a dead end" {not ex x. u R x} then ex t. (u <= t & s <= t)
+"#
+
+end FregeDiagrams

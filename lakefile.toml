@@ -1,0 +1,10 @@
+name = "frege-diagrams"
+defaultTargets = ["FregeDiagrams", "framediag"]
+
+[[lean_lib]]
+name = "FregeDiagrams"
+globs = ["FregeDiagrams.+"]
+
+[[lean_exe]]
+name = "framediag"
+root = "FregeDiagrams.Main"

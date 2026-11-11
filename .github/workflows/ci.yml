@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          test: false
+          use-mathlib-cache: false
+      - name: Tests (the #guard checks of the library)
+        run: lake build FregeDiagrams.Test
+      - name: Layout checks and the example figures
+        run: |
+          lake exe framediag _build/check --check
+          lake exe framediag _build/ex --fig examples/basic.fgd --no-pdf
+      - name: examples/basic.fgd draws the same as the built-in examples
+        run: |
+          lake exe framediag _build/a --no-pdf
+          lake exe framediag _build/b --fig examples/basic.fgd --no-pdf
+          diff -r -x '*.tex' _build/a _build/b
