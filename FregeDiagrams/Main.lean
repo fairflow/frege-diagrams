@@ -98,7 +98,7 @@ def main (args : List String) : IO UInt32 := do
   let figs ← match parseFile src with
     | .ok fs => pure fs
     | .error e => IO.eprintln s!"framediag: {srcName}: {e}"; return 1
-  if pdf && !(← haveRsvg) then
+  if pdf && !check && !(← haveRsvg) then
     IO.eprintln "framediag: rsvg-convert not found on PATH; it makes the PDF copies of the SVGs.\n  Install librsvg (macOS: `brew install librsvg` or `port install librsvg`), or pass --no-pdf."
     return 1
   if check then
