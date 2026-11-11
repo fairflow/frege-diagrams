@@ -29,7 +29,7 @@ starts a labelled relation, not a comment).
 
 | token | written | notes |
 |---|---|---|
-| name | `s`, `t₁`, `u′`, `s'`, `x_2` | an ASCII letter or `_`, then ASCII letters, digits, `_`, `'`, `′` and the subscript digits `₀`–`₉`; `'` is displayed as `′`. Not one of the reserved words below. |
+| name | `s`, `t₁`, `u′`, `s'`, `x_2`, `σ`, `Δ₂` | an ASCII letter, a Greek letter (`Α`–`Ω`, `α`–`ω`) or `_`, then any of these, digits, `'`, `′` and the subscript digits `₀`–`₉`; `'` is displayed as `′`. Not one of the reserved words below. |
 | integer | `12`, `-34` | a `-` directly before a digit makes a negative integer |
 | decimal | `0.35`, `1`, `2.5` | at most two digits after the point; never negative |
 | string | `"u is a dead end"` | anything except `"`, which cannot be written inside a string |
@@ -42,7 +42,16 @@ Reserved words, which cannot be names: `fig`, `all`, `ex`, `not`, `if`,
 since a hint starting with one of them is read as that hint.
 
 Unicode beyond the characters above can be used in strings, labels and
-comments: `"σ ⊨ φ"` and `-[≡ᵣ]-` are fine, a state named `σ` is not.
+comments: `"x ⊨ φ"` and `-[≡ᵣ]-` are fine, a state named `⊤` or `ϕ` (U+03D5,
+outside the Greek ranges) is not.
+
+Greek names are set in LaTeX as their macros (`σ₁` as `{\sigma}_1`; capitals
+that look like Latin letters, such as `Α`, as those letters), and a binding
+link of a Greek name is dashed in Greek Morse code.
+
+```fgd
+fig lang_greek = all σ. if s <= σ then ex τ₁. σ R τ₁°
+```
 
 ## Grammar
 
@@ -104,7 +113,10 @@ pair          ::= "(" int "," int ")"
 
 /* Tokens */
 name          ::= letter ( letter | digit | "'" | "′" | subscript )*
-letter        ::= [a-zA-Z] | "_"
+letter        ::= [a-zA-Z]
+                | [Α-Ω]
+                | [α-ω]
+                | "_"
 digit         ::= [0-9]
 subscript     ::= [₀-₉]
 int           ::= "-"? digit+

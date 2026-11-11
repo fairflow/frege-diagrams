@@ -120,10 +120,15 @@ deriving BEq, Repr, Inhabited
 
 def isSubscriptDigit (c : Char) : Bool := '₀' ≤ c && c ≤ '₉'
 
-def isIdentStart (c : Char) : Bool := c.isAlpha || c == '_'
+/-- A Greek letter: `Α`–`Ω` (without the unassigned U+03A2) and `α`–`ω`
+(with the final sigma `ς`). -/
+def isGreekLetter (c : Char) : Bool :=
+  ('Α' ≤ c && c ≤ 'Ω' && c.toNat != 0x3A2) || ('α' ≤ c && c ≤ 'ω')
+
+def isIdentStart (c : Char) : Bool := c.isAlpha || c == '_' || isGreekLetter c
 
 def isIdentChar (c : Char) : Bool :=
-  c.isAlphanum || c == '_' || c == '\'' || c == '′' || isSubscriptDigit c
+  c.isAlphanum || c == '_' || c == '\'' || c == '′' || isSubscriptDigit c || isGreekLetter c
 
 /-- Words with a fixed meaning in a formula; no name may be one of them. -/
 def reserved : List String := ["fig", "all", "ex", "not", "if", "then", "R"]

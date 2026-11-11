@@ -64,7 +64,7 @@ fig NAME [hints] = formula
 
 Rules:
 
-* `--` starts a comment (a labelled relation `-[` is not one). Names may use Unicode: `s′`, `t₁`.
+* `--` starts a comment (a labelled relation `-[` is not one). Names may use primes, subscript digits and Greek letters: `s′`, `t₁`, `σ` (the exact rule is in [LANGUAGE.md](LANGUAGE.md)).
 * Binders carry no `°` (`all y.`); `°` belongs to occurrences.
 * **Labelled relations** are for relations a frame does not have. Unicode
   subscripts in a label (`ᵣ₊₁`, `₂ₙ₊₁`) are set as real SVG subscripts, so
