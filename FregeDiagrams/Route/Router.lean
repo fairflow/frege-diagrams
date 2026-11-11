@@ -583,7 +583,7 @@ and monogons the links leave (none when the routing is locally minimal). -/
 def TreeDiagram.render (d : TreeDiagram) (o : DrawOpts := {}) : Rendered := Id.run do
   -- with links, every choice of flipped notches (up to four binders) is
   -- routed once; the three cheapest are routed again with more rounds
-  let bs := d.tree.binders
+  let bs := d.tree.binders.filter fun b => (o.fixedNotches.lookup b).isNone
   let flipSets : List (List String) :=
     if !o.links || bs.length > 4 then [[]]
     else (List.range (2 ^ bs.length)).map fun m =>

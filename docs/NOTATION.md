@@ -179,7 +179,9 @@ pastel colour, and its links are dashed in the **Morse code of its name**
 (dot 1.6 units, dash 5.5, with a short mark in the longer gaps), so that
 binders stay distinct in black and white. Links run around the tree; to save
 crossings the router may turn a notch over (⊔ for ∀, ∧ for ∃, as the ∃ notch
-of `u` above). The free state has no links. With `--hide-bound` the names
+of `u` above). A figure can fix the side of a notch with the hint
+`notch x up` or `notch x down`; the router then leaves that notch as it is and
+routes the links around it. The free state has no links. With `--hide-bound` the names
 are left out and the links alone carry the binding.
 
 ## Where this notation departs from Frege's

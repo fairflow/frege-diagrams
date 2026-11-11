@@ -59,7 +59,11 @@ def edgeSel (src tgt : String) (occ panel : Nat) : String := s!"edge:{src}>{tgt}
 
 /-- The checks of one figure (none for a figure without view A). -/
 def Fig.lint (d : Fig) : Array Lint := Id.run do
-  if d.hints.views == .b then return #[]
+  if d.hints.views == .b then
+    -- only the view-B hint can be checked
+    return (d.hints.notches.filter fun (x, _) => !d.body.bound.contains x).toArray.map fun (x, up) =>
+      { sev := .error, msg := s!"The hint notch {x} {if up then "up" else "down"} names no quantified state, so it has no effect.",
+        fix := some (.notch x none), fixLabel := "Remove the hint" }
   let ((), fl) := (flatten d.body 1 true false).run {}
   let h := d.hints
   let edges := fl.items.filterMap fun | .edge e => some e | _ => none
@@ -81,6 +85,13 @@ def Fig.lint (d : Fig) : Array Lint := Id.run do
       out := out.push { sev := .error,
                         msg := s!"The hint {l.print} names no loop of the picture, so it has no effect.",
                         fix := some (.loop l.key none), fixLabel := "Remove the hint" }
+  -- view-B notch hints naming no binder
+  let bound := d.body.bound
+  for (x, up) in h.notches do
+    unless bound.contains x do
+      out := out.push { sev := .error,
+                        msg := s!"The hint notch {x} {if up then "up" else "down"} names no quantified state, so it has no effect.",
+                        fix := some (.notch x none), fixLabel := "Remove the hint" }
   -- notches
   for e in edges do
     let eh := h.edges.find? fun eh =>

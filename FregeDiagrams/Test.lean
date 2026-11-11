@@ -85,11 +85,12 @@ def genHints : G Hints := do
              panel := 1 + (← rand 3), bend := ← opt genInt, side := ← opt (do return (← rand 2) == 0),
              at_ := ← opt (rand 250) : EdgeHint }
   let loops ← genList 0 2 do return { key := ← genKey, angle := ← genInt : LoopHint }
+  let notches ← genList 0 2 do return (← pick names, (← rand 2) == 0)
   let texts ← genList 0 2 do
     return { x := ← genInt, y := ← genInt, s := ← pick texts, color := ← pick [Color.black, .red, .grey],
              size := ← rand 30, middle := (← rand 2) == 0, italic := (← rand 2) == 0 : TextHint }
   let nameDy ← (do if (← rand 2) == 0 then pure none else some <$> genInt : G (Option Int))
-  return { size, views, nodes, edges, loops, texts, nameDy }
+  return { size, views, nodes, edges, loops, texts, nameDy, notches }
 
 def genFig : G Fig := do
   return { name := ← pick ["f", "ex_trans", "x1"], hints := ← genHints, body := ← genForm (← rand 5) }
@@ -255,3 +256,20 @@ partial def fixAll (src : String) (n : String) (fuel : Nat := 10) : String :=
 #guard FregeDiagrams.morseOf 'σ' == "..." && FregeDiagrams.morseOf 'Ω' == ".--"
 -- distinct names keep distinct link patterns
 #guard FregeDiagrams.morseDash "α" != FregeDiagrams.morseDash "β"
+
+/-! ## Fixed notch orientation in view B (`notch NAME up|down`) -/
+
+#guard FregeDiagrams.notchUp { fixedNotches := [("t", false)] } .all "t" == false
+-- a fixed notch is not turned over by the router's choice
+#guard FregeDiagrams.notchUp { fixedNotches := [("u", true)], flips := ["u"] } .ex "u" == true
+#guard FregeDiagrams.notchUp { flips := ["u"] } .ex "u" == true
+#guard (FregeDiagrams.Fig.parse "fig n [notch t down] = all t. s <= t").toOption.map (·.hints.notches) == some [("t", false)]
+-- editing: fix, change, release
+#guard editRun (FregeDiagrams.applyEdit "fig n = all t. s <= t\n" "n" (.notch "t" (some false))) == "fig n [notch t down] = all t. s <= t\n"
+#guard editRun (FregeDiagrams.applyEdit "fig n [notch t down] = all t. s <= t\n" "n" (.notch "t" (some true))) == "fig n [notch t up] = all t. s <= t\n"
+#guard editRun (FregeDiagrams.applyEdit "fig n [notch t down] = all t. s <= t\n" "n" (.notch "t" none)) == "fig n = all t. s <= t\n"
+-- a notch hint for a name no quantifier binds is reported, with a fix
+#guard ((FregeDiagrams.Fig.parse "fig n [notch zz up] = all t. s <= t").toOption.map (·.lint.size)) == some 1
+-- the fixed side reaches the drawing: view B of t fixed down differs from the default
+#guard (({ name := "n", tree := (FregeDiagrams.Fig.parse "fig n = all t. s <= t").toOption.get!.body.toTree : FregeDiagrams.TreeDiagram }).svg {} !=
+        ({ name := "n", tree := (FregeDiagrams.Fig.parse "fig n = all t. s <= t").toOption.get!.body.toTree : FregeDiagrams.TreeDiagram }).svg { fixedNotches := [("t", false)] })
