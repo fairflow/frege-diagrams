@@ -276,3 +276,26 @@ default output stays byte-identical throughout.
 | 9 | uses of a figure, draft links from the PDF, page frame, rebuild button (10) | |
 | 10 | signature and n-ary relations (7); `figure% FILE NAME` (9) | |
 | 11 | figures from Lean definitions (1d.2) | |
+
+
+## Link editing (2026-11-11)
+
+Decision (Matthew, 2026-11-11): **(A) pinned routes.** An edited binder's links
+are stored as polylines in the tree's own coordinates (`route x …`, whole
+units). Considered and not taken: (B) relative moves ("one track further
+out"), which tie the text to the router's grid; (C) router preferences,
+which are robust but not direct manipulation.
+
+* A pin holds for one layout. It is checked against the binder's terminals
+  (the notch point, and `NODE_R + 1` from each bound state on one of its four
+  sides), ends within 1.5 units are snapped onto them with a short jog, and a
+  pin that misses a terminal or has a slanted segment is not used: reported
+  (`--check`, the editor's Problems, with a one-click "route automatically
+  again"), never adapted silently.
+* Since the layout of view B depends on which way every notch opens, pinning
+  a binder also fixes every notch of the figure as drawn.
+* Editing (the page, not Lean): the binder's links as a graph of points and
+  horizontal or vertical segments; moving a coordinate of a point moves it
+  along every segment sharing that coordinate; terminals do not move, and a
+  segment reaching one gets a jog. The page draws only a preview during a
+  drag; on release Lean checks and draws the pin.

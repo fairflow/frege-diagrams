@@ -24,6 +24,7 @@ hint   ::= "size" "(" NAT "," NAT ")" | "views" ("A" | "B")
          | "edge" NAME ">" NAME ("#" NAT)? ("/" NAT)?
              ("bend" INT | "side" ("+" | "-") | "at" DEC)*        any order
          | "loop" key INT | "namedy" INT | "notch" NAME ("up" | "down")
+         | "route" NAME pair pair+ (";" pair pair+)*
          | "text" "(" INT "," INT ")"
              ("black" | "red" | "grey" | NAT | "middle" | "italic")* STRING
 key    ::= NAME ("/" NAT)?                        state NAME of panel NAT
@@ -206,6 +207,9 @@ def TextHint.print (t : TextHint) : String :=
 
 def notchPrint (n : String × Bool) : String := s!"notch {n.1} {if n.2 then "up" else "down"}"
 
+def routePrint (r : String × List (List (Int × Int))) : String :=
+  s!"route {r.1} " ++ "; ".intercalate (r.2.map fun ps => " ".intercalate (ps.map fun (a, b) => printPair a b))
+
 def Hints.print (h : Hints) : List String :=
   (match h.size with | some (w, ht) => [s!"size {printPair w ht}"] | none => []) ++
   (match h.views with | .both => [] | .a => ["views A"] | .b => ["views B"]) ++
@@ -214,6 +218,7 @@ def Hints.print (h : Hints) : List String :=
   h.loops.map LoopHint.print ++
   (match h.nameDy with | some v => [s!"namedy {v}"] | none => []) ++
   h.notches.map notchPrint ++
+  h.routes.map routePrint ++
   h.texts.map TextHint.print
 
 /-- The canonical text of a figure. -/
@@ -411,6 +416,20 @@ def hint (h : Hints) : Parser Hints := do
       else if ← isWord "down" then do discard next; pure false
       else fail "expected 'up' or 'down'"
     return { h with notches := h.notches ++ [(x, up)] }
+  | some (.ident "route") =>
+    discard next
+    let x ← name
+    let rec polyline (acc : Array (Int × Int)) (fuel : Nat) : Parser (List (Int × Int)) := do
+      match fuel with
+      | 0 => return acc.toList
+      | fuel + 1 => if ← isSym "(" then polyline (acc.push (← pair)) fuel else return acc.toList
+    let rec polylines (acc : Array (List (Int × Int))) (fuel : Nat) : Parser (List (List (Int × Int))) := do
+      let p ← polyline #[] 10000
+      if p.length < 2 then fail "a route's polyline needs at least two points"
+      match fuel with
+      | 0 => return (acc.push p).toList
+      | fuel + 1 => if ← optSym ";" then polylines (acc.push p) fuel else return (acc.push p).toList
+    return { h with routes := h.routes ++ [(x, ← polylines #[] 10000)] }
   | some (.ident "loop") =>
     discard next
     let k ← key
@@ -447,7 +466,7 @@ breaks, the order of hints) as it was. -/
 /-- Which hint a span holds: an index into the list of its kind. -/
 inductive HintRef where
   | size | views | namedy
-  | node (i : Nat) | edge (i : Nat) | loop (i : Nat) | text (i : Nat) | notch (i : Nat)
+  | node (i : Nat) | edge (i : Nat) | loop (i : Nat) | text (i : Nat) | notch (i : Nat) | route (i : Nat)
 deriving BEq, Repr, Inhabited
 
 structure FigSpans where
@@ -477,6 +496,7 @@ def hintS (h : Hints) : Parser (Hints × HintRef × Span) := do
     | some (.ident "loop") => .loop h.loops.length
     | some (.ident "text") => .text h.texts.length
     | some (.ident "notch") => .notch h.notches.length
+    | some (.ident "route") => .route h.routes.length
     | _ => .node h.nodes.length
   let h' ← hint h
   return (h', r, ⟨a, (← get).prevEnd⟩)

@@ -30,6 +30,8 @@ inductive Edit where
   /-- fix a binder's notch in view B to open up (`true`) or down (`false`), or
   leave it to the router (`none`) -/
   | notch (x : String) (up : Option Bool)
+  /-- pin binder `x`'s links to these polylines, or route them automatically (`none`) -/
+  | route (x : String) (ps : Option (List (List (Int × Int))))
 deriving Repr, Inhabited
 
 /-- What an edit does to the text of the hints. -/
@@ -82,6 +84,12 @@ def Edit.apply (h : Hints) : Edit → Hints × Act
     | some i, some u => ({ h with notches := h.notches.set i (x, u) }, .replace (.notch i) (notchPrint (x, u)))
     | some i, none => ({ h with notches := h.notches.eraseIdx i }, .delete (.notch i))
     | none, some u => ({ h with notches := h.notches ++ [(x, u)] }, .add (notchPrint (x, u)))
+    | none, none => (h, .nothing)
+  | .route x ps =>
+    match h.routes.findIdx? (·.1 == x), ps with
+    | some i, some p => ({ h with routes := h.routes.set i (x, p) }, .replace (.route i) (routePrint (x, p)))
+    | some i, none => ({ h with routes := h.routes.eraseIdx i }, .delete (.route i))
+    | none, some p => ({ h with routes := h.routes ++ [(x, p)] }, .add (routePrint (x, p)))
     | none, none => (h, .nothing)
 
 def splice (cs : List Char) (a b : Nat) (ins : String) : List Char :=

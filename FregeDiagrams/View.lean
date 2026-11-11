@@ -220,7 +220,9 @@ def Fig.toDiagram (d : Fig) (o : DrawOpts := {}) : Diagram := Id.run do
 options of the run. -/
 def Fig.drawOpts (d : Fig) (o : DrawOpts) : DrawOpts :=
   let o := match d.hints.nameDy with | some v => { o with nameDy := Float.ofInt v } | none => o
-  { o with fixedNotches := d.hints.notches }
+  { o with fixedNotches := d.hints.notches,
+           pinned := d.hints.routes.map fun (x, ps) =>
+             (x, ps.toArray.map fun p => p.toArray.map fun (a, b) => (⟨Float.ofInt a, Float.ofInt b⟩ : P)) }
 
 /-- The pictures of a figure: `(file stem, SVG)`.  With both views, view A is
 `NAME` and view B `NAME_B`. -/

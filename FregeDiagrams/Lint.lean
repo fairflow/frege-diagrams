@@ -92,6 +92,16 @@ def Fig.lint (d : Fig) : Array Lint := Id.run do
       out := out.push { sev := .error,
                         msg := s!"The hint notch {x} {if up then "up" else "down"} names no quantified state, so it has no effect.",
                         fix := some (.notch x none), fixLabel := "Remove the hint" }
+  -- route pins naming no binder, or not drawn with horizontal and vertical segments
+  for (x, ps) in h.routes do
+    if !bound.contains x then
+      out := out.push { sev := .error,
+                        msg := s!"The hint route {x} … names no quantified state, so it has no effect.",
+                        fix := some (.route x none), fixLabel := "Remove the hint" }
+    else if ps.any (fun p => (p.zip p.tail).any fun ((a, b), (c, e)) => a != c && b != e) then
+      out := out.push { sev := .error,
+                        msg := s!"The route of {x} has a segment that is neither horizontal nor vertical, so it cannot be used; the links are routed automatically.",
+                        fix := some (.route x none), fixLabel := "Route automatically again" }
   -- notches
   for e in edges do
     let eh := h.edges.find? fun eh =>

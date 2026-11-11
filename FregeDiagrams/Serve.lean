@@ -24,7 +24,9 @@ Requests (`op`):
 
 `edit` objects (`kind`): `node {name, panel, x, y, label: [dx,dy] | null}`,
 `unnode {name, panel}`, `edge {src, tgt, occ, panel, bend, side: "+"|"-"|null, at}`,
-`size {w, h}`, `namedy {v}`, `loop {name, panel, angle}`, `notch {name, dir: "up"|"down"}` (`null` removes).
+`size {w, h}`, `namedy {v}`, `loop {name, panel, angle}`, `notch {name, dir: "up"|"down"}`,
+`route {name, polys: [[[x,y],…],…]}` (`null` removes).  `render` also returns `stale`: the
+binders whose `route` pin no longer fits (drawn routed automatically).
 -/
 import Lean.Data.Json
 import FregeDiagrams.View
@@ -84,6 +86,13 @@ def decodeEdit (j : Json) : Except String Edit := do
   | "size" => return .size (← getNat j "w") (← getNat j "h")
   | "namedy" => return .nameDy (← getOpt j "v")
   | "loop" => return .loop (← keyOf j) (← getOpt j "angle")
+  | "route" =>
+    let ps : Option (List (List (Int × Int))) ← match j.getObjVal? "polys" with
+      | .ok .null | .error _ => pure none
+      | .ok v => do
+        let raw : List (List (List Int)) ← fromJson? v
+        pure (some (raw.map fun p => p.map fun xy => (xy.getD 0 0, xy.getD 1 0)))
+    return .route (← getStr j "name") ps
   | "notch" =>
     let up ← match ← getOpt (α := String) j "dir" with
       | some "up" => pure (some true)
@@ -111,6 +120,10 @@ def encodeEdit : Edit → Json
   | .size w h => Json.mkObj [("kind", "size"), ("w", w), ("h", h)]
   | .nameDy v => Json.mkObj [("kind", "namedy"), ("v", optJson v)]
   | .loop k a => Json.mkObj ([("kind", ("loop" : Json))] ++ keyFields k ++ [("angle", optJson a)])
+  | .route x ps => Json.mkObj [("kind", "route"), ("name", x),
+      ("polys", match ps with
+        | some ps => Json.arr (ps.toArray.map fun p => Json.arr (p.toArray.map fun (a, b) => Json.arr #[toJson a, toJson b]))
+        | none => Json.null)]
   | .notch x up => Json.mkObj [("kind", "notch"), ("name", x),
       ("dir", match up with | some true => "up" | some false => "down" | none => Json.null)]
 
@@ -146,9 +159,11 @@ def handle (j : Json) : Except String Json := do
     let only := (getStr j "only").toOption.getD ""
     let a : Json := if f.hints.views == .b || only == "b" then .null
       else (f.toDiagram { o with annotate := true }).svg
-    let b : Json := if f.hints.views == .a || only == "a" then .null
-      else ({ name := f.name, tree := f.body.toTree : TreeDiagram }).svg { o with annotate := true }
-    return okWith [("a", a), ("b", b)]
+    let rb := if f.hints.views == .a || only == "a" then none
+      else some (({ name := f.name, tree := f.body.toTree : TreeDiagram }).render { o with annotate := true })
+    let b : Json := match rb with | some r => r.svg | none => .null
+    let stale : Json := Json.arr ((rb.map (·.stalePins)).getD #[] |>.map toJson)
+    return okWith [("a", a), ("b", b), ("stale", stale)]
   | "edit" =>
     let e ← decodeEdit (← j.getObjVal? "edit")
     return okWith [("text", ← applyEdit text (← getStr j "fig") e)]
@@ -175,6 +190,9 @@ def handle (j : Json) : Except String Json := do
       let tag := if hb then " (names hidden)" else ""
       if !r.problems.isEmpty then
         probs := probs.push s!"view B{tag}: {r.problems.size} empty bigon(s) or monogon(s)"
+      if hb == o.hideBound then
+        for x in r.stalePins do
+          probs := probs.push s!"view B: the route of {x} no longer fits the layout (its notch or its states moved); it is routed automatically"
       if !r.names.isEmpty then
         probs := probs.push s!"view B{tag}: misplaced names {r.names}"
       for (outer, inner, side) in r.nesting do

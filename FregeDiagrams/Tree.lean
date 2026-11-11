@@ -60,6 +60,9 @@ structure DrawOpts where
   /-- binders whose notch is fixed (the `notch NAME up|down` hint): `true`
   opens upwards; these are never turned over by the router -/
   fixedNotches : List (String × Bool) := []
+  /-- binders whose links are pinned (the `route` hint), as polylines in the
+  tree's coordinates -/
+  pinned : List (String × Array Polyline) := []
   /-- a factor on every clearance of the links: row gaps, tracks, channels,
   the room kept around states and names (`--spacing`) -/
   spacing : Float := 1.0

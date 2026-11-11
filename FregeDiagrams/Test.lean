@@ -86,11 +86,14 @@ def genHints : G Hints := do
              at_ := ← opt (rand 250) : EdgeHint }
   let loops ← genList 0 2 do return { key := ← genKey, angle := ← genInt : LoopHint }
   let notches ← genList 0 2 do return (← pick names, (← rand 2) == 0)
+  let routes ← genList 0 2 do
+    let ps ← genList 1 3 (genList 2 4 (do return (← genInt, ← genInt)))
+    return (← pick names, ps)
   let texts ← genList 0 2 do
     return { x := ← genInt, y := ← genInt, s := ← pick texts, color := ← pick [Color.black, .red, .grey],
              size := ← rand 30, middle := (← rand 2) == 0, italic := (← rand 2) == 0 : TextHint }
   let nameDy ← (do if (← rand 2) == 0 then pure none else some <$> genInt : G (Option Int))
-  return { size, views, nodes, edges, loops, texts, nameDy, notches }
+  return { size, views, nodes, edges, loops, texts, nameDy, notches, routes }
 
 def genFig : G Fig := do
   return { name := ← pick ["f", "ex_trans", "x1"], hints := ← genHints, body := ← genForm (← rand 5) }
@@ -273,3 +276,28 @@ partial def fixAll (src : String) (n : String) (fuel : Nat := 10) : String :=
 -- the fixed side reaches the drawing: view B of t fixed down differs from the default
 #guard (({ name := "n", tree := (FregeDiagrams.Fig.parse "fig n = all t. s <= t").toOption.get!.body.toTree : FregeDiagrams.TreeDiagram }).svg {} !=
         ({ name := "n", tree := (FregeDiagrams.Fig.parse "fig n = all t. s <= t").toOption.get!.body.toTree : FregeDiagrams.TreeDiagram }).svg { fixedNotches := [("t", false)] })
+
+/-! ## Pinned routes (`route NAME …`) -/
+
+open FregeDiagrams FregeDiagrams.Route in
+/-- A binder with its notch at the origin and one bound state at (100, 50):
+a pin ending at the notch and at the top of the state (rounded) fits and is
+snapped onto the terminals; moved by 40 it does not fit. -/
+def pinCases : List Bool :=
+  let b : Binder := { name := "x", notch := ⟨0.0, 0.0⟩, dir := -1.0, hw := 5.0, tgts := #[⟨100.0, 50.0⟩] }
+  let pin : Array Polyline := #[#[⟨0.0, 0.0⟩, ⟨0.0, -20.0⟩, ⟨100.0, -20.0⟩, ⟨100.0, 45.0⟩]]
+  let moved : Array Polyline := pin.map (·.map fun p => ⟨p.x + 40.0, p.y⟩)
+  let diagonal : Array Polyline := #[#[⟨0.0, 0.0⟩, ⟨100.0, 45.0⟩]]
+  [(fitPin b pin).isSome,
+   ((fitPin b pin).map fun r => decide ((r.polys[0]!.back! - ⟨100.0, 50.0 - (NODE_R + 1.0)⟩).len < 0.01)) == some true,
+   (fitPin b moved).isNone,
+   (fitPin b diagonal).isNone]
+#guard pinCases == [true, true, true, true]
+#guard (FregeDiagrams.Fig.parse "fig r [route x (0,0) (0,-20) (100,-20); (100,-20) (100,45)] = all x. s <= x").toOption.map (·.hints.routes) ==
+  some [("x", [[(0, 0), (0, -20), (100, -20)], [(100, -20), (100, 45)]])]
+#guard editRun (FregeDiagrams.applyEdit "fig r = all x. s <= x\n" "r" (.route "x" (some [[(0, 0), (0, 9)]]))) ==
+  "fig r [route x (0,0) (0,9)] = all x. s <= x\n"
+#guard editRun (FregeDiagrams.applyEdit "fig r [route x (0,0) (0,9)] = all x. s <= x\n" "r" (.route "x" none)) == "fig r = all x. s <= x\n"
+-- a route for an unbound name, and a diagonal segment, are reported with a fix
+#guard ((FregeDiagrams.Fig.parse "fig r [route zz (0,0) (0,9)] = all x. s <= x").toOption.map (·.lint.size)) == some 1
+#guard ((FregeDiagrams.Fig.parse "fig r [route x (0,0) (5,9)] = all x. s <= x").toOption.map (·.lint.size)) == some 1
