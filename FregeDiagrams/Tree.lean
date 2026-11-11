@@ -100,8 +100,18 @@ def extendAll (env : List Bind) (p : P) : List Bind :=
 def linkPalette : Array String :=
   #["#4f8fc0", "#d4813a", "#5ea35a", "#b0619f", "#c2a02e", "#45a8a0", "#c4605c", "#7f78c4"]
 
+/-- Greek Morse code (the Greek national variant of Morse), for Greek letters
+in names; capital and small letters alike.  Without it every all-Greek name
+would get the same fallback pattern. -/
+def greekMorse (c : Char) : String :=
+  let small := "αβγδεζηθικλμνξοπρσςτυφχψω".toList
+  let capital := "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΣΤΥΦΧΨΩ".toList
+  let codes := [".-", "-...", "--.", "-..", ".", "--..", "....", "-.-.", "..", "-.-", ".-..", "--",
+    "-.", "-..-", "---", ".--.", ".-.", "...", "...", "-", "-.--", "..-.", "----", "--.-", ".--"]
+  ((small.zip codes ++ capital.zip codes).lookup c).getD ""
+
 /-- International Morse for the characters of state names; a prime is the
-apostrophe, a subscript digit the digit. -/
+apostrophe, a subscript digit the digit; Greek letters by `greekMorse`. -/
 def morseOf : Char → String
   | 'a' => ".-" | 'b' => "-..." | 'c' => "-.-." | 'd' => "-.." | 'e' => "." | 'f' => "..-."
   | 'g' => "--." | 'h' => "...." | 'i' => ".." | 'j' => ".---" | 'k' => "-.-" | 'l' => ".-.."
@@ -111,7 +121,7 @@ def morseOf : Char → String
   | '′' | '\'' => ".----." | '0' | '₀' => "-----" | '1' | '₁' => ".----" | '2' | '₂' => "..---"
   | '3' | '₃' => "...--" | '4' | '₄' => "....-" | '5' | '₅' => "....." | '6' | '₆' => "-...."
   | '7' | '₇' => "--..." | '8' | '₈' => "---.." | '9' | '₉' => "----."
-  | _ => ""
+  | c => greekMorse c
 
 /-- The dash pattern spelling a name in Morse, repeated along the link: dot
 1.6, dash 5.5, gap 2.2 within a letter; between letters and between repeats

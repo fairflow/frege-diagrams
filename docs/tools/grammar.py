@@ -82,7 +82,7 @@ GRAMMAR = [
     ]),
     ("Tokens", [
         ("name", Seq(N("letter"), Star(Alt(N("letter"), N("digit"), T("'"), T("′"), N("subscript"))))),
-        ("letter", Alt(C("[a-zA-Z]"), T("_"))),
+        ("letter", Alt(C("[a-zA-Z]"), C("[Α-Ω]"), C("[α-ω]"), T("_"))),
         ("digit", C("[0-9]")),
         ("subscript", C("[₀-₉]")),
         ("int", Seq(Opt(T("-")), Plus(N("digit")))),

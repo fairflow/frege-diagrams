@@ -24,11 +24,25 @@ import FregeDiagrams.Fig
 
 namespace FregeDiagrams
 
+/-- The LaTeX of a Greek letter, braced so that a following letter cannot run
+into the macro name; capitals that look like Latin letters are those letters. -/
+def greekTex (c : Char) : String :=
+  let lower := "αβγδεζηθικλμνξοπρςστυφχψω".toList.zip
+    ["\\alpha", "\\beta", "\\gamma", "\\delta", "\\varepsilon", "\\zeta", "\\eta", "\\theta",
+     "\\iota", "\\kappa", "\\lambda", "\\mu", "\\nu", "\\xi", "o", "\\pi", "\\rho", "\\varsigma",
+     "\\sigma", "\\tau", "\\upsilon", "\\varphi", "\\chi", "\\psi", "\\omega"]
+  let upper := "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ".toList.zip
+    ["A", "B", "\\Gamma", "\\Delta", "E", "Z", "H", "\\Theta", "I", "K", "\\Lambda", "M", "N", "\\Xi",
+     "O", "\\Pi", "P", "\\Sigma", "T", "\\Upsilon", "\\Phi", "X", "\\Psi", "\\Omega"]
+  match (lower ++ upper).lookup c with
+  | some t => if t.startsWith "\\" then "{" ++ t ++ "}" else t
+  | none => c.toString
+
 def latexName (s : String) : String :=
   let cs := s.toList
   let base := (cs.filter (!isSubscriptDigit ·)).map fun c => if c == '′' then '\'' else c
   let subs := (cs.filter isSubscriptDigit).map fun c => Char.ofNat (c.toNat - '₀'.toNat + '0'.toNat)
-  String.ofList base ++ match subs with
+  String.join (base.map greekTex) ++ match subs with
     | [] => ""
     | [d] => "_" ++ String.singleton d
     | ds => "_{" ++ String.ofList ds ++ "}"

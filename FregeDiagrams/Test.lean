@@ -38,7 +38,7 @@ def rand (n : Nat) : G Nat := do
 
 def pick {α} [Inhabited α] (xs : List α) : G α := do return xs[← rand xs.length]!
 
-def names : List String := ["s", "t", "u", "x′", "t₁", "y", "s'", "ab_2"]
+def names : List String := ["s", "t", "u", "x′", "t₁", "y", "s'", "ab_2", "σ", "Ωτ₂′"]
 def texts : List String := ["inf(u)", "R°(u) = ∅", "", "a, b & c | d {x}", "then"]
 def rels : List Rel := [.le, .sqle, .R, .Rinf, .reach, .eq, .ne]
 
@@ -243,3 +243,15 @@ partial def fixAll (src : String) (n : String) (fuel : Nat := 10) : String :=
   ((FregeDiagrams.parseFile s).toOption.bind (·.find? (·.name == n))).map (·.lint.size) == some 0
 -- the notch fix puts it in the middle of the first stretch
 #guard ((fixAll lintSrc "mixed").splitOn "edge s>y at 0.25").length == 2
+
+/-! ## Greek letters in names -/
+
+#guard FregeDiagrams.isIdent "σ" && FregeDiagrams.isIdent "τ₁′" && FregeDiagrams.isIdent "xα"
+#guard !FregeDiagrams.isIdent "°" && !FregeDiagrams.isIdent "ϕ"   -- ϕ (U+03D5) is outside the ranges
+#guard (FregeDiagrams.Fig.parse "fig g = all σ. if s <= σ then σ R τ₁").toOption.map (·.roundTrips) == some true
+#guard FregeDiagrams.latexName "σ₁" == "{\\sigma}_1"
+#guard FregeDiagrams.latexName "Ω′" == "{\\Omega}'"
+#guard FregeDiagrams.latexName "Ακ" == "A{\\kappa}"
+#guard FregeDiagrams.morseOf 'σ' == "..." && FregeDiagrams.morseOf 'Ω' == ".--"
+-- distinct names keep distinct link patterns
+#guard FregeDiagrams.morseDash "α" != FregeDiagrams.morseDash "β"
