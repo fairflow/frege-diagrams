@@ -6,7 +6,7 @@ and, in a Lean development that gives figures a meaning, the statement that
 is proved about it. This document defines the text: its tokens, its grammar,
 and what each construct says. How the pictures are read is in
 [NOTATION.md](NOTATION.md); the tools are in
-[GUIDE.md](GUIDE.md).
+[MANUAL.md](MANUAL.md).
 
 A small file of figures:
 

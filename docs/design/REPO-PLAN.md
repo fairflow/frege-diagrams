@@ -1,7 +1,9 @@
 # frege-diagrams: plan for the documentation and for integration
 
-Status 2026-11-11: PLAN. The library, the two views, the router, the editor and
-`docs/GUIDE.md` exist. This note plans the documents still to be written and
+Status 2026-11-11: DONE for the documents: `docs/LANGUAGE.md`,
+`docs/NOTATION.md` and `docs/MANUAL.md` exist (`docs/GUIDE.md`, the earlier
+single guide, was split into them and removed). The library, the two views,
+the router and the editor exist. This note plans the documents still to be written and
 the exchange with other notations. Names: the package is `frege-diagrams`, the
 Lean library and namespace `FregeDiagrams`, the extension of figure files
 `.fgd` (`.fig` clashes with xfig and MATLAB; `framediag --fig` accepts any

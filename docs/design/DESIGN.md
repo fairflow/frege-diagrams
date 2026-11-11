@@ -149,7 +149,7 @@ Today a state without a hint goes on a plain grid.
 `Fig.toLatex` writes chained-relation notation (`\sq`, `\SqR`, `\Y`,
 `\reach`, `\nF`, `^{\circ}`, bounded `\forall u\sqsupseteq s.`); the rules
 are in the header of `FregeDiagrams/Latex.lean`, the macro definitions in
-`../GUIDE.md` §3. `framediag` writes `NAME.tex`, and a document's
+`../MANUAL.md` §5. `framediag` writes `NAME.tex`, and a document's
 `\formula{NAME}` inputs it.
 
 ## 5. Verso (PROPOSAL, not implemented)
@@ -198,6 +198,6 @@ reroute (every routing order for up to four binders, else the default and
 its reverse), inner scopes first and preferring the nearest tracks; flips
 chosen by trying all; names placed last, with room reserved; spacing as
 `--spacing`; checks (empty bigons and monogons, misplaced names fail;
-nesting violations are reported). `../GUIDE.md` has the user-facing account. Optimal per binder given the grid, the cost
+nesting violations are reported). `../MANUAL.md` has the user-facing account. Optimal per binder given the grid, the cost
 model and the other binders; not globally optimal. (An earlier router, a
 fixed route family searched exhaustively, is not included.)

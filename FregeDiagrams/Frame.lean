@@ -3,7 +3,7 @@ FregeDiagrams.Frame: variant A, a frame picture.
 
 A frame picture is a set of states (dots) and arrows between them, drawn at
 hand-placed integer coordinates.  The vocabulary
-(`docs/GUIDE.md` has the full table):
+(`docs/LANGUAGE.md` and `docs/NOTATION.md` have the full tables):
 
 * a **hollow** dot is an infallible state; a **red** dot is a new state (one
   asserted to exist by the conclusion); a **crossed** dot says "no such state";

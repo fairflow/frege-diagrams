@@ -1,7 +1,7 @@
 /-
 FregeDiagrams.Latex: a figure's formula in chained-relation notation.
 
-The output uses these macros (definitions in `docs/GUIDE.md`, section 3): `\sq` (`⊑`), `\SqR` (`⊑;R`), `\Y`
+The output uses these macros (definitions in `docs/MANUAL.md`, section 5): `\sq` (`⊑`), `\SqR` (`⊑;R`), `\Y`
 (`⊑;R;⊑`), `\reach` (`⇝`), `\nF` (`∉ F`), `\imp`; `^{\circ}` restricts a
 relation to infallible targets, and a composite is written `({\sq};R;{\le})`.
 

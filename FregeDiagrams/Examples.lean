@@ -6,7 +6,7 @@ given, and what `FregeDiagrams.Test` checks.  It holds the legends of view B
 (the key to the formula trees, with text leaves only), the three ways of
 bracketing an implication, and a few neutral illustrative frame conditions.
 None of them is attached to a theorem; a client that gives figures a meaning
-does so in its own library (see `docs/GUIDE.md`, section 4).
+does so in its own library (see `docs/MANUAL.md`, section 6).
 
 Free state: `s` (an arbitrary infallible state, not drawn with a notch).
 -/
