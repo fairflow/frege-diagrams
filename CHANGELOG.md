@@ -3,6 +3,8 @@
 ## Unreleased
 
 * docs/LANGUAGE.md: the figure language, with its grammar in EBNF and syntax diagrams generated from one source (docs/tools/grammar.py); CI checks the EBNF and that the examples parse.
+* docs/MANUAL.md: the tools (installing, `framediag`, `framedit`, LaTeX, figures with a meaning in Lean); replaces docs/GUIDE.md, whose language part is in docs/LANGUAGE.md.
+* `framediag --fig FILE.lean [--def NAME]` reads the figures from a raw string in a Lean file, so one string serves theorems (`fig_of%`), drawings and the editor; parse errors give the line of the file.
 * View B with links: the hint `route x …` pins a binder's links to given polylines; the router routes the others around them; a pin that no longer fits its layout is reported (`--check`, framedit) and replaced by automatic routing. framedit edits links directly: segment handles, bend and branch-point handles, orthogonality kept, ends fixed with automatic jogs.
 * View B: the hint `notch x up|down` fixes the side a binder's notch opens to; the link router routes around it instead of turning it over. In framedit, notches in the Frege view can be selected and set to automatic, up or down.
 * docs/NOTATION.md: how to read view A and view B, and where the notation departs from Frege's; its pictures are drawn from docs/notation.fgd and the examples by docs/tools/images.sh, checked in CI.

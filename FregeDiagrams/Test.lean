@@ -301,3 +301,11 @@ def pinCases : List Bool :=
 -- a route for an unbound name, and a diagonal segment, are reported with a fix
 #guard ((FregeDiagrams.Fig.parse "fig r [route zz (0,0) (0,9)] = all x. s <= x").toOption.map (·.lint.size)) == some 1
 #guard ((FregeDiagrams.Fig.parse "fig r [route x (0,0) (5,9)] = all x. s <= x").toOption.map (·.lint.size)) == some 1
+
+/-! ## Figures in a Lean file (`framediag --fig FILE.lean`) -/
+
+-- name, contents, the line where the contents start; any number of `#`; a
+-- `"#` inside a `##` string does not end it
+#guard FregeDiagrams.leanRawStrings "def a : String := r#\"x\"#\n\ndef  b :String:=r##\"y\"#z\"##\ndef c : Nat := 3" ==
+  [("a", "x", 1), ("b", "y\"#z", 3)]
+#guard (FregeDiagrams.leanRawStrings ("-- figures\ndef figs : String := r#\"" ++ "\nfig f = s <= t\n" ++ "\"#")).map (·.2.2) == [2]

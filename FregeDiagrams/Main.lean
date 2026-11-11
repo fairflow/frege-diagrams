@@ -6,7 +6,7 @@ links (view B); `--hide-bound` leaves the bound names out (both views);
 `--spacing X` scales the clearances of the links; `--notch-name-offset DY`
 moves each bound name DY units towards its notch's open end (a figure's
 `namedy` hint overrides it); `--check` and `--stats` run
-the layout checks instead of drawing.  `docs/GUIDE.md` has the detail.
+the layout checks instead of drawing.  `docs/MANUAL.md` has the detail.
 
 Parses the figures of FILE (`--fig FILE`, the normal input), or without
 `--fig` the example figures (`exampleSource` in `FregeDiagrams/Examples.lean`), and
@@ -43,7 +43,7 @@ where parseDecimal' (s : String) : Option Float :=
   | _ => none
 
 def usage : String :=
-  "usage: lake exe framediag OUTDIR [--fig FILE] [--no-pdf] [--links] [--hide-bound] [--spacing X] [--notch-name-offset DY] [--check]"
+  "usage: lake exe framediag OUTDIR [--fig FILE [--def NAME]] [--no-pdf] [--links] [--hide-bound] [--spacing X] [--notch-name-offset DY] [--check] [--stats]"
 
 /-- Is `rsvg-convert` on the PATH? -/
 def haveRsvg : IO Bool := do
@@ -81,6 +81,7 @@ def main (args : List String) : IO UInt32 := do
   let rec dropSpacing : List String → List String
     | "--spacing" :: _ :: rest => dropSpacing rest
     | "--notch-name-offset" :: _ :: rest => dropSpacing rest
+    | "--def" :: _ :: rest => dropSpacing rest
     | a :: rest => a :: dropSpacing rest
     | [] => []
   let args := (dropSpacing args).filter fun a => a != "--links" && a != "--hide-bound" && a != "--annotate" && a != "--check" && a != "--stats"
@@ -92,12 +93,33 @@ def main (args : List String) : IO UInt32 := do
     | _, _ => none
   let some (some outdir, file, pdf) := parseArgs args (none, none, true)
     | IO.eprintln usage; return 2
-  let (src, srcName) ← match file with
-    | some f => pure (← IO.FS.readFile f, f)
-    | none => pure (exampleSource, "FregeDiagrams/Examples.lean")
+  -- `--def NAME`: which raw string of a Lean file holds the figures
+  let rec defOf : List String → Option String
+    | "--def" :: v :: _ => some v
+    | _ :: rest => defOf rest
+    | [] => none
+  let (src, srcName, lineNote) ← match file with
+    | some f =>
+      let text ← IO.FS.readFile f
+      if f.endsWith ".lean" then
+        let defs : List (String × String × Nat) := leanRawStrings text
+        let chosen := match defOf args0 with
+          | some n => defs.filter (fun d => d.1 == n)
+          | none => defs
+        match chosen with
+        | [(n, body, line)] =>
+          pure (body, s!"{f} (the string {n})", s!" (line 1 of the string is line {line} of the file)")
+        | [] =>
+          IO.eprintln s!"framediag: {f}: no raw string definition{match defOf args0 with | some n => s!" named {n}" | none => ""} (expected def NAME : String := r#\"…\"#)"
+          return 1
+        | ds =>
+          IO.eprintln s!"framediag: {f}: several raw string definitions ({", ".intercalate (ds.map (fun d : String × String × Nat => d.1))}); choose one with --def NAME"
+          return 1
+      else pure (text, f, "")
+    | none => pure (exampleSource, "FregeDiagrams/Examples.lean", "")
   let figs ← match parseFile src with
     | .ok fs => pure fs
-    | .error e => IO.eprintln s!"framediag: {srcName}: {e}"; return 1
+    | .error e => IO.eprintln s!"framediag: {srcName}: {e}{lineNote}"; return 1
   if pdf && !check && !(← haveRsvg) then
     IO.eprintln "framediag: rsvg-convert not found on PATH; it makes the PDF copies of the SVGs.\n  Install librsvg (macOS: `brew install librsvg` or `port install librsvg`), or pass --no-pdf."
     return 1

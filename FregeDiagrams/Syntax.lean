@@ -572,4 +572,61 @@ The converse holds only up to whitespace, comments and the order of hints of
 different kinds. -/
 def ParsePrint : Prop := ∀ d : Fig, d.WellFormed = true → Fig.parse d.print = .ok d
 
+/-! ## Figures kept in a Lean file
+
+A Lean file may keep figures in a raw string, `def NAME : String := r#"…"#`
+(any number of `#`), and take them with `fig_of% NAME "FIG"`. `framediag
+--fig FILE.lean` and the editor read the same string, so it is the one
+source of the figures. -/
+
+/-- The raw string definitions of a Lean file: name, contents, and the line
+of the file on which the contents start (the line after the opening quote
+counts from there). -/
+partial def leanRawStrings (src : String) : List (String × String × Nat) := Id.run do
+  let cs := src.toList
+  let mut out : Array (String × String × Nat) := #[]
+  let mut rest := cs
+  let mut line := 1
+  while !rest.isEmpty do
+    match rest with
+    | 'd' :: 'e' :: 'f' :: c :: r =>
+      if !c.isWhitespace then
+        rest := rest.tail
+        continue
+      -- def NAME : String := r##"
+      let r := r.dropWhile Char.isWhitespace
+      let name := r.takeWhile fun c => !c.isWhitespace && c != ':'
+      let r := (r.drop name.length).dropWhile Char.isWhitespace
+      let ok1 := r.take 1 == [':']
+      let r := (r.drop 1).dropWhile Char.isWhitespace
+      let ok2 := r.take 6 == "String".toList
+      let r := (r.drop 6).dropWhile Char.isWhitespace
+      let ok3 := r.take 2 == [':', '=']
+      let r := (r.drop 2).dropWhile Char.isWhitespace
+      let ok4 := r.take 1 == ['r']
+      let r := r.drop 1
+      let hashes := r.takeWhile (· == '#')
+      let r := r.drop hashes.length
+      if ok1 && ok2 && ok3 && ok4 && !hashes.isEmpty && r.take 1 == ['"'] then
+        let body := r.drop 1
+        let close := '"' :: hashes
+        -- the contents end at the first closing delimiter
+        let mut i := 0
+        let mut found := false
+        let mut b := body
+        while !b.isEmpty && !found do
+          if b.take close.length == close then found := true else
+            b := b.tail
+            i := i + 1
+        if found then
+          let consumed := cs.length - rest.length
+          let startLine := line + ((cs.drop consumed).take (rest.length - body.length)).count '\n'
+          out := out.push (String.ofList name, String.ofList (body.take i), startLine)
+      rest := rest.tail
+    | c :: r =>
+      if c == '\n' then line := line + 1
+      rest := r
+    | [] => pure ()
+  return out.toList
+
 end FregeDiagrams
