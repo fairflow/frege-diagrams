@@ -1,0 +1,14 @@
+-- Figures of docs/NOTATION.md; drawn into docs/images/ by docs/tools/images.sh.
+
+-- Every ≤-successor t of s sees an infallible dead end u:
+-- the free state s (hollow), a bound state t (filled, black: hypothesis),
+-- a state asserted to exist u (red; hollow: infallible), "no such state" v (crossed)
+fig n_states [size (440,130),
+    s@(30,90), t@(150,90), u@(280,90) label (0,-12), v@(400,90),
+    edge s>t at 0.45, edge t>u at 0.45, edge u>v at 0.45] =
+  all t. if s <= t then ex u. (t R u° & not ex v. u R v)
+
+-- A ∀ notch on a composite arrow in a conclusion: its intermediate state is
+-- existential, so the notch stands before the bead (for every y, some m)
+fig n_order [size (300,100), s@(30,60), y@(260,60) label (10,4), edge s>y at 0.25] =
+  all y. s <=°;R y

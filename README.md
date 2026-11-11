@@ -50,6 +50,7 @@ draws the same example figures built into the library.
 ## Documentation
 
 * [docs/LANGUAGE.md](docs/LANGUAGE.md): the figure language, with its grammar (EBNF and syntax diagrams).
+* [docs/NOTATION.md](docs/NOTATION.md): reading the pictures, view A and Frege's notation in view B, and where it departs from Frege.
 * [docs/GUIDE.md](docs/GUIDE.md): the tools, LaTeX, giving a figure a meaning in Lean.
 * [docs/design/](docs/design/): design notes, the editor's plan, and the plan for further documents.
 

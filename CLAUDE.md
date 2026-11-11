@@ -6,6 +6,7 @@
 * The grammar has one source, `docs/tools/grammar.py`; regenerate the EBNF
   block of `docs/LANGUAGE.md` and `docs/diagrams/` from it, never edit them
   by hand.
+* Every picture in `docs/images/` comes from `sh docs/tools/images.sh`; never edit or add one by hand.
 * Changes reach `main` only by pull request; Matthew merges.
 * Commits use the GitHub no-reply address configured in this clone; never
   put a personal email address in the repository.
