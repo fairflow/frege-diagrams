@@ -260,6 +260,10 @@ Worth taking over, in order of use here:
 
 ## Order of work
 
+The next steps (judgement strokes, blocks, editing view B, sound
+transformations, sheets) are proposed in [PROPOSAL.md](PROPOSAL.md)
+(2026-11-12).
+
 Each step is one commit (or a few), reviewable on its own, with tests; the
 default output stays byte-identical throughout.
 
