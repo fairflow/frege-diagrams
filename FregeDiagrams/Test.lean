@@ -315,7 +315,7 @@ open FregeDiagrams
 def bad := (Fig.parse "fig r [route x (0,0) (0,9)] = all x. s <= x").toOption.get!
 def badDy := (Fig.parse "fig r [namedy 2, route x (0,0) (0,9)] = all x. s <= x").toOption.get!
 def run (f : Fig) (o : DrawOpts) : Array String × Array String :=
-  let r := ({ name := f.name, tree := f.body.toTree : TreeDiagram }).render (f.drawOpts { o with links := true })
+  let r := f.toTreeDiagram.render (f.drawOpts { o with links := true })
   (r.stalePins, r.setAside)
 
 #guard run bad {} == (#["x"], #[])
@@ -325,7 +325,7 @@ def run (f : Fig) (o : DrawOpts) : Array String × Array String :=
 -- the figure's own namedy overrides the option, so its pins still apply
 #guard run badDy { nameDy := 3.0 } == (#["x"], #[])
 -- without links nothing is reported
-#guard (({ name := "r", tree := bad.body.toTree : TreeDiagram }).render (bad.drawOpts { hideBound := true })).setAside.isEmpty
+#guard (bad.toTreeDiagram.render (bad.drawOpts { hideBound := true })).setAside.isEmpty
 
 end FregeDiagrams.Test.Pins
 
