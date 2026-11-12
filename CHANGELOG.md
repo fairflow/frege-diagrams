@@ -5,6 +5,10 @@ was merged as, the date and time (UTC) of that commit, and the tag if one
 is applied. `framediag --version` prints the version; the editor shows it
 with the commit it runs from.
 
+## 0.6.0 (unreleased)
+
+* The canvas grows instead of reporting an error: a state dragged or nudged past the right or bottom edge enlarges the `size` hint (with a margin); it cannot leave by the left or top. A corner handle resizes the canvas, and with Shift stretches the figure (the new edit `resize {w, h, from}`: hinted states and captions move in proportion). A state outside the canvas in typed text is still reported, now with the fix *Enlarge the canvas*.
+
 ## 0.5.0 (unreleased)
 
 * framedit: a Lean file may hold several figure strings; the toolbar's *String* menu switches between them (refused while there are unsaved changes), `--def NAME` picks the first one shown. *New figure* in the figure inspector appends a figure. Tests of the file handling (zero, one or several strings, nested delimiters, unclosed strings, repeated names, the round trip), run in CI.

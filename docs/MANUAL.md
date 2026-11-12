@@ -208,7 +208,16 @@ has a square handle for bending. A notch can be grabbed directly: dragged
 along its arrow it moves (`at`), dragged across the arrow it changes side
 (`side`); its name, dragged across the arrow, moves in the notch (`namedy x
 N`, for that binder only, in both views). A drag that starts on the name and
-goes along the arrow moves the notch. The inspector edits the same hints by
+goes along the arrow moves the notch.
+
+**The canvas.** A state dragged or nudged past the right or bottom edge makes
+the canvas grow (the `size` hint), with a margin; it cannot be moved past the
+left or top edge. The small square at the bottom right corner resizes the
+canvas: dragged, it gives the figure more or less room and leaves every state
+where it is; dragged with Shift, it stretches the figure, moving the hinted
+states and captions in proportion (name offsets, bends and loops stay). A
+state outside the canvas in a hand-written text is reported, with
+*Enlarge the canvas* as its fix. The inspector edits the same hints by
 number. These edits change hints only, never the formula.
 
 **The Frege view (view B).**

@@ -26,7 +26,8 @@ Requests (`op`):
 
 `edit` objects (`kind`): `node {name, panel, x, y, label: [dx,dy] | null}`,
 `unnode {name, panel}`, `edge {src, tgt, occ, panel, bend, side: "+"|"-"|null, at}`,
-`size {w, h}`, `namedy {v}` (the figure's) or `namedy {name, v}` (one binder's), `judgement {v: "claim"|"definition"|"content"}`, `stroke {path, v}`, `gap {path, v}`
+`size {w, h}`, `resize {w, h, from: [w₀, h₀] | null}` (with `from`, the hinted
+states and captions are stretched from `w₀ × h₀`), `namedy {v}` (the figure's) or `namedy {name, v}` (one binder's), `judgement {v: "claim"|"definition"|"content"}`, `stroke {path, v}`, `gap {path, v}`
 (`v` null or 0 removes), `loop {name, panel, angle}`, `notch {name, dir: "up"|"down"}`,
 `route {name, polys: [[[x,y],…],…]}` (`null` removes).  `render` also returns `stale`: the
 binders whose `route` pin no longer fits (drawn routed automatically), `setAside`: the
@@ -90,6 +91,11 @@ def decodeEdit (j : Json) : Except String Edit := do
                    occ := (← getOpt j "occ").getD 1, panel := (← getOpt j "panel").getD 1,
                    bend := ← getOpt j "bend", side, at_ := ← getOpt j "at" }
   | "size" => return .size (← getNat j "w") (← getNat j "h")
+  | "resize" =>
+    let from_ : Option (Nat × Nat) ← match j.getObjVal? "from" with
+      | .ok (.arr #[a, b]) => pure (some (← fromJson? a, ← fromJson? b))
+      | _ => pure none
+    return .resize (← getNat j "w") (← getNat j "h") from_
   | "namedy" =>
     match (getStr j "name").toOption with
     | some x => return .nameDyOf x (← getOpt j "v")
@@ -138,6 +144,9 @@ def encodeEdit : Edit → Json
       ("side", match e.side with | some true => "+" | some false => "-" | none => Json.null),
       ("at", optJson e.at_)]
   | .size w h => Json.mkObj [("kind", "size"), ("w", w), ("h", h)]
+  | .resize w h f => Json.mkObj [("kind", "resize"), ("w", w), ("h", h),
+      ("from", match f with | some (a, b) => Json.arr #[toJson a, toJson b] | none => .null)]
+  | .textAt _ _ => Json.mkObj [("kind", "textAt")]
   | .nameDy v => Json.mkObj [("kind", "namedy"), ("v", optJson v)]
   | .nameDyOf x v => Json.mkObj [("kind", "namedy"), ("name", x), ("v", optJson v)]
   | .judgement j => Json.mkObj [("kind", "judgement"), ("v", judgementStr j)]

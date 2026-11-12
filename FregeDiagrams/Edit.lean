@@ -36,6 +36,12 @@ inductive Edit where
   | route (x : String) (ps : Option (List (List (Int × Int))))
   /-- set the figure's judgement stroke (`claim`, the default, removes the hint) -/
   | judgement (j : Judgement)
+  /-- set the canvas size; with `scaleFrom := some (w₀, h₀)`, also move every
+  hinted state and caption so that the figure stretches from `w₀ × h₀` to the
+  new size (name offsets, bends and loops are kept) -/
+  | resize (w h : Nat) (scaleFrom : Option (Nat × Nat))
+  /-- replace caption `i` (in the order of the hints) -/
+  | textAt (i : Nat) (t : TextHint)
   /-- set or remove (`none` or 0) the extra stroke length into a block, view B -/
   | stroke (path : String) (v : Option Int)
   /-- set or remove (`none` or 0) the extra room above a block, view B -/
@@ -71,6 +77,12 @@ def Edit.apply (h : Hints) : Edit → Hints × Act
   | .size w ht =>
     let t := s!"size {printPair w ht}"
     ({ h with size := some (w, ht) }, if h.size.isSome then .replace .size t else .add t)
+  | .resize w ht _ =>
+    let t := s!"size {printPair w ht}"
+    ({ h with size := some (w, ht) }, if h.size.isSome then .replace .size t else .add t)
+  | .textAt i t =>
+    if i < h.texts.length then ({ h with texts := h.texts.set i t }, .replace (.text i) t.print)
+    else (h, .nothing)
   | .stroke p v =>
     let v := v.filter (· != 0)
     match h.strokes.findIdx? (·.1 == p), v with
@@ -164,10 +176,16 @@ def Act.text (src : List Char) (fs : FigSpans) : Act → Except String (List Cha
     | some c => .ok (splice src c.start.off c.start.off (if fs.hints.isEmpty then t else ", " ++ t))
     | none => .ok (splice src fs.eq.start.off fs.eq.start.off ("[" ++ t ++ "] "))
 
-/-- Apply an edit to figure `fig` of the source text `src`.  The result is
-the new text; it is checked to parse to the edited figure, with every other
-figure unchanged. -/
-def applyEdit (src : String) (fig : String) (e : Edit) : Except String String := do
+/-- The edits that stretch a figure's hinted states and captions from
+`w₀ × h₀` to `w × h` (positions rounded to whole units). -/
+def scaleEdits (h : Hints) (w h' w₀ h₀ : Nat) : List Edit :=
+  let sx (x : Int) : Int := if w₀ == 0 then x else Float.round (Float.ofInt x * w.toFloat / w₀.toFloat) |>.toInt64.toInt
+  let sy (y : Int) : Int := if h₀ == 0 then y else Float.round (Float.ofInt y * h'.toFloat / h₀.toFloat) |>.toInt64.toInt
+  h.nodes.map (fun n => .node { n with x := sx n.x, y := sy n.y }) ++
+  ((List.range h.texts.length).zip h.texts).map fun (i, t) => .textAt i { t with x := sx t.x, y := sy t.y }
+
+/-- One edit, as a change to the text of one hint (`applyEdit`). -/
+def applyEdit1 (src : String) (fig : String) (e : Edit) : Except String String := do
   let figs ← parseFileSpans src
   let some i := figs.findIdx? (·.1.name == fig) | throw s!"no figure {fig}"
   let (f, fs) := figs[i]!
@@ -178,5 +196,17 @@ def applyEdit (src : String) (fig : String) (e : Edit) : Except String String :=
   if figs' != expected then
     throw "editor bug: the edited text does not parse to the edited figure; nothing changed"
   return out
+
+/-- Apply an edit to figure `fig` of the source text `src`.  The result is
+the new text; it is checked to parse to the edited figure, with every other
+figure unchanged. -/
+def applyEdit (src : String) (fig : String) (e : Edit) : Except String String := do
+  -- stretching the figure is several edits, each checked
+  if let .resize w h (some (w₀, h₀)) := e then
+    let figs ← parseFile src
+    let some f := figs.find? (·.name == fig) | throw s!"no figure {fig}"
+    return ← (scaleEdits f.hints w h w₀ h₀ ++ ([.resize w h none] : List Edit)).foldlM
+      (fun s e => applyEdit1 s fig e) src
+  applyEdit1 src fig e
 
 end FregeDiagrams

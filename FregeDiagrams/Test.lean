@@ -502,3 +502,23 @@ def svgs (f : Fig) : List String := (f.pictures (f.drawOpts {})).map (·.2)
   some "fig f [namedy t 3] = all t. s <= t"
 
 end FregeDiagrams.Test.NameDy
+
+/-! ## The canvas: resize, stretch, and the fix for a state outside it -/
+
+namespace FregeDiagrams.Test.Canvas
+open FregeDiagrams
+
+def src := "fig c [size (100,50), s@(10,20), t@(90,40) label (3,4), text (50,45) \"cap\"] = s <= t\n"
+def run (e : Edit) : String := match applyEdit src "c" e with | .ok s => s | .error e => "ERROR " ++ e
+
+-- resize alone keeps every position
+#guard run (.resize 200 100 none) == "fig c [size (200,100), s@(10,20), t@(90,40) label (3,4), text (50,45) \"cap\"] = s <= t\n"
+-- stretched from 100×50 to 200×100: states and captions move, name offsets stay
+#guard run (.resize 200 100 (some (100, 50))) == "fig c [size (200,100), s@(20,40), t@(180,80) label (3,4), text (100,90) grey 11 \"cap\"] = s <= t\n"
+-- a state outside the canvas: the fix enlarges it, after which there is no problem
+def out := "fig o [size (100,50), s@(10,30), t@(130,70)] = s <= t"
+#guard ((Fig.parse out).toOption.get!.lint.filterMap (·.fix)).toList.length == 1
+#guard (do let f ← (Fig.parse out).toOption; let e ← f.lint.findSome? (fun (l : Lint) => l.fix)
+           let t ← (applyEdit out "o" e).toOption; let g ← (Fig.parse t).toOption; pure g.lint.size) == some 0
+
+end FregeDiagrams.Test.Canvas
