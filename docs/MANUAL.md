@@ -67,6 +67,9 @@ lake exe framediag OUTDIR [--fig FILE [--def NAME]] [--no-pdf] [--links] [--hide
 ```
 
 OUTDIR is required, even with `--check`, which writes nothing.
+`lake exe framediag --version` prints the version; the editor shows it at the
+top of the page, with the commit (short hash, and "modified" when the working
+tree has changes), the tag if any, and the commit's date and time.
 
 | option | effect |
 |---|---|
