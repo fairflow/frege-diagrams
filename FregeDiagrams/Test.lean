@@ -365,7 +365,7 @@ def claim := fig "fig c = all t. s <= t"
 -- a definition must be "D" {f}
 #guard ((fig "fig d [judgement definition] = s <= t").lint.map (·.msg.startsWith "A definition must be")).toList == [true]
 -- view B: one judgement bar for a claim, two for a definition, none for a content
-def bars (f : Fig) : Nat := ((f.pictures.getLast!.2).splitOn "stroke-width=\"2.0\"").length - 1
+def bars (f : Fig) : Nat := ((f.pictures { style := .classic }).getLast!.2.splitOn "stroke-width=\"2.0\"").length - 1
 #guard bars claim == 1 && bars cont == 0 && bars defn == 2
 -- the editor's edit: add, change, remove
 #guard (applyEdit "fig c = s <= t" "c" (.judgement .content)).toOption ==

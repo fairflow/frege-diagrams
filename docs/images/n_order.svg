@@ -1,14 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="300" height="100" viewBox="0 0 300 100">
+<style>polyline,path,polygon{stroke-linejoin:round}</style>
 <rect width="100%" height="100%" fill="white"/>
-<polyline points="84.5,60.0 84.5,46.0 97.7,46.0 97.7,60.0" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="5,3.2"/>
+<path d="M84.5,60.0 L84.5,49.5 Q84.5,46.0 88.0,46.0 L94.2,46.0 Q97.7,46.0 97.7,49.5 L97.7,60.0" fill="none" stroke="#c0392b" stroke-width="1.1" stroke-linecap="round" stroke-dasharray="5,3.2"/>
 <text x="91.1" y="55.7" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="12" font-style="italic" text-anchor="middle" fill="#c0392b">y</text>
-<polyline points="37.2,60.0 41.5,60.0 47.3,60.0 53.0,60.0 58.8,60.0 64.5,60.0 70.2,60.0 76.0,60.0 81.8,60.0 84.5,60.0" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="5,3.2"/>
-<polyline points="97.7,60.0 99.0,60.0 104.8,60.0 110.5,60.0 116.2,60.0 122.0,60.0 127.7,60.0 133.5,60.0 139.2,60.0 145.0,60.0 145.0,60.0" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="5,3.2"/>
-<polyline points="145.0,60.0 150.8,60.0 156.5,60.0 162.2,60.0 168.0,60.0 173.8,60.0 179.5,60.0 185.2,60.0 191.0,60.0 196.8,60.0 202.5,60.0 208.2,60.0 214.0,60.0 219.8,60.0 225.5,60.0 231.2,60.0 237.0,60.0 242.8,60.0 248.5,60.0 252.8,60.0" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round"/>
-<circle cx="145.0" cy="60.0" r="3.2" fill="white" stroke="#c0392b" stroke-width="1.3"/>
+<path d="M37.2,60.0 L39.4,60.0 Q41.5,60.0 43.6,60.0 L44.4,60.0 Q47.3,60.0 50.1,60.0 L50.1,60.0 Q53.0,60.0 55.9,60.0 L55.9,60.0 Q58.8,60.0 61.6,60.0 L61.6,60.0 Q64.5,60.0 67.3,60.0 L67.3,60.0 Q70.2,60.0 73.1,60.0 L73.1,60.0 Q76.0,60.0 78.9,60.0 L80.4,60.0 Q81.8,60.0 83.2,60.0 L84.5,60.0" fill="none" stroke="#c0392b" stroke-width="1.1" stroke-linecap="round" stroke-dasharray="5,3.2"/>
+<path d="M97.7,60.0 L98.3,60.0 Q99.0,60.0 99.7,60.0 L101.9,60.0 Q104.8,60.0 107.7,60.0 L107.7,60.0 Q110.5,60.0 113.3,60.0 L113.3,60.0 Q116.2,60.0 119.1,60.0 L119.2,60.0 Q122.0,60.0 124.8,60.0 L124.8,60.0 Q127.7,60.0 130.6,60.0 L130.7,60.0 Q133.5,60.0 136.3,60.0 L136.3,60.0 Q139.2,60.0 142.0,60.0 L145.0,60.0 L145.0,60.0" fill="none" stroke="#c0392b" stroke-width="1.1" stroke-linecap="round" stroke-dasharray="5,3.2"/>
+<path d="M145.0,60.0 L148.0,60.0 Q150.8,60.0 153.7,60.0 L153.7,60.0 Q156.5,60.0 159.3,60.0 L159.3,60.0 Q162.2,60.0 165.0,60.0 L165.1,60.0 Q168.0,60.0 170.9,60.0 L171.0,60.0 Q173.8,60.0 176.7,60.0 L176.7,60.0 Q179.5,60.0 182.3,60.0 L182.3,60.0 Q185.2,60.0 188.0,60.0 L188.1,60.0 Q191.0,60.0 193.9,60.0 L194.0,60.0 Q196.8,60.0 199.7,60.0 L199.7,60.0 Q202.5,60.0 205.3,60.0 L205.3,60.0 Q208.2,60.0 211.0,60.0 L211.1,60.0 Q214.0,60.0 216.9,60.0 L217.0,60.0 Q219.8,60.0 222.7,60.0 L222.7,60.0 Q225.5,60.0 228.3,60.0 L228.3,60.0 Q231.2,60.0 234.0,60.0 L234.1,60.0 Q237.0,60.0 239.9,60.0 L240.0,60.0 Q242.8,60.0 245.7,60.0 L246.3,60.0 Q248.5,60.0 250.7,60.0 L252.8,60.0" fill="none" stroke="#c0392b" stroke-width="1.1" stroke-linecap="round"/>
+<circle cx="145.0" cy="60.0" r="3.2" fill="white" stroke="#c0392b" stroke-width="1.0"/>
 <polygon points="252.8,60.0 244.8,63.6 244.8,56.4" fill="#c0392b"/>
-<circle cx="30" cy="60" r="4.2" fill="white" stroke="#1b1b1b" stroke-width="1.4"/>
+<circle cx="30" cy="60" r="4.2" fill="white" stroke="#1b1b1b" stroke-width="1.1"/>
 <text x="30" y="50" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="14" font-style="italic" text-anchor="middle" fill="#1b1b1b">s</text>
-<circle cx="260" cy="60" r="4.2" fill="#1b1b1b" stroke="#1b1b1b" stroke-width="1.4"/>
+<circle cx="260" cy="60" r="4.2" fill="#1b1b1b" stroke="#1b1b1b" stroke-width="1.1"/>
 <text x="270" y="64" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="14" font-style="italic" text-anchor="middle" fill="#1b1b1b">y</text>
 </svg>

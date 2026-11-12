@@ -126,6 +126,14 @@ inductive Item where
   /-- free text at integer coordinates. -/
   | text (x y : Int) (s color : String) (size : Nat) (anchor : String) (italic : Bool)
 
+/-- The drawing style.  **soft** (the default since 0.10.0): thinner
+strokes, round joins, and rounded corners on every bend of a line (notches,
+forks, condition strokes, link turns).  **classic**: the drawing of earlier
+versions, byte for byte (`--style classic`). -/
+inductive Style where
+  | soft | classic
+deriving BEq, DecidableEq, Repr, Inhabited
+
 /-- A variant-A diagram: states (drawn last, on top) and items. -/
 structure Diagram where
   name : String
@@ -140,6 +148,7 @@ structure Diagram where
   /-- for the editor: wrap each state, label and arrow in a `<g>` carrying its
   `attrs` attributes.  Off by default, so the output is unchanged. -/
   annotate : Bool := false
+  style : Style := .soft
 deriving Inhabited
 
 namespace Diagram
@@ -446,6 +455,77 @@ def renderNode (n : State) : Array String := renderDot n ++ renderLabel n
 
 end Diagram
 
+/-- The stroke widths of the soft style, from those of the classic one. -/
+def softWidth : String → String
+  | "2.0" => "1.6" | "1.9" => "1.15" | "1.5" => "1.1" | "1.4" => "1.1" | "1.3" => "1.0" | w => w
+
+/-- The radius of the rounded corners of the soft style. -/
+def SOFT_R : Float := 3.5
+
+/-- A polyline as an SVG path whose corners are rounded with radius `r`
+(less where a segment is short: at most half of either segment). -/
+def roundedPath (pts : Array P) (r : Float) : String := Id.run do
+  let f (p : P) := fmt1 p.x ++ "," ++ fmt1 p.y
+  let mut d := "M" ++ f pts[0]!
+  for i in [1:pts.size - 1] do
+    let p0 := pts[i-1]!; let p1 := pts[i]!; let p2 := pts[i+1]!
+    let l1 := (p1 - p0).len; let l2 := (p2 - p1).len
+    let rr := min r (min (l1 / 2.0) (l2 / 2.0))
+    if rr < 0.3 then
+      d := d ++ " L" ++ f p1
+    else
+      let a := p1 - (p1 - p0) * (rr / l1)
+      let b := p1 + (p2 - p1) * (rr / l2)
+      d := d ++ " L" ++ f a ++ " Q" ++ f p1 ++ " " ++ f b
+  return d ++ " L" ++ f pts.back!
+
+/-- A decimal number as `fmt1` prints it (`-12.5`, `3.0`). -/
+def parseFloat? (s : String) : Option Float := do
+  let (neg, t) := if s.startsWith "-" then (true, (s.drop 1).toString) else (false, s)
+  let (ip, fp) := match t.splitOn "." with
+    | [a] => (a, "")
+    | [a, b] => (a, b)
+    | _ => ("", "x")
+  if ip.isEmpty || !ip.all Char.isDigit || !fp.all Char.isDigit then none
+  let v := ip.toNat!.toFloat + (if fp.isEmpty then 0.0 else fp.toNat!.toFloat / (10.0 ^ fp.length.toFloat))
+  return if neg then -v else v
+
+/-- Parse the `points` of a polyline as printed by `polyStr`. -/
+def parsePoints (s : String) : Array P :=
+  (s.splitOn " ").toArray.filterMap fun xy =>
+    match xy.splitOn "," with
+    | [x, y] => do
+      let px ← parseFloat? x; let py ← parseFloat? y
+      pure (⟨px, py⟩ : P)
+    | _ => none
+
+/-- The soft style, applied to a drawn SVG: widths, round joins, and (unless
+`keepLines`, which the editor needs for its handles) every polyline with a
+bend drawn as a path with rounded corners. -/
+def softSvg (svg : String) (keepLines : Bool := false) : String := Id.run do
+  -- stroke widths
+  let parts := svg.splitOn "stroke-width=\""
+  let mut out := parts.headD ""
+  for p in parts.drop 1 do
+    match p.splitOn "\"" with
+    | w :: rest => out := out ++ "stroke-width=\"" ++ softWidth w ++ "\"" ++ "\"".intercalate rest
+    | [] => out := out ++ "stroke-width=\"" ++ p
+  -- round joins everywhere
+  out := out.replace "<rect width=\"100%\" height=\"100%\" fill=\"white\"/>"
+    "<style>polyline,path,polygon{stroke-linejoin:round}</style>\n<rect width=\"100%\" height=\"100%\" fill=\"white\"/>"
+  if keepLines then return out
+  -- rounded corners
+  let parts := out.splitOn "<polyline points=\""
+  let mut res := parts.headD ""
+  for p in parts.drop 1 do
+    match p.splitOn "\"" with
+    | ptsStr :: rest =>
+      let pts := parsePoints ptsStr
+      if pts.size ≥ 3 then res := res ++ "<path d=\"" ++ roundedPath pts SOFT_R ++ "\"" ++ "\"".intercalate rest
+      else res := res ++ "<polyline points=\"" ++ p
+    | [] => res := res ++ "<polyline points=\"" ++ p
+  return res
+
 /-- The SVG document around a body. -/
 def svgDoc (w h : Nat) (body : Array String) : String :=
   s!"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{w}\" height=\"{h}\" viewBox=\"0 0 {w} {h}\">\n" ++
@@ -468,6 +548,7 @@ def Diagram.svg (d : Diagram) : String := Id.run do
   for n in d.nodes do
     body := body ++ wrap (n.attrs ++ " data-part=\"dot\"") (Diagram.renderDot n)
       ++ wrap (n.attrs ++ " data-part=\"label\"") (Diagram.renderLabel n)
-  return svgDoc d.w d.h body
+  let svg := svgDoc d.w d.h body
+  return if d.style == .soft then softSvg svg d.annotate else svg
 
 end FregeDiagrams

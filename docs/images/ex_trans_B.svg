@@ -1,38 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="164" height="131" viewBox="0 0 164 131">
+<style>polyline,path,polygon{stroke-linejoin:round}</style>
 <rect width="100%" height="100%" fill="white"/>
 <g transform="translate(-2.0,-3.0)">
-<polyline points="14.0,25.0 14.0,43.0" fill="none" stroke="#1b1b1b" stroke-width="2.0" stroke-linecap="round"/>
-<polyline points="24.0,34.0 24.0,20.0 37.2,20.0 37.2,34.0" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round"/>
+<polyline points="14.0,25.0 14.0,43.0" fill="none" stroke="#1b1b1b" stroke-width="1.6" stroke-linecap="round"/>
+<path d="M24.0,34.0 L24.0,23.5 Q24.0,20.0 27.5,20.0 L33.7,20.0 Q37.2,20.0 37.2,23.5 L37.2,34.0" fill="none" stroke="#c0392b" stroke-width="1.1" stroke-linecap="round"/>
 <text x="30.6" y="29.7" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="12" font-style="italic" text-anchor="middle" fill="#c0392b">u</text>
-<polyline points="14.0,34.0 24.0,34.0" fill="none" stroke="#c0392b" stroke-width="1.3" stroke-linecap="round"/>
-<polyline points="37.2,34.0 41.2,34.0" fill="none" stroke="#c0392b" stroke-width="1.3" stroke-linecap="round"/>
-<polyline points="51.2,34.0 51.2,20.0 64.4,20.0 64.4,34.0" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round"/>
+<polyline points="14.0,34.0 24.0,34.0" fill="none" stroke="#c0392b" stroke-width="1.0" stroke-linecap="round"/>
+<polyline points="37.2,34.0 41.2,34.0" fill="none" stroke="#c0392b" stroke-width="1.0" stroke-linecap="round"/>
+<path d="M51.2,34.0 L51.2,23.5 Q51.2,20.0 54.7,20.0 L60.9,20.0 Q64.4,20.0 64.4,23.5 L64.4,34.0" fill="none" stroke="#c0392b" stroke-width="1.1" stroke-linecap="round"/>
 <text x="57.8" y="29.7" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="12" font-style="italic" text-anchor="middle" fill="#c0392b">t</text>
-<polyline points="41.2,34.0 51.2,34.0" fill="none" stroke="#c0392b" stroke-width="1.3" stroke-linecap="round"/>
-<polyline points="64.4,34.0 68.4,34.0" fill="none" stroke="#c0392b" stroke-width="1.3" stroke-linecap="round"/>
-<polyline points="68.4,34.0 88.4,34.0" fill="none" stroke="#c0392b" stroke-width="1.3" stroke-linecap="round"/>
-<polyline points="88.4,34.0 98.4,34.0" fill="none" stroke="#c0392b" stroke-width="1.3" stroke-linecap="round"/>
-<circle cx="106.4" cy="34.0" r="4.2" fill="white" stroke="#c0392b" stroke-width="1.4"/>
+<polyline points="41.2,34.0 51.2,34.0" fill="none" stroke="#c0392b" stroke-width="1.0" stroke-linecap="round"/>
+<polyline points="64.4,34.0 68.4,34.0" fill="none" stroke="#c0392b" stroke-width="1.0" stroke-linecap="round"/>
+<polyline points="68.4,34.0 88.4,34.0" fill="none" stroke="#c0392b" stroke-width="1.0" stroke-linecap="round"/>
+<polyline points="88.4,34.0 98.4,34.0" fill="none" stroke="#c0392b" stroke-width="1.0" stroke-linecap="round"/>
+<circle cx="106.4" cy="34.0" r="4.2" fill="white" stroke="#c0392b" stroke-width="1.1"/>
 <text x="106.4" y="25.0" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="12" font-style="italic" text-anchor="middle" fill="#c0392b">s</text>
-<polyline points="112.6,34.0 113.0,34.0 114.1,34.0 115.2,34.0 116.3,34.0 117.4,34.0 118.5,34.0 119.6,34.0 120.7,34.0 121.8,34.0 122.9,34.0 124.0,34.0 125.1,34.0 126.2,34.0 127.3,34.0 128.4,34.0 129.5,34.0 130.6,34.0 131.7,34.0 132.8,34.0 133.9,34.0 135.0,34.0 136.1,34.0 137.2,34.0 138.3,34.0 139.4,34.0 140.5,34.0 141.6,34.0 142.7,34.0 143.8,34.0 144.2,34.0" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="5,3.2"/>
+<path d="M112.6,34.0 L113.0,34.0 L113.5,34.0 Q114.1,34.0 114.6,34.0 L114.7,34.0 Q115.2,34.0 115.8,34.0 L115.8,34.0 Q116.3,34.0 116.8,34.0 L116.9,34.0 Q117.4,34.0 118.0,34.0 L118.0,34.0 Q118.5,34.0 119.0,34.0 L119.0,34.0 Q119.6,34.0 120.1,34.0 L120.2,34.0 Q120.7,34.0 121.2,34.0 L121.2,34.0 Q121.8,34.0 122.3,34.0 L122.4,34.0 Q122.9,34.0 123.5,34.0 L123.5,34.0 Q124.0,34.0 124.5,34.0 L124.5,34.0 Q125.1,34.0 125.6,34.0 L125.7,34.0 Q126.2,34.0 126.8,34.0 L126.8,34.0 Q127.3,34.0 127.8,34.0 L127.9,34.0 Q128.4,34.0 128.9,34.0 L128.9,34.0 Q129.5,34.0 130.1,34.0 L130.1,34.0 Q130.6,34.0 131.1,34.0 L131.1,34.0 Q131.7,34.0 132.2,34.0 L132.2,34.0 Q132.8,34.0 133.4,34.0 L133.4,34.0 Q133.9,34.0 134.4,34.0 L134.4,34.0 Q135.0,34.0 135.6,34.0 L135.6,34.0 Q136.1,34.0 136.6,34.0 L136.6,34.0 Q137.2,34.0 137.8,34.0 L137.8,34.0 Q138.3,34.0 138.9,34.0 L138.9,34.0 Q139.4,34.0 139.9,34.0 L139.9,34.0 Q140.5,34.0 141.1,34.0 L141.1,34.0 Q141.6,34.0 142.1,34.0 L142.1,34.0 Q142.7,34.0 143.2,34.0 L143.8,34.0 L144.2,34.0" fill="none" stroke="#c0392b" stroke-width="1.1" stroke-linecap="round" stroke-dasharray="5,3.2"/>
 <polygon points="144.2,34.0 136.2,37.6 136.2,30.4" fill="#c0392b"/>
-<circle cx="150.4" cy="34.0" r="4.2" fill="#c0392b" stroke="#c0392b" stroke-width="1.4"/>
+<circle cx="150.4" cy="34.0" r="4.2" fill="#c0392b" stroke="#c0392b" stroke-width="1.1"/>
 <text x="150.4" y="25.0" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="12" font-style="italic" text-anchor="middle" fill="#c0392b">t</text>
-<polyline points="88.4,76.0 98.4,76.0" fill="none" stroke="#1b1b1b" stroke-width="1.3" stroke-linecap="round"/>
-<circle cx="106.4" cy="76.0" r="4.2" fill="#1b1b1b" stroke="#1b1b1b" stroke-width="1.4"/>
+<polyline points="88.4,76.0 98.4,76.0" fill="none" stroke="#1b1b1b" stroke-width="1.0" stroke-linecap="round"/>
+<circle cx="106.4" cy="76.0" r="4.2" fill="#1b1b1b" stroke="#1b1b1b" stroke-width="1.1"/>
 <text x="106.4" y="67.0" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="12" font-style="italic" text-anchor="middle" fill="#1b1b1b">u</text>
-<polyline points="112.6,76.0 113.0,76.0 114.1,76.0 115.2,76.0 116.3,76.0 117.4,76.0 118.5,76.0 119.6,76.0 120.7,76.0 121.8,76.0 122.9,76.0 124.0,76.0 125.1,76.0 126.2,76.0 127.3,76.0 128.4,76.0 129.5,76.0 130.6,76.0 131.7,76.0 132.8,76.0 133.9,76.0 135.0,76.0 136.1,76.0 137.2,76.0 138.3,76.0 139.4,76.0 140.5,76.0 141.6,76.0 142.7,76.0 143.8,76.0 144.2,76.0" fill="none" stroke="#1b1b1b" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="5,3.2"/>
+<path d="M112.6,76.0 L113.0,76.0 L113.5,76.0 Q114.1,76.0 114.6,76.0 L114.7,76.0 Q115.2,76.0 115.8,76.0 L115.8,76.0 Q116.3,76.0 116.8,76.0 L116.9,76.0 Q117.4,76.0 118.0,76.0 L118.0,76.0 Q118.5,76.0 119.0,76.0 L119.0,76.0 Q119.6,76.0 120.1,76.0 L120.2,76.0 Q120.7,76.0 121.2,76.0 L121.2,76.0 Q121.8,76.0 122.3,76.0 L122.4,76.0 Q122.9,76.0 123.5,76.0 L123.5,76.0 Q124.0,76.0 124.5,76.0 L124.5,76.0 Q125.1,76.0 125.6,76.0 L125.7,76.0 Q126.2,76.0 126.8,76.0 L126.8,76.0 Q127.3,76.0 127.8,76.0 L127.9,76.0 Q128.4,76.0 128.9,76.0 L128.9,76.0 Q129.5,76.0 130.1,76.0 L130.1,76.0 Q130.6,76.0 131.1,76.0 L131.1,76.0 Q131.7,76.0 132.2,76.0 L132.2,76.0 Q132.8,76.0 133.4,76.0 L133.4,76.0 Q133.9,76.0 134.4,76.0 L134.4,76.0 Q135.0,76.0 135.6,76.0 L135.6,76.0 Q136.1,76.0 136.6,76.0 L136.6,76.0 Q137.2,76.0 137.8,76.0 L137.8,76.0 Q138.3,76.0 138.9,76.0 L138.9,76.0 Q139.4,76.0 139.9,76.0 L139.9,76.0 Q140.5,76.0 141.1,76.0 L141.1,76.0 Q141.6,76.0 142.1,76.0 L142.1,76.0 Q142.7,76.0 143.2,76.0 L143.8,76.0 L144.2,76.0" fill="none" stroke="#1b1b1b" stroke-width="1.1" stroke-linecap="round" stroke-dasharray="5,3.2"/>
 <polygon points="144.2,76.0 136.2,79.6 136.2,72.4" fill="#1b1b1b"/>
-<circle cx="150.4" cy="76.0" r="4.2" fill="#1b1b1b" stroke="#1b1b1b" stroke-width="1.4"/>
+<circle cx="150.4" cy="76.0" r="4.2" fill="#1b1b1b" stroke="#1b1b1b" stroke-width="1.1"/>
 <text x="150.4" y="67.0" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="12" font-style="italic" text-anchor="middle" fill="#1b1b1b">t</text>
-<polyline points="88.4,34.0 88.4,76.0" fill="none" stroke="#1b1b1b" stroke-width="1.3" stroke-linecap="round"/>
-<polyline points="78.4,118.0 88.4,118.0" fill="none" stroke="#1b1b1b" stroke-width="1.3" stroke-linecap="round"/>
-<circle cx="96.4" cy="118.0" r="4.2" fill="white" stroke="#1b1b1b" stroke-width="1.4"/>
+<polyline points="88.4,34.0 88.4,76.0" fill="none" stroke="#1b1b1b" stroke-width="1.0" stroke-linecap="round"/>
+<polyline points="78.4,118.0 88.4,118.0" fill="none" stroke="#1b1b1b" stroke-width="1.0" stroke-linecap="round"/>
+<circle cx="96.4" cy="118.0" r="4.2" fill="white" stroke="#1b1b1b" stroke-width="1.1"/>
 <text x="96.4" y="109.0" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="12" font-style="italic" text-anchor="middle" fill="#1b1b1b">s</text>
-<polyline points="102.6,118.0 103.0,118.0 104.1,118.0 105.2,118.0 106.3,118.0 107.4,118.0 108.5,118.0 109.6,118.0 110.7,118.0 111.8,118.0 112.9,118.0 114.0,118.0 115.1,118.0 116.2,118.0 117.3,118.0 118.4,118.0 119.5,118.0 120.6,118.0 121.7,118.0 122.8,118.0 123.9,118.0 125.0,118.0 126.1,118.0 127.2,118.0 128.3,118.0 129.4,118.0 130.5,118.0 131.6,118.0 132.7,118.0 133.8,118.0 134.2,118.0" fill="none" stroke="#1b1b1b" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="5,3.2"/>
+<path d="M102.6,118.0 L103.0,118.0 L103.5,118.0 Q104.1,118.0 104.6,118.0 L104.7,118.0 Q105.2,118.0 105.8,118.0 L105.8,118.0 Q106.3,118.0 106.8,118.0 L106.9,118.0 Q107.4,118.0 108.0,118.0 L108.0,118.0 Q108.5,118.0 109.0,118.0 L109.0,118.0 Q109.6,118.0 110.1,118.0 L110.2,118.0 Q110.7,118.0 111.2,118.0 L111.2,118.0 Q111.8,118.0 112.3,118.0 L112.4,118.0 Q112.9,118.0 113.5,118.0 L113.5,118.0 Q114.0,118.0 114.5,118.0 L114.5,118.0 Q115.1,118.0 115.6,118.0 L115.7,118.0 Q116.2,118.0 116.8,118.0 L116.8,118.0 Q117.3,118.0 117.8,118.0 L117.9,118.0 Q118.4,118.0 119.0,118.0 L119.0,118.0 Q119.5,118.0 120.0,118.0 L120.0,118.0 Q120.6,118.0 121.1,118.0 L121.2,118.0 Q121.7,118.0 122.2,118.0 L122.2,118.0 Q122.8,118.0 123.3,118.0 L123.4,118.0 Q123.9,118.0 124.5,118.0 L124.5,118.0 Q125.0,118.0 125.5,118.0 L125.5,118.0 Q126.1,118.0 126.6,118.0 L126.7,118.0 Q127.2,118.0 127.8,118.0 L127.8,118.0 Q128.3,118.0 128.9,118.0 L128.9,118.0 Q129.4,118.0 129.9,118.0 L129.9,118.0 Q130.5,118.0 131.1,118.0 L131.1,118.0 Q131.6,118.0 132.1,118.0 L132.1,118.0 Q132.7,118.0 133.2,118.0 L133.8,118.0 L134.2,118.0" fill="none" stroke="#1b1b1b" stroke-width="1.1" stroke-linecap="round" stroke-dasharray="5,3.2"/>
 <polygon points="134.2,118.0 126.2,121.6 126.2,114.4" fill="#1b1b1b"/>
-<circle cx="140.4" cy="118.0" r="4.2" fill="#1b1b1b" stroke="#1b1b1b" stroke-width="1.4"/>
+<circle cx="140.4" cy="118.0" r="4.2" fill="#1b1b1b" stroke="#1b1b1b" stroke-width="1.1"/>
 <text x="140.4" y="109.0" font-family="Latin Modern Math, STIX Two Math, Cambria Math, Times New Roman, serif" font-size="12" font-style="italic" text-anchor="middle" fill="#1b1b1b">u</text>
-<polyline points="78.4,34.0 78.4,118.0" fill="none" stroke="#1b1b1b" stroke-width="1.3" stroke-linecap="round"/>
+<polyline points="78.4,34.0 78.4,118.0" fill="none" stroke="#1b1b1b" stroke-width="1.0" stroke-linecap="round"/>
 </g>
 </svg>

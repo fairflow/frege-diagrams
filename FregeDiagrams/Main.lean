@@ -44,7 +44,7 @@ where parseDecimal' (s : String) : Option Float :=
   | _ => none
 
 def usage : String :=
-  "usage: lake exe framediag OUTDIR [--fig FILE [--def NAME]] [--no-pdf] [--links] [--hide-bound] [--spacing X] [--notch-name-offset DY] [--check] [--stats]"
+  "usage: lake exe framediag OUTDIR [--fig FILE [--def NAME]] [--no-pdf] [--links] [--hide-bound] [--spacing X] [--notch-name-offset DY] [--style classic] [--check] [--stats]"
 
 /-- Is `rsvg-convert` on the PATH? -/
 def haveRsvg : IO Bool := do
@@ -67,7 +67,8 @@ def main (args : List String) : IO UInt32 := do
     return 0
   -- typesetting options for the whole set of diagrams
   let opts : DrawOpts := { links := args.contains "--links", hideBound := args.contains "--hide-bound",
-                           annotate := args.contains "--annotate" }
+                           annotate := args.contains "--annotate",
+                           style := if ((args.dropWhile (· != "--style")).drop 1).head? == some "classic" then .classic else .soft }
   let args0 := args
   let check := args.contains "--check" || args.contains "--stats"
   -- `--spacing X`: a factor on the clearances of the links
@@ -86,6 +87,7 @@ def main (args : List String) : IO UInt32 := do
     | "--spacing" :: _ :: rest => dropSpacing rest
     | "--notch-name-offset" :: _ :: rest => dropSpacing rest
     | "--def" :: _ :: rest => dropSpacing rest
+    | "--style" :: _ :: rest => dropSpacing rest
     | a :: rest => a :: dropSpacing rest
     | [] => []
   let args := (dropSpacing args).filter fun a => a != "--links" && a != "--hide-bound" && a != "--annotate" && a != "--check" && a != "--stats"
@@ -173,7 +175,7 @@ def main (args : List String) : IO UInt32 := do
   IO.FS.createDirAll dir
   let mut svgs : Array System.FilePath := #[]
   let legendFile := dir / "legend.svg"
-  IO.FS.writeFile legendFile legend.svg
+  IO.FS.writeFile legendFile { legend with style := opts.style }.svg
   svgs := svgs.push legendFile
   for f in figs do
     for (n, svg) in f.pictures opts do

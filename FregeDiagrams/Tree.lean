@@ -80,6 +80,8 @@ structure DrawOpts where
   /-- for the editor: ids and current hint values on the SVG elements of
   view A (`Diagram.annotate`).  Off by default; the output is then unchanged. -/
   annotate : Bool := false
+  /-- the drawing style (`--style classic` for the drawing of earlier versions) -/
+  style : Style := .soft
   /-- internal: the block being drawn (`blockPath`), for the annotations -/
   block : String := "b"
   /-- internal: whether the block being drawn can take a `gap` (a hypothesis,

@@ -252,7 +252,7 @@ def Fig.toDiagram (d : Fig) (o : DrawOpts := {}) : Diagram := Id.run do
     g := g.text t.x t.y t.s (color := t.color.svg) (size := t.size)
       (anchor := if t.middle then "middle" else "start") (italic := t.italic)
   let (w, ht) := h.size.getD ((maxX + 40).toNat, (maxY + 40).toNat)
-  return { g with w, h := ht, nameDy := o.nameDy, nameDys := o.nameDys, annotate := o.annotate }
+  return { g with w, h := ht, nameDy := o.nameDy, nameDys := o.nameDys, annotate := o.annotate, style := o.style }
 
 /-- The drawing options of a figure: its `namedy` and `notch` hints over the
 options of the run. -/

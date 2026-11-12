@@ -718,7 +718,8 @@ def TreeDiagram.render (d : TreeDiagram) (o : DrawOpts := {}) : Rendered := Id.r
   let mut nTree := 0
   for a in links do
     for c in sc.curves do nTree := nTree + (crossings a c).size
-  return { svg := svgDoc (x1 - x0 + 2.0 * m).toUInt64.toNat (y1 - y0 + 2.0 * m).toUInt64.toNat body,
+  let doc := svgDoc (x1 - x0 + 2.0 * m).toUInt64.toNat (y1 - y0 + 2.0 * m).toUInt64.toNat body
+  return { svg := if o.style == .soft then softSvg doc o.annotate else doc,
            problems := probs, nLink, nTree,
            nesting := if o.links then nestingViolations sc binders rs else #[],
            names := if o.links then nameViolations sc names links else #[],
