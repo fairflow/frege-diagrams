@@ -64,10 +64,11 @@ GRAMMAR = [
     ]),
     ("Hints", [
         ("hints", Seq(T("["), Opt(Seq(N("hint"), Star(Seq(T(","), N("hint"))))), T("]"))),
-        ("hint", Alt(N("size-hint"), N("views-hint"), N("position-hint"), N("edge-hint"),
+        ("hint", Alt(N("size-hint"), N("views-hint"), N("judgement-hint"), N("position-hint"), N("edge-hint"),
                      N("loop-hint"), N("namedy-hint"), N("notch-hint"), N("route-hint"), N("text-hint"))),
         ("size-hint", Seq(T("size"), N("pair"))),
         ("views-hint", Seq(T("views"), Alt(T("A"), T("B")))),
+        ("judgement-hint", Seq(T("judgement"), Alt(T("claim"), T("definition"), T("content")))),
         ("position-hint", Seq(N("key"), T("@"), N("pair"), Opt(Seq(T("label"), N("pair"))))),
         ("edge-hint", Seq(T("edge"), N("name"), T(">"), N("name"), Opt(Seq(T("#"), N("int"))),
                           Opt(Seq(T("/"), N("int"))), Star(N("edge-option")))),

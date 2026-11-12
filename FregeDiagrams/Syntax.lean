@@ -20,6 +20,7 @@ base   ::= "<=" | "<=°" | "R" | "R°" | "~>" | "=" | "!="
          | "-[" LABEL "]-" | "-[" LABEL "]->"        labelled relation
 hints  ::= "[" (hint ("," hint)*)? "]"
 hint   ::= "size" "(" NAT "," NAT ")" | "views" ("A" | "B")
+         | "judgement" ("claim" | "definition" | "content")
          | key "@" "(" INT "," INT ")" ("label" "(" INT "," INT ")")?
          | "edge" NAME ">" NAME ("#" NAT)? ("/" NAT)?
              ("bend" INT | "side" ("+" | "-") | "at" DEC)*        any order
@@ -213,6 +214,8 @@ def routePrint (r : String × List (List (Int × Int))) : String :=
 def Hints.print (h : Hints) : List String :=
   (match h.size with | some (w, ht) => [s!"size {printPair w ht}"] | none => []) ++
   (match h.views with | .both => [] | .a => ["views A"] | .b => ["views B"]) ++
+  (match h.judgement with
+    | .claim => [] | .definition => ["judgement definition"] | .content => ["judgement content"]) ++
   h.nodes.map NodeHint.print ++
   h.edges.map EdgeHint.print ++
   h.loops.map LoopHint.print ++
@@ -399,6 +402,12 @@ def hint (h : Hints) : Parser Hints := do
     if ← isWord "A" then discard next; return { h with views := .a }
     else if ← isWord "B" then discard next; return { h with views := .b }
     else fail "expected 'A' or 'B'"
+  | some (.ident "judgement") =>
+    discard next
+    if ← isWord "claim" then discard next; return { h with judgement := .claim }
+    else if ← isWord "definition" then discard next; return { h with judgement := .definition }
+    else if ← isWord "content" then discard next; return { h with judgement := .content }
+    else fail "expected 'claim', 'definition' or 'content'"
   | some (.ident "edge") =>
     discard next
     let src ← name; expectSym ">"; let tgt ← name
@@ -465,7 +474,7 @@ breaks, the order of hints) as it was. -/
 
 /-- Which hint a span holds: an index into the list of its kind. -/
 inductive HintRef where
-  | size | views | namedy
+  | size | views | namedy | judgement
   | node (i : Nat) | edge (i : Nat) | loop (i : Nat) | text (i : Nat) | notch (i : Nat) | route (i : Nat)
 deriving BEq, Repr, Inhabited
 
@@ -492,6 +501,7 @@ def hintS (h : Hints) : Parser (Hints × HintRef × Span) := do
     | some (.ident "size") => .size
     | some (.ident "views") => .views
     | some (.ident "namedy") => .namedy
+    | some (.ident "judgement") => .judgement
     | some (.ident "edge") => .edge h.edges.length
     | some (.ident "loop") => .loop h.loops.length
     | some (.ident "text") => .text h.texts.length

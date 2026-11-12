@@ -125,7 +125,8 @@ the end.
 ![legend_B](images/legend_B.svg)
 
 * The short vertical bar at the left is the **judgement stroke**: the whole
-  figure is asserted (Begriffsschrift §2).
+  figure is asserted (Begriffsschrift §2). See also *Claims, definitions,
+  contents* below.
 * The horizontal line from it is the **content stroke**; what it leads to is
   the content.
 * `if H₁, H₂ then C` (that is H₁ → (H₂ → C)): `C` continues along the main
@@ -159,6 +160,20 @@ and an arc across its rays. (Neither conjunction nor disjunction is encoded
 through `→` and `¬`: the encodings `¬A → B` for ∨ and `¬(A → ¬B)` for ∧ are
 not valid in intuitionistic logic.)
 
+### Claims, definitions, contents
+
+| claim | definition | content |
+|---|---|---|
+| ![](images/n_claim.svg) | ![](images/n_definition.svg) | ![](images/n_content.svg) |
+| one judgement stroke: the formula is asserted | two strokes: `dead(u)` is defined as what follows | no stroke: the formula is only shown |
+
+A figure is a **claim** by default. A **definition** (`judgement definition`)
+has Frege's double judgement stroke (§24) and the name it defines on its
+left; its formula reads `dead(u) :≡ ¬∃x. u R x`. A **content**
+(`judgement content`) has no judgement stroke: Frege's content stroke alone,
+a content put forward without being judged (§2), for a formula displayed in
+an argument but not claimed. View A draws all three alike.
+
 ### Leaves
 
 At the end of each stroke is a leaf: a chain of relations, drawn as a small
@@ -191,6 +206,7 @@ are left out and the links alone carry the binding.
 | Frege (Begriffsschrift) | here |
 |---|---|
 | judgement stroke, content stroke, condition stroke, negation stroke | the same |
+| double judgement stroke for a definition (§24), content stroke alone for an unjudged content (§2) | the same; the name defined is written `D :≡` to the left |
 | generality: a concavity in the content stroke with a German letter | ⊓: a square notch with the name |
 | no existential quantifier (¬∀¬) | ∨: a pointed notch |
 | no conjunction or disjunction (through → and ¬) | forks: filled dot for ∧, hollow dot and arc for ∨ |

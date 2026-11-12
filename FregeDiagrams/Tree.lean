@@ -2,7 +2,8 @@
 FregeDiagrams.Tree: variant B, a Frege-style formula tree whose leaves are small
 frame pictures.
 
-The tree is asserted by a vertical judgement stroke on the left.  Each
+The tree is asserted by a vertical judgement stroke on the left (two for a
+definition, none for a mere content: `Judgement`).  Each
 construct draws a horizontal content stroke from its left end; its layout is
 computed bottom-up by `measure` (width, extent above, extent below the
 stroke) and drawn top-down by `draw`.  Colour is polarity: red positive,
@@ -193,6 +194,10 @@ def flipCol (c : String) : String := if c == RED then BLACK else RED
 
 /-- Length of the stub of stroke before each construct. -/
 def STUB : Float := 10.0
+
+/-- The distance between the two bars of a definition's double judgement
+stroke; a definition's tree starts at the second. -/
+def JUDGE_GAP : Float := 4.0
 
 /-- Horizontal length of the rays of a conjunction fork. -/
 def FORK : Float := 16.0
@@ -397,10 +402,21 @@ where
       return out.push (.shape (.circle ⟨xj, y⟩ 2.6 "white" col))
     return out.push (.shape (.circle ⟨xj, y⟩ 2.2 col))
 
-/-- A variant-B diagram: one formula tree, asserted with a judgement stroke. -/
+/-- What a figure's leftmost stroke says (Begriffsschrift §2, §24): a
+**claim** has the judgement stroke `⊢` (the default), a **definition** the
+double judgement stroke, a **content** none (a formula displayed, nothing
+claimed). -/
+inductive Judgement where
+  | claim | definition | content
+deriving BEq, DecidableEq, Repr, Inhabited
+
+/-- A variant-B diagram: one formula tree, with its judgement stroke. -/
 structure TreeDiagram where
   name : String
   tree : Tree
+  judgement : Judgement := .claim
+  /-- a definition: the name it defines, written `D :≡` left of the strokes -/
+  defines : Option String := none
 
 /-- The state names of a tree not bound by any of its notches, in order. -/
 partial def Tree.free (bound : List String := []) : Tree → List String
@@ -434,6 +450,16 @@ def TreeDiagram.layout (d : TreeDiagram) (o : DrawOpts) :
   let x0 := if o.links then 26.0 else 14.0
   let free := (d.tree.free).foldl (fun acc n => if acc.contains n then acc else acc ++ [n]) []
   let o := { o with root := ⟨x0, y⟩, free }
-  (sh (stroke #[⟨x0, y - 9.0⟩, ⟨x0, y + 9.0⟩] .R BLACK 2.0) ++ draw d.tree x0 y RED [] o, x0, y, w, up, dn)
+  let bar (x : Float) := sh (stroke #[⟨x, y - 9.0⟩, ⟨x, y + 9.0⟩] .R BLACK 2.0)
+  let judge := match d.judgement with
+    | .claim => bar x0
+    | .definition => bar x0 ++ bar (x0 + JUDGE_GAP)
+    | .content => #[]
+  let judge := match d.defines with
+    | some s => judge.push (.shape (.text ⟨x0 - 6.0, y + 4.2⟩ (s ++ " :≡") BLACK 12 "end"))
+    | none => judge
+  -- a definition's tree starts at its second stroke
+  let xt := if d.judgement == .definition then x0 + JUDGE_GAP else x0
+  (judge ++ draw d.tree xt y RED [] o, x0, y, w + (xt - x0), up, dn)
 
 end FregeDiagrams

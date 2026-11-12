@@ -35,6 +35,7 @@ deriving instance ToExpr for LoopHint
 deriving instance ToExpr for Color
 deriving instance ToExpr for TextHint
 deriving instance ToExpr for Views
+deriving instance ToExpr for Judgement
 deriving instance ToExpr for Hints
 deriving instance ToExpr for Fig
 

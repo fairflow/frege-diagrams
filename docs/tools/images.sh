@@ -22,7 +22,7 @@ for f in ex_composite ex_composite_B ex_trans ex_trans_B ex_or ex_or_B \
 done
 cp "$T/links/ex_composite_B.svg" "$D/ex_composite_B_links.svg"
 cp "$T/links/ex_serial_B.svg" "$D/ex_serial_B_links.svg"
-for f in n_states n_states_B n_order n_order_B; do
+for f in n_states n_states_B n_order n_order_B n_claim n_definition n_content; do
   cp "$T/notation/$f.svg" "$D/$f.svg"
 done
 echo "docs/images: $(ls "$D" | wc -l | tr -d ' ') pictures"

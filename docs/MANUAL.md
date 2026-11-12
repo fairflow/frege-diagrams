@@ -193,6 +193,10 @@ file, when the text would end the string early. When a formula has changed
 `fig_of%` in Lean files and `\diag`, `\formula` in TeX files of the
 repository. The inspector shows the same list for the current figure.
 
+**The figure.** With nothing selected, the inspector edits the figure's
+canvas size, its `namedy`, and its judgement stroke (*claim*, *definition*,
+*content*: the hint `judgement …`).
+
 The toolbar options (links, hidden names, notch-name offset) are the options
 of `framediag`; they are not stored in the file.
 
