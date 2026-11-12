@@ -1,6 +1,6 @@
 # Proposal: judgement strokes, blocks, editing view B, sound transformations
 
-Status 2026-11-12: a proposal, nothing implemented. It extends
+Status 2026-11-12: a proposal; steps 1 and 2 of section 7 are implemented. It extends
 [EDITOR.md](EDITOR.md) (sections 6 and 8 there) and keeps its rules: Lean is
 the only renderer and the only writer of figure text; the default output of
 every existing figure stays byte-identical; every new construct is a hint or a
@@ -184,8 +184,8 @@ Rules for keeping the editor non-modal as it grows:
 
 | step | content | size |
 |---|---|---|
-| 1 | judgement strokes (section 1): hint, drawing, field, docs, tests | small |
-| 2 | pins and view options, remedy (a) (section 3) | small |
+| 1 | judgement strokes (section 1): hint, drawing, field, docs, tests | small; done 2026-11-12 (PR #10) |
+| 2 | pins and view options, remedy (a) (section 3) | small; done 2026-11-12 (PR #11) |
 | 3 | block ids in view B, block selection, highlight in view A (section 2) | medium |
 | 4 | view B layout hints and handles; notches along their segment (section 3) | medium |
 | 5 | `Form.interp`, the rules with pinned soundness theorems, structure edits and rules in the editor (section 4) | large |

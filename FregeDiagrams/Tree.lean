@@ -64,6 +64,10 @@ structure DrawOpts where
   /-- binders whose links are pinned (the `route` hint), as polylines in the
   tree's coordinates -/
   pinned : List (String × Array Polyline) := []
+  /-- whether the pins were made for this layout: false when a notch-name
+  offset other than the figure's own, or a `--spacing` other than 1, is in
+  force.  Pins are used only then, and only with names shown (`pinsApply`). -/
+  pinsLayoutOk : Bool := true
   /-- a factor on every clearance of the links: row gaps, tracks, channels,
   the room kept around states and names (`--spacing`) -/
   spacing : Float := 1.0
@@ -75,6 +79,12 @@ structure DrawOpts where
   view A (`Diagram.annotate`).  Off by default; the output is then unchanged. -/
   annotate : Bool := false
 deriving Inhabited
+
+/-- A figure's `route` pins hold for the layout they were made on: names
+shown, the figure's own notch-name offset, spacing 1.  With names hidden, or
+another offset or spacing, the layout differs and the pins are set aside (the links are routed
+automatically); that is not an error. -/
+def DrawOpts.pinsApply (o : DrawOpts) : Bool := o.pinsLayoutOk && !o.hideBound
 
 /-- Extra room between rows, for the link lanes. -/
 def DrawOpts.gap (o : DrawOpts) : Float := if o.links then 16.0 * o.spacing else 0.0

@@ -121,7 +121,7 @@ let sel = null;                         // {k:'state'|'label'|'edge', ...}
 let typingErr = null;
 let lastNudge = null;
 let checked = null;
-let lineOffset = 0, usesCache = {}, lintItems = [], staleItems = [];
+let lineOffset = 0, usesCache = {}, lintItems = [], staleItems = [], pinsApply = true;
 const opts = {links:false, hideBound:false, nameDy:0};
 const $ = id => document.getElementById(id);
 
@@ -221,6 +221,10 @@ async function renderB(){
   staleItems = (r.ok&&r.stale?r.stale:[]).map(x=>({sev:"error", sel:`link:${x}`,
     msg:`The route of ${x} no longer fits the layout (its notch or its states moved), so it is drawn routed automatically.`,
     fix:{kind:"route",name:x,polys:null}, fixLabel:"Route automatically again"}));
+  pinsApply = !(r.ok && r.pinsApply===false);
+  const aside = r.ok&&r.setAside?r.setAside:[];
+  if(aside.length) staleItems.push({sev:"note",
+    msg:`The links of ${aside.join(", ")} are pinned for the layout with names shown and no extra notch-name offset. With the current options the layout differs, so they are drawn routed automatically here; the file is unchanged.`});
   renderProblems();
 }
 async function renderTex(){ if(!fig) return; const r=await lean({op:"body",text:cur,fig}); $("tex").textContent=r.ok?r.tex:""; }
@@ -459,6 +463,7 @@ $("viewB").addEventListener("pointerup", async ()=>{
 });
 /* pin a binder's links: every notch not yet fixed is fixed as drawn (the layout, and so the pin, depends on them) */
 async function pinRoute(name, polys, label){
+  if(!pinsApply){ drawSelection(); explain("Not applied",null,null,"Links are pinned for the layout with names shown and no extra notch-name offset. Show the names and set the toolbar's notch-name offset to 0 (a figure's own namedy is fine), then move the links."); return; }
   const before=cur; let t=cur;
   for(const n of document.querySelectorAll('#paperB g[data-k="notch"]')){
     if(n.dataset.fixed) continue;
@@ -506,7 +511,7 @@ function setNotch(name, dir){
 }
 function describeSel(){
   const g=findSel(); if(!g){ return; } const d=g.dataset;
-  if(d.k==="link"){ explain(`Links of ${d.name} (Frege view)`,null,null,`${d.pinned==="1"?"Pinned by the hint route "+d.name+".":"Routed automatically."} Drag a square to move a segment sideways, a round handle to move a bend or a branch point; the ends at the notch and the states stay. On release the links are pinned and every notch is fixed as drawn.`); return; }
+  if(d.k==="link"){ explain(`Links of ${d.name} (Frege view)`,null,null,`${d.pinned==="1"?"Pinned by the hint route "+d.name+".":"Routed automatically."} Drag a square to move a segment sideways, a round handle to move a bend or a branch point; the ends at the notch and the states stay. On release the links are pinned and every notch is fixed as drawn.${pinsApply?"":" (Pins are made with names shown and no extra notch-name offset: change those options first.)"}`); return; }
   if(d.k==="notch"){ explain(`Notch of ${d.name} (Frege view)`,null,null,`Opens ${d.up==="1"?"up":"down"}, ${d.fixed?"fixed by the hint notch "+d.name+" "+d.fixed:"chosen by the router"}. ↑ fixes it up, ↓ down, Delete gives it back to the router. With links on, the links are routed again (a few seconds).`); return; }
   if(d.k==="edge") explain(`Arrow ${d.src}→${d.tgt}${d.occ!=="1"?" #"+d.occ:""}`,null,null,"Drag the square handle to bend it, or ↑/↓; ←/→ moves its notch. Hint: edge "+d.src+">"+d.tgt+".");
   else if(d.part==="label") explain(`Name of ${d.name}`,null,null,"Drag it, or use the arrow keys. Changes the label offset of the state's position hint.");
@@ -621,7 +626,7 @@ const allItems=()=>lintItems.concat(staleItems);
 function renderProblems(){
   const ul=$("probs"); const items=allItems();
   let h = items.length
-    ? items.map((p,i)=>`<li class="${p.sev}"><b>${p.sev==="error"?"Error":"Warning"}.</b> ${esc(p.msg)}
+    ? items.map((p,i)=>`<li class="${p.sev}"><b>${p.sev==="error"?"Error":p.sev==="note"?"Note":"Warning"}.</b> ${esc(p.msg)}
         <span style="display:inline-flex;gap:4px;margin-left:4px">${p.sel?`<button data-lintshow="${i}" data-help="Select the object in the sketch.">Show</button>`:""}${p.fix?`<button data-lintfix="${i}" data-help="${esc(p.fixLabel)}: a change to one hint, shown in the strip above; undo restores it.">${esc(p.fixLabel)}</button>`:""}</span></li>`).join("")
     : '<li class="pass">Hints and sketch: no problems.</li>';
   if(!checked) h += '<li class="note">Layout checks of the Frege view have not run (Run checks).</li>';
