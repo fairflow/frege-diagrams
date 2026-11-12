@@ -5,7 +5,12 @@ was merged as, the date and time (UTC) of that commit, and the tag if one
 is applied. `framediag --version` prints the version; the editor shows it
 with the commit it runs from.
 
-## 0.7.0 (unreleased)
+## 0.8.0 (unreleased)
+
+* VS Code: *Edit figures* above each figure string of a Lean file opens the figure editor on that string beside the Lean file (and from the command palette); saving writes the string back into the Lean document and saves it; edits elsewhere in the Lean file do not disturb the editor; the String menu switches between the strings of the file. A text that would end the string early is refused.
+* framedit: the String menu is hidden for a figure file (the toolbar style overrode `hidden`); the help strip names a menu or field by its label, not by its options.
+
+## 0.7.0 · 8acb4e1 · 2026-11-12 21:49 UTC (tag `v0.7.0` proposed)
 
 * A VS Code extension, first version (`tools/vscode/`, docs/design/VSCODE.md steps 1 and 2): figure files (`*.fgd`) open in the figure editor inside VS Code, the browser editor's page in a webview talking to the same `framediag --serve`; saving goes through VS Code; a change made in a text editor or on disk reaches the page. framediag is the workspace's (built with Lake when missing), and the page comes from the same package. Plain JavaScript type-checked with `// @ts-check`; a smoke test against a real framediag; `npm run package` writes the `.vsix`.
 * framedit: the page sends every request through one function, `api`, which in VS Code posts a message instead of fetching.

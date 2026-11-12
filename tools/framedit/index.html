@@ -54,6 +54,7 @@ ul.list{list-style:none;margin:0;padding:0;font-size:13px;display:flex;flex-dire
 ul.list li{border-radius:5px;padding:4px 7px}
 li.error{background:var(--err-soft)} li.warning{background:var(--warn-soft)} li.pass{background:var(--ok-soft)} li.note{background:var(--bg)}
 #viewA svg g[data-k]:focus, #viewB svg g[data-k]:focus{outline:none}
+[hidden]{display:none !important}
 .ver{font-family:ui-monospace,Menlo,monospace;font-size:12px;padding:2px 6px;border:1px solid var(--line,#ccc);border-radius:4px;margin:0 8px}
 #hist{max-height:180px;overflow:auto}
 #hist button{border:0;background:none;padding:1px 4px;text-align:left;width:100%}
@@ -797,7 +798,9 @@ document.addEventListener("click", ev=>{
   else if(t.dataset.lintfix!==undefined){ const p=allItems()[+t.dataset.lintfix]; commitEdit(p.fix, p.fixLabel); }
   else if(t.dataset.hist) { const i=+t.dataset.hist; const a=cur; hi=i; lastNudge=null; setCur(hist[i].text); $("src").value=cur; explain(`Back to: ${hist[i].label}`,a,cur); }
 });
-document.addEventListener("mouseover", ev=>{ const h=ev.target.closest("[data-help]"); if(h&&!drag) $("explain").innerHTML=`<b>${esc(h.textContent.trim().split("\n")[0].slice(0,60)||"")}</b> <span class="muted">${esc(h.dataset.help)}</span>`; });
+/* the name of a control for the help strip: a menu or field by its label, not its contents */
+function helpTitle(h){ if(h.matches("select,input,textarea")){ const l=h.labels&&h.labels[0]; return l?l.textContent.trim():(h.getAttribute("aria-label")||""); } return h.textContent.trim().split("\n")[0].slice(0,60); }
+document.addEventListener("mouseover", ev=>{ const h=ev.target.closest("[data-help]"); if(h&&!drag) $("explain").innerHTML=`<b>${esc(helpTitle(h))}</b> <span class="muted">${esc(h.dataset.help)}</span>`; });
 document.addEventListener("focusin", ev=>{ const h=ev.target.closest("[data-help]"); if(h) $("explain").innerHTML=`<span class="muted">${esc(h.dataset.help)}</span>`; });
 
 /* ---------- typing in the text ---------- */
@@ -894,6 +897,8 @@ async function doSave(){
 async function reloadFromHost(){
   const f=(await api("/api/file")).body;
   if(f.text===cur){ disk={text:f.text,hash:f.hash}; renderChrome(); return; }
+  // the rest of the file changed (a proof edited beside a figure string): our string did not
+  if(f.text===disk.text){ disk={text:f.text,hash:f.hash}; renderChrome(); return; }
   if(cur!==disk.text){ explain("The file changed elsewhere",null,null,"The file changed outside this editor while you have unsaved changes here; save to overwrite it, or undo your changes to take its version."); return; }
   disk={text:f.text,hash:f.hash}; push(f.text,"Changed outside the editor");
 }

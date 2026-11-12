@@ -2,7 +2,7 @@
 
 Status 2026-11-12: approved by Matthew (every detail, including the three
 decisions below: here, a local `.vsix`, the workspace's `framediag`). Steps 1
-and 2 are built (0.7.0). One change from the plan: the extension is plain
+and 2 are built (0.7.0), step 3 too (0.8.0). One change from the plan: the extension is plain
 JavaScript type-checked with `// @ts-check` against the VS Code API
 declarations, not TypeScript, so that it has no build step. The browser
 editor (`tools/framedit/`) stays: it needs nothing but Python and a browser,

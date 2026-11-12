@@ -37,7 +37,7 @@ const ext = require('../extension.js');
   const loc = ext.locate(doc.uri);
   assert.strictEqual(loc.pkg, repo, 'frege-diagrams itself is its own package');
   assert.ok(fs.existsSync(loc.exe), 'framediag is built (lake build framediag at the repository root)');
-  const ed = { doc, loc, fast: new ext.Server(loc.exe), slow: new ext.Server(loc.exe), tool: { line: 'test' }, saving: { on: false } };
+  const ed = { src: ext.makeSource(doc, false, null), loc, fast: new ext.Server(loc.exe), slow: new ext.Server(loc.exe), tool: { line: 'test' }, saving: { on: false } };
 
   const f = await ext.handle(ed, '/api/file');
   assert.strictEqual(f.body.text, 'fig one = all t. s <= t\n');
@@ -59,6 +59,30 @@ const ext = require('../extension.js');
   const u = await ext.handle(ed, '/api/uses', { names: ['ex_trans'] });
   assert.ok(Array.isArray(u.body.ex_trans));
   assert.strictEqual((await ext.handle(ed, '/api/select', { name: 'x' })).status, 400);
+
+  // a Lean file with two figure strings: the first by default, the other by /api/select;
+  // a save replaces only that string's contents
+  docText = 'import X\n\ndef figsA : String := r#"\nfig a = s <= t\n"#\n\ntheorem t : True := trivial\n\ndef figsB : String := r##"\n-- "# inside\nfig b = s R t\n"##\n';
+  ed.src = ext.makeSource(doc, true, null);
+  let lf = await ext.handle(ed, '/api/file');
+  assert.strictEqual(lf.body.kind, 'Lean string figsA');
+  assert.deepStrictEqual(lf.body.strings, [{ name: 'figsA', line: 3 }, { name: 'figsB', line: 9 }]);
+  assert.strictEqual(lf.body.text, '\nfig a = s <= t\n');
+  assert.strictEqual((await ext.handle(ed, '/api/select', { name: 'nope' })).status, 400);
+  assert.strictEqual((await ext.handle(ed, '/api/select', { name: 'figsB' })).status, 200);
+  lf = await ext.handle(ed, '/api/file');
+  assert.strictEqual(lf.body.text, '\n-- "# inside\nfig b = s R t\n');
+  assert.strictEqual(lf.body.lineOffset, 8);
+  // a text that would end the string early is refused
+  assert.strictEqual((await ext.handle(ed, '/api/save', { text: 'fig b = s R t "##', base: lf.body.hash })).status, 400);
+  const before = docText;
+  const sv = await ext.handle(ed, '/api/save', { text: '\nfig b [judgement content] = s R t\n', base: lf.body.hash });
+  assert.strictEqual(sv.status, 200);
+  assert.strictEqual(docText, before.replace('\n-- "# inside\nfig b = s R t\n', '\nfig b [judgement content] = s R t\n'));
+  assert.ok(docText.includes('fig a = s <= t') && docText.includes('theorem t : True'));
+  // rawStrings: unclosed, and a def inside a string is not one
+  assert.deepStrictEqual(ext.rawStrings('def f : String := r#"\n-- def g : String := r#"\n"#').map((x) => x.name), ['f']);
+  assert.strictEqual(ext.rawStrings('def f : String := r#"x').at(0).end, -1);
 
   ed.fast.dispose(); ed.slow.dispose();
   console.log('smoke test: ok');

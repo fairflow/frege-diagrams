@@ -2,7 +2,7 @@
   "name": "frege-diagrams",
   "displayName": "Frege Diagrams",
   "description": "Edit Frege-style formula trees and Kripke frame pictures, drawn by Lean, inside VS Code.",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "publisher": "fairflow",
   "license": "Apache-2.0",
   "repository": {
@@ -17,7 +17,10 @@
     "Other"
   ],
   "main": "./extension.js",
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:lean4",
+    "workspaceContains:**/*.fgd"
+  ],
   "contributes": {
     "languages": [
       {
@@ -57,6 +60,21 @@
           "description": "The lake program used to build framediag when it is missing. Empty: ~/.elan/bin/lake, else lake on the PATH."
         }
       }
+    },
+    "commands": [
+      {
+        "command": "fregeDiagrams.editFigures",
+        "title": "Edit figures (the first figure string of this Lean file)",
+        "category": "Frege Diagrams"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "fregeDiagrams.editFigures",
+          "when": "resourceExtname == .lean"
+        }
+      ]
     }
   },
   "scripts": {
