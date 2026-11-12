@@ -42,8 +42,10 @@ deriving instance ToExpr for Fig
 private unsafe def evalStringUnsafe (stx : Syntax) : TermElabM String :=
   evalTerm String (mkConst ``String) stx
 
+/-- Evaluate a term of type `String` at elaboration time (used by `fig_of%`
+and `#figure_claims`). -/
 @[implemented_by evalStringUnsafe]
-private opaque evalString (stx : Syntax) : TermElabM String
+opaque evalString (stx : Syntax) : TermElabM String
 
 /-- `fig_of% SRC "NAME"`: the figure `NAME` of the figure source `SRC : String`,
 parsed at elaboration time. -/

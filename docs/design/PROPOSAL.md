@@ -1,6 +1,6 @@
 # Proposal: judgement strokes, blocks, editing view B, sound transformations
 
-Status 2026-11-12: a proposal; steps 1 and 2 of section 7 are implemented. It extends
+Status 2026-11-12: a proposal; steps 1, 2 and 6 of section 7 are implemented. It extends
 [EDITOR.md](EDITOR.md) (sections 6 and 8 there) and keeps its rules: Lean is
 the only renderer and the only writer of figure text; the default output of
 every existing figure stays byte-identical; every new construct is a hint or a
@@ -35,6 +35,9 @@ and existing clients are unaffected. A claim can be checked: an attribute
 command `#figure_claims SRC` that fails when a claim of SRC has no tagged
 theorem (in the manner of the axiom pins). A client that gives figures a
 meaning (`denote`) can then require the tagged theorem to mention the figure.
+(As built, 2026-11-12: the field is `Hints.judgement`; the attribute is
+`@[figure_claim "NAME"]`, without SRC, matched by figure name; and
+schematic figures, with a text leaf without a meaning, are not checked.)
 
 **Cost.** One hint, one stroke variant in `Tree.lean`, one field; no effect on
 speed.
@@ -189,7 +192,7 @@ Rules for keeping the editor non-modal as it grows:
 | 3 | block ids in view B, block selection, highlight in view A (section 2) | medium |
 | 4 | view B layout hints and handles; notches along their segment (section 3) | medium |
 | 5 | `Form.interp`, the rules with pinned soundness theorems, structure edits and rules in the editor (section 4) | large |
-| 6 | `@[figure_claim]` and `#figure_claims` (section 1) | small |
+| 6 | `@[figure_claim]` and `#figure_claims` (section 1) | small; done 2026-11-12: schematic figures (a text leaf without a meaning) are not checked |
 | 7 | sheets and derivations (section 5) | large |
 
 Steps 1, 2 and 6 are independent of the rest; 4 needs 3; 5 needs 3; 7 needs

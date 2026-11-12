@@ -15,6 +15,7 @@ import FregeDiagrams.Elab
 import FregeDiagrams.Latex
 import FregeDiagrams.Edit
 import FregeDiagrams.Lint
+import FregeDiagrams.Claims
 
 namespace FregeDiagrams.Test
 
@@ -371,3 +372,46 @@ def bars (f : Fig) : Nat := ((f.pictures.getLast!.2).splitOn "stroke-width=\"2.0
   some "fig c [size (10,20)] = s <= t"
 
 end FregeDiagrams.Test.Judge
+
+/-! ## Claims and their theorems (`#figure_claims`) -/
+
+namespace FregeDiagrams.Test.Claims
+open FregeDiagrams
+
+def src : String := r#"
+fig a = s <= s
+fig b [judgement content] = s <= t
+fig c = if "A" then "B"
+fig d [judgement definition] = "loop(s)" {s R s}
+"#
+
+@[figure_claim "a"] theorem claim_a : True := trivial
+
+/--
+info: #figure_claims src: 4 figures
+a: claim, FregeDiagrams.Test.Claims.claim_a
+b: content
+c: claim, schematic (not checked)
+d: definition
+-/
+#guard_msgs in #figure_claims src
+
+def src2 : String := r#"
+fig a = s <= s
+fig e = t <= t
+"#
+
+/--
+error: #figure_claims src2: no theorem tagged @[figure_claim "NAME"] for e
+a: claim, FregeDiagrams.Test.Claims.claim_a
+e: claim, NO THEOREM
+-/
+#guard_msgs in #figure_claims src2
+
+/-- error: figure_claim: FregeDiagrams.Test.Claims.notThm is not a theorem; tag the theorem that states figure a -/
+#guard_msgs in @[figure_claim "a"] def notThm : Nat := 3
+
+#guard (Fig.parse "fig c = if \"A\" then s <= t").toOption.map (·.body.schematic) == some true
+#guard (Fig.parse "fig c = if \"A\" {s R s} then s <= t").toOption.map (·.body.schematic) == some false
+
+end FregeDiagrams.Test.Claims
