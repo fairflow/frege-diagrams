@@ -67,8 +67,9 @@ The regions are not drawn; they are selected:
 Loops and shared states belong to view A and the link graph, never to the
 place graph, so the tree structure of blocks is exact.
 
-**Implementation.** Each block gets an id from its path in the formula (`b.1.0`:
-the conclusion's first hypothesis), as planned in EDITOR.md step 3, written on
+**Implementation.** Each block gets an id from its path in the formula (`b/1/0`:
+the conclusion's first hypothesis; written with `.` until 2026-11-12, changed
+to `/` because hints name blocks and `0.1` reads as a decimal), as planned in EDITOR.md step 3, written on
 its SVG group by `DrawOpts.annotate`. Paths are stable under hint edits.
 
 ## 3. Editing view B
@@ -189,7 +190,7 @@ Rules for keeping the editor non-modal as it grows:
 |---|---|---|
 | 1 | judgement strokes (section 1): hint, drawing, field, docs, tests | small; done 2026-11-12 (PR #10) |
 | 2 | pins and view options, remedy (a) (section 3) | small; done 2026-11-12 (PR #11) |
-| 3 | block ids in view B, block selection, highlight in view A (section 2) | medium |
+| 3 | block ids in view B, block selection, highlight in view A (section 2) | medium; done 2026-11-12 |
 | 4 | view B layout hints and handles; notches along their segment (section 3) | medium |
 | 5 | `Form.interp`, the rules with pinned soundness theorems, structure edits and rules in the editor (section 4) | large |
 | 6 | `@[figure_claim]` and `#figure_claims` (section 1) | small; done 2026-11-12: schematic figures (a text leaf without a meaning) are not checked |

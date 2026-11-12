@@ -197,6 +197,15 @@ number. These edits change hints only, never the formula.
   are drawn routed automatically, with a note in Problems, and moving links
   asks you to change the options first.
 
+**Blocks.** A block is a subtree of the formula: a hypothesis, a conclusion,
+a part of `&` or `|`, the scope of a quantifier or a negation. Click the start
+of a stroke, a fork's dot or the junction of a condition stroke in the Frege
+view to select the block that starts there: it is shaded in the Frege view,
+its arrows and states are marked in the sketch, and the inspector shows its
+formula. Alt+↑ widens the selection to the enclosing block, Alt+↓ narrows it
+again; Esc clears it. A selected notch shows its scope the same way. Blocks
+are selected, not yet moved (moving them changes the formula: a later step).
+
 **The text.** The source can be edited directly. It is parsed after a pause;
 an error shows its line and column with a caret (and, for a Lean file, the
 line of the file), and the pictures stay as they were, marked out of date.

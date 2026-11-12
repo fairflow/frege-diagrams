@@ -122,6 +122,8 @@ let typingErr = null;
 let lastNudge = null;
 let checked = null;
 let lineOffset = 0, usesCache = {}, lintItems = [], staleItems = [], pinsApply = true;
+/* the selected block (a subtree of the formula, view B), by its path b, b/0, b/1/2, …; null if none */
+let block = null, blockTrail = [];
 const opts = {links:false, hideBound:false, nameDy:0};
 const $ = id => document.getElementById(id);
 
@@ -244,6 +246,8 @@ function decorateB(svg){
     g.setAttribute("tabindex","0"); g.setAttribute("role","button"); g.style.cursor="pointer";
     g.setAttribute("aria-label",`Links of ${g.dataset.name}, ${g.dataset.pinned==="1"?"pinned":"routed automatically"}`);
   }
+  for(const c of svg.querySelectorAll('[data-k="branch"]')){ c.style.cursor="pointer"; c.setAttribute("role","button"); c.setAttribute("aria-label",`Block ${c.dataset.path}`); }
+  if(block && !svg.querySelector(`rect[data-k="block"][data-path="${block}"]`)){ block=null; blockTrail=[]; }
   drawSelection();
   if(sel&&(sel.key.startsWith("notch:")||sel.key.startsWith("link:"))) renderInspector();
 }
@@ -351,7 +355,35 @@ function decorate(){
 }
 function findSel(){ if(!sel) return null; const svg=$(sel.key.startsWith("notch:")||sel.key.startsWith("link:")?"paperB":"paperA"); if(!svg) return null; return [...svg.querySelectorAll("g[data-k]")].find(g=>keyOf(g)===sel.key)||null; }
 function nodeG(name,panel){ return [...($("paperA")?.querySelectorAll('g[data-k="state"][data-part="dot"]')||[])].find(g=>g.dataset.name===name&&g.dataset.panel===String(panel)); }
+/* the selected block: a shaded box in view B, its arrows and states marked in view A */
+const inBlock=(p,b)=>p===b||p.startsWith(b+"/");
+function drawBlock(){
+  document.querySelectorAll(".blockmark").forEach(e=>e.remove());
+  const b = block || (sel&&sel.key.startsWith("notch:")&&findSel()?findSel().dataset.path:null);
+  if(!b) return;
+  const B=$("paperB"), r0=B&&B.querySelector(`rect[data-k="block"][data-path="${b}"]`);
+  if(r0){ const r=document.createElementNS(SVGNS,"rect");
+    for(const a of ["x","y","width","height"]) r.setAttribute(a,r0.getAttribute(a));
+    r.setAttribute("rx","4"); r.setAttribute("fill","rgba(36,87,166,0.08)"); r.setAttribute("stroke","#2457a6"); r.setAttribute("stroke-width","1"); r.setAttribute("stroke-dasharray","4,3");
+    r.setAttribute("class","blockmark"); r.style.pointerEvents="none"; r0.parentNode.insertBefore(r,r0); }
+  const A=$("paperA"); if(!A) return;
+  for(const g of A.querySelectorAll('g[data-k="edge"]')){ if(!inBlock(g.dataset.path||"",b)) continue;
+    for(const pl of g.querySelectorAll("polyline")){ if(pl.getAttribute("stroke")==="transparent") continue; const c=pl.cloneNode(); c.setAttribute("stroke","rgba(36,87,166,0.35)"); c.setAttribute("stroke-width","6"); c.removeAttribute("stroke-dasharray"); c.setAttribute("fill","none"); c.setAttribute("class","blockmark"); c.style.pointerEvents="none"; g.parentNode.insertBefore(c,g); } }
+  for(const g of A.querySelectorAll('g[data-k="state"][data-part="dot"]')){ if(!(g.dataset.paths||"").split(" ").some(p=>p&&inBlock(p,b))) continue;
+    const c0=g.querySelector("circle"); const c=document.createElementNS(SVGNS,"circle"); c.setAttribute("cx",c0.getAttribute("cx")); c.setAttribute("cy",c0.getAttribute("cy")); c.setAttribute("r","8"); c.setAttribute("fill","rgba(36,87,166,0.18)"); c.setAttribute("class","blockmark"); c.style.pointerEvents="none"; g.parentNode.insertBefore(c,g); }
+}
+function selectBlock(p, trail){
+  block=p; if(trail!==undefined) blockTrail=trail;
+  if(p) sel=null;
+  drawSelection(); renderInspector();
+  if(p) describeBlock(p);
+}
+async function describeBlock(p){
+  const r=await lean({op:"block",text:cur,fig,path:p}); if(block!==p) return;
+  const e=$("blockF"); if(e) e.textContent = r.ok ? r.formula : r.error;
+}
 function drawSelection(){
+  drawBlock();
   document.querySelectorAll(".selmark").forEach(e=>e.remove());
   document.querySelectorAll('#paperB g[data-k="link"]').forEach(e=>e.style.opacity="");
   const g=findSel(); if(!g) return;
@@ -444,9 +476,11 @@ $("viewB").addEventListener("pointerdown", ev=>{
     if(ldrag.seg!==null){ const s0=ldrag.M0.S[ldrag.seg]; if(isEnd(ldrag.M0,s0.a)&&isEnd(ldrag.M0,s0.b)){ ldrag=null; explain("Cannot move this segment",null,null,"It joins two fixed ends (the notch and a state); move a neighbouring segment or point instead."); return; } }
     $("viewB").setPointerCapture(ev.pointerId); ev.preventDefault(); return;
   }
+  const br=t.closest('[data-k="branch"]');
+  if(br){ selectBlock(br.dataset.path, []); return; }
   const g=t.closest('g[data-k="notch"], g[data-k="link"]');
-  if(!g){ if(sel&&(sel.key.startsWith("notch:")||sel.key.startsWith("link:"))){ sel=null; drawSelection(); renderInspector(); } return; }
-  sel={key:keyOf(g)}; drawSelection(); renderInspector(); describeSel();
+  if(!g){ if(block){ selectBlock(null, []); return; } if(sel&&(sel.key.startsWith("notch:")||sel.key.startsWith("link:"))){ sel=null; drawSelection(); renderInspector(); } return; }
+  block=null; sel={key:keyOf(g)}; drawSelection(); renderInspector(); describeSel();
 });
 $("viewB").addEventListener("pointermove", ev=>{
   if(!ldrag) return; const p=layoutPt(ev,ldrag.g), M=cloneM(ldrag.M0);
@@ -483,7 +517,18 @@ document.addEventListener("keydown", ev=>{
   if(mod&&ev.key.toLowerCase()==="z"&&!inField){ev.preventDefault(); ev.shiftKey?redo():undo(); return;}
   if(mod&&ev.key.toLowerCase()==="y"&&!inField){ev.preventDefault(); redo(); return;}
   if(inField) return;
-  if(ev.key==="Escape"&&sel){ sel=null; drawSelection(); renderInspector(); return; }
+  if(ev.key==="Escape"&&(sel||block)){ sel=null; block=null; blockTrail=[]; drawSelection(); renderInspector(); return; }
+  if(ev.altKey&&(ev.key==="ArrowUp"||ev.key==="ArrowDown")){
+    const cur_ = block || (sel&&sel.key.startsWith("notch:")&&findSel()?findSel().dataset.path:null);
+    const B=$("paperB"); if(!B) return; ev.preventDefault();
+    const has=p=>!!B.querySelector(`rect[data-k="block"][data-path="${p}"]`);
+    if(!cur_){ if(has("b")) selectBlock("b", []); return; }
+    if(ev.key==="ArrowUp"){ const i=cur_.lastIndexOf("/"); if(i<0) return; selectBlock(cur_.slice(0,i), blockTrail.concat([cur_])); }
+    else { const back=blockTrail.length?blockTrail[blockTrail.length-1]:null;
+      if(back&&back.startsWith(cur_+"/")) selectBlock(back, blockTrail.slice(0,-1));
+      else if(has(cur_+"/0")) selectBlock(cur_+"/0", []); }
+    return;
+  }
   const k={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[ev.key];
   if(sel&&sel.key.startsWith("link:")&&["Delete","Backspace"].includes(ev.key)){
     const g=findSel(); if(!g||g.dataset.pinned!=="1") return; ev.preventDefault();
@@ -519,6 +564,12 @@ function describeSel(){
 }
 function renderInspector(){
   const el=$("insp"); const g=findSel();
+  if(!g && block){
+    el.innerHTML=`<h2>Block ${esc(block)}</h2>
+    <p><code id="blockF">…</code></p>
+    <p class="muted">A block is a subtree of the formula: shaded in the Frege view, its arrows and states marked in the sketch. <kbd>Alt</kbd>+<kbd>↑</kbd> widens to the enclosing block, <kbd>Alt</kbd>+<kbd>↓</kbd> narrows; <kbd>Esc</kbd> clears. Click the start of a stroke, a fork's dot or a condition stroke's junction to select its block.</p>`;
+    describeBlock(block); return;
+  }
   if(!g){
     const f=figs.find(x=>x.name===fig)||{}; const svg=$("paperA");
     const w=f.hasSize?f.w:(svg?+svg.getAttribute("width")/2:0), h=f.hasSize?f.h:(svg?+svg.getAttribute("height")/2:0);
