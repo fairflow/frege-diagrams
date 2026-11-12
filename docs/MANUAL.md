@@ -298,7 +298,15 @@ that same package. Settings: `fregeDiagrams.framediagPath`,
 cd tools/vscode && npm run package && code --install-extension frege-diagrams.vsix
 ```
 
-Figure strings in Lean files, colouring and diagnostics come next
+In a Lean file, an *Edit figures* link appears above each figure string
+(`def NAME : String := r#"…"#`); it opens the editor on that string beside
+the Lean file (also *Frege Diagrams: Edit figures* in the command palette).
+Saving writes the string's contents back into the Lean document and saves it,
+so the theorems that use the figures (`fig_of%`) are checked again at once;
+editing the Lean file elsewhere (a proof) does not disturb the editor. A file
+with several strings has the *String* menu, as in the browser.
+
+Colouring and diagnostics for the figure language come next
 (docs/design/VSCODE.md).
 
 ## 5. LaTeX

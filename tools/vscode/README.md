@@ -15,9 +15,12 @@ workspace's `lakefile` requires frege-diagrams, and the extension runs
 `fregeDiagrams.framediagPath` and `fregeDiagrams.lakePath` override where the
 programs are.
 
-Planned (docs/design/VSCODE.md): editing the figure strings of Lean files
-(*Edit figures*), colouring and diagnostics for the figure language, pictures
-on hover.
+In a Lean file, *Edit figures* above each figure string
+(`def NAME : String := r#"…"#`) opens the editor on that string beside the
+Lean file; saving writes the string back and saves the Lean file.
+
+Planned (docs/design/VSCODE.md): colouring and diagnostics for the figure
+language, pictures on hover.
 
 ## Building and installing
 
