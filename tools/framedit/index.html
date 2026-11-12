@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>framedit</title>
 <style>
-/* framedit v0.1: toolbar; sketch (editable) and Frege view side by side; inspector; source text, problems, history. */
+/* framedit: toolbar; sketch (editable) and Frege view side by side; inspector; source text, problems, history. */
 :root{
   --bg:#f3f4f6; --panel:#fff; --ink:#1d2430; --muted:#5b6474; --line:#d5d9e0;
   --accent:#2457a6; --accent-soft:#e3ecf9; --warn:#8a5a00; --warn-soft:#fdf3dc;
@@ -53,6 +53,7 @@ textarea#src.bad{border-color:var(--err)}
 ul.list{list-style:none;margin:0;padding:0;font-size:13px;display:flex;flex-direction:column;gap:4px}
 ul.list li{border-radius:5px;padding:4px 7px}
 li.error{background:var(--err-soft)} li.warning{background:var(--warn-soft)} li.pass{background:var(--ok-soft)} li.note{background:var(--bg)}
+#viewA svg g[data-k]:focus, #viewB svg g[data-k]:focus{outline:none}
 .ver{font-family:ui-monospace,Menlo,monospace;font-size:12px;padding:2px 6px;border:1px solid var(--line,#ccc);border-radius:4px;margin:0 8px}
 #hist{max-height:180px;overflow:auto}
 #hist button{border:0;background:none;padding:1px 4px;text-align:left;width:100%}
@@ -66,7 +67,6 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;paddi
 <body>
 <div class="grp" style="justify-content:space-between">
   <div class="grp"><h1>framedit</h1><span class="ver" id="toolVer" title="The version of frege-diagrams in use: version, commit, tag, commit date and time"></span><span class="muted" id="filePath"></span></div>
-  <span class="muted">v0.1 · Lean draws everything you see; every change is a change to the text below</span>
 </div>
 
 <div class="bar" role="toolbar" aria-label="Editor">
@@ -237,9 +237,11 @@ function scaleSvg(svg,k){ const w=+svg.getAttribute("width"), h=+svg.getAttribut
 function decorateB(svg){
   svg.id="paperB";
   for(const g of svg.querySelectorAll('g[data-k="notch"]')){
+    const nn=g.querySelector('[data-part="nname"]');
+    if(nn){ const t=nn.querySelector("text"); if(t&&t.textContent){ const tb=t.getBBox(), tr=document.createElementNS(SVGNS,"rect"); tr.setAttribute("x",tb.x-2); tr.setAttribute("y",tb.y-1); tr.setAttribute("width",tb.width+4); tr.setAttribute("height",tb.height+2); tr.setAttribute("fill","transparent"); nn.appendChild(tr); nn.style.cursor="ns-resize"; } }
     const b=g.getBBox(), r=document.createElementNS(SVGNS,"rect");
     r.setAttribute("x",b.x-3); r.setAttribute("y",b.y-3); r.setAttribute("width",b.width+6); r.setAttribute("height",b.height+6); r.setAttribute("fill","transparent");
-    g.appendChild(r); g.setAttribute("tabindex","0"); g.setAttribute("role","button"); g.style.cursor="pointer";
+    g.appendChild(r); if(nn) g.appendChild(nn); g.setAttribute("tabindex","0"); g.setAttribute("role","button"); g.style.cursor="ew-resize";
     g.setAttribute("aria-label",`Notch of ${g.dataset.name} (${g.dataset.kind==="all"?"for all":"there is"}), opens ${g.dataset.up==="1"?"up":"down"}, ${g.dataset.fixed?"fixed":"chosen by the router"}`);
   }
   for(const g of svg.querySelectorAll('g[data-k="link"]')){
@@ -346,7 +348,12 @@ function decorate(){
   svg.id="paperA"; scaleSvg(svg,2);
   for(const g of svg.querySelectorAll("g[data-k]")){
     const isEdge=g.dataset.k==="edge", part=g.dataset.part;
-    if(isEdge){ for(const pl of [...g.querySelectorAll("polyline")]){ const c=pl.cloneNode(); c.setAttribute("stroke","transparent"); c.setAttribute("stroke-width","10"); c.removeAttribute("stroke-dasharray"); c.style.pointerEvents="stroke"; g.appendChild(c);} }
+    if(isEdge){ for(const pl of [...g.querySelectorAll("polyline")]){ const c=pl.cloneNode(); c.setAttribute("stroke","transparent"); c.setAttribute("stroke-width","10"); c.removeAttribute("stroke-dasharray"); c.style.pointerEvents="stroke"; pl.parentNode.insertBefore(c,pl.nextSibling);}
+      // the notch and its name can be grabbed: the name over the notch's own hit area
+      for(const nn of g.querySelectorAll('[data-part="nname"]')){ const t=nn.querySelector("text"); if(!t) continue; const b=t.getBBox(); const r=document.createElementNS(SVGNS,"rect"); r.setAttribute("x",b.x-2); r.setAttribute("y",b.y-1); r.setAttribute("width",b.width+4); r.setAttribute("height",b.height+2); r.setAttribute("fill","transparent"); nn.appendChild(r); nn.style.cursor="ns-resize"; nn.parentNode.appendChild(nn); }
+      for(const nt of g.querySelectorAll('[data-part="notch"]')){ nt.style.cursor="grab";
+        const b=nt.getBBox(), r=document.createElementNS(SVGNS,"rect"); r.setAttribute("x",b.x-2); r.setAttribute("y",b.y-2); r.setAttribute("width",b.width+4); r.setAttribute("height",b.height+4); r.setAttribute("fill","transparent");
+        nt.insertBefore(r, nt.querySelector('[data-part="nname"]')); } }
     else if(part==="dot"){ const c0=g.querySelector("circle"); const c=document.createElementNS(SVGNS,"circle"); c.setAttribute("cx",c0.getAttribute("cx")); c.setAttribute("cy",c0.getAttribute("cy")); c.setAttribute("r","10"); c.setAttribute("fill","transparent"); g.appendChild(c); }
     else { const t=g.querySelector("text"); const b=t.getBBox(); const r=document.createElementNS(SVGNS,"rect"); r.setAttribute("x",b.x-2); r.setAttribute("y",b.y-2); r.setAttribute("width",b.width+4); r.setAttribute("height",b.height+4); r.setAttribute("fill","transparent"); g.appendChild(r); }
     g.setAttribute("tabindex","0"); g.setAttribute("role","button");
@@ -419,6 +426,22 @@ function drawSelection(){
     h.dataset.handle="bend"; svg.appendChild(h);
   }
 }
+/* the drawn curve of an arrow: the Bézier of edgeGeo, trimmed by NODE_R+3 at both ends
+   (Frame.lean); nearest(p): the fraction along it, the point and its normal (perp of the
+   direction: (-dy, dx)); at(f): the point and normal at fraction f */
+function edgeCurve(g,A,B){
+  const ax=+A.dataset.x, ay=+A.dataset.y, bx=+B.dataset.x, by=+B.dataset.y, bend=+(g.dataset.bend||0);
+  const mx=(ax+bx)/2, my=(ay+by)/2, l=Math.hypot(bx-ax,by-ay)||1, cx=mx-(by-ay)/l*bend, cy=my+(bx-ax)/l*bend;
+  const P=[]; for(let i=0;i<=200;i++){ const t=i/200, u=1-t; P.push({x:u*u*ax+2*u*t*cx+t*t*bx, y:u*u*ay+2*u*t*cy+t*t*by}); }
+  const L=[0]; for(let i=1;i<P.length;i++) L.push(L[i-1]+Math.hypot(P[i].x-P[i-1].x,P[i].y-P[i-1].y));
+  const T=7.2, s0=T, s1=L[L.length-1]-T, len=Math.max(1e-6,s1-s0);
+  const idx=s=>{ let i=1; while(i<L.length-1&&L[i]<s) i++; return i; };
+  const at=f=>{ const s=s0+f*len, i=idx(s), a=P[i-1], b=P[i], dl=Math.hypot(b.x-a.x,b.y-a.y)||1, k=(s-L[i-1])/dl;
+    return {pt:{x:a.x+(b.x-a.x)*k, y:a.y+(b.y-a.y)*k}, n:{x:-(b.y-a.y)/dl, y:(b.x-a.x)/dl}}; };
+  const nearest=p=>{ let best=0, bd=1e18; for(let i=0;i<P.length;i++){ if(L[i]<s0||L[i]>s1) continue; const d=(P[i].x-p.x)**2+(P[i].y-p.y)**2; if(d<bd){bd=d;best=i;} }
+    const f=(L[best]-s0)/len; return Object.assign({f}, at(f)); };
+  return {at, nearest};
+}
 /* the arrow's geometry as Frame.lean draws it: quadratic Bézier with control point mid + perp·bend */
 function edgeGeo(g,A,B){
   const ax=+A.dataset.x, ay=+A.dataset.y, bx=+B.dataset.x, by=+B.dataset.y, bend=+(g.dataset.bend||0);
@@ -448,24 +471,43 @@ async function commitEdit(e, label, coalesce){
 }
 
 /* ---------- pointer: select and drag ---------- */
-function svgPt(ev){ const svg=$("paperA"); const p=svg.createSVGPoint(); p.x=ev.clientX; p.y=ev.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+/* a pointer position in the sketch's coordinates; a drag keeps the frame it started in
+   (m), since redrawing during the drag can move the picture on the page */
+function svgPt(ev, m){ const svg=$("paperA"); const p=svg.createSVGPoint(); p.x=ev.clientX; p.y=ev.clientY; return p.matrixTransform(m||svg.getScreenCTM().inverse()); }
 let drag=null, dragBusy=false, dragNext=null;
 $("viewA").addEventListener("pointerdown", ev=>{
   const svg=$("paperA"); if(!svg) return;
-  if(ev.target.dataset && ev.target.dataset.handle==="bend"){ const g=findSel(); drag={kind:"bend",g:snapshot(g),p0:svgPt(ev),base:cur,text:cur}; $("viewA").setPointerCapture(ev.pointerId); ev.preventDefault(); return; }
+  if(ev.target.dataset && ev.target.dataset.handle==="bend"){ const g=findSel(); drag={kind:"bend",g:snapshot(g),p0:svgPt(ev), m:$("paperA").getScreenCTM().inverse(),base:cur,text:cur}; $("viewA").setPointerCapture(ev.pointerId); ev.preventDefault(); return; }
   const g=ev.target.closest("g[data-k]");
   if(!g){ sel=null; drawSelection(); renderInspector(); return; }
   sel={key:keyOf(g)}; drawSelection(); renderInspector();
-  if(g.dataset.k==="state"){ drag={kind:g.dataset.part==="label"?"label":"state", g:snapshot(g), p0:svgPt(ev), base:cur, text:cur, moved:false};
+  if(g.dataset.k==="state"){ drag={kind:g.dataset.part==="label"?"label":"state", g:snapshot(g), p0:svgPt(ev), m:$("paperA").getScreenCTM().inverse(), base:cur, text:cur, moved:false};
+    $("viewA").setPointerCapture(ev.pointerId); ev.preventDefault(); }
+  else if(g.dataset.k==="edge" && ev.target.closest('[data-part="notch"]')){
+    const nt=ev.target.closest('[data-part="notch"]');
+    drag={kind:ev.target.closest('[data-part="nname"]')?"nname":"notchAt", g:snapshot(g), p0:svgPt(ev), m:$("paperA").getScreenCTM().inverse(), base:cur, text:cur, moved:false,
+          v:nt.dataset.var, dy0: nt.dataset.dy!=="" ? +nt.dataset.dy : (figs.find(x=>x.name===fig)||{}).namedy||0};
     $("viewA").setPointerCapture(ev.pointerId); ev.preventDefault(); }
   describeSel();
 });
 function snapshot(g){ return {dataset:{...g.dataset}}; }
 $("viewA").addEventListener("pointermove", ev=>{
-  if(!drag) return; const p=svgPt(ev), dx=Math.round(p.x-drag.p0.x), dy=Math.round(p.y-drag.p0.y);
+  if(!drag) return; const p=svgPt(ev, drag.m), dx=Math.round(p.x-drag.p0.x), dy=Math.round(p.y-drag.p0.y);
   const d=drag.g.dataset; let e;
   if(drag.kind==="state") e=stateEdit(drag.g,+d.x+dx,+d.y+dy);
   else if(drag.kind==="label") e=stateEdit(drag.g,+d.x,+d.y,[+d.lx+dx,+d.ly+dy]);
+  else if(drag.kind==="notchAt"||drag.kind==="nname"){ const A=nodeG(d.src,d.panel),B=nodeG(d.tgt,d.panel); if(!A||!B) return;
+    const c=edgeCurve(drag.g,A,B);
+    // a drag that starts on the name moves the name only if it goes across the arrow
+    if(drag.kind==="nname"&&!drag.decided){ const q0=c.at((d.at===""?35:+d.at)/100), ux=p.x-drag.p0.x, uy=p.y-drag.p0.y;
+      if(Math.hypot(ux,uy)<3) return; drag.decided=true;
+      if(Math.abs(ux*q0.n.y-uy*q0.n.x) > Math.abs(ux*q0.n.x+uy*q0.n.y)) drag.kind="notchAt"; }
+    if(drag.kind==="notchAt"){ const q=c.nearest(p); const at=Math.max(5,Math.min(95,Math.round(q.f*100)));
+      const off=(p.x-q.pt.x)*q.n.x+(p.y-q.pt.y)*q.n.y; let side=d.side||null;
+      if(Math.abs(off)>12) side = off>0?"+":"-";
+      e=edgeEdit(drag.g,{at,side}); }
+    else { const f=(d.at===""?35:+d.at)/100, q=c.at(f), sgn=d.side==="+"?1:d.side==="-"?-1:(d.q==="all"?-1:1);
+      const v=drag.dy0+Math.round(((p.x-drag.p0.x)*q.n.x+(p.y-drag.p0.y)*q.n.y)*sgn); e={kind:"namedy",name:drag.v,v}; } }
   else { const A=nodeG(d.src,d.panel),B=nodeG(d.tgt,d.panel); if(!A||!B) return; const geo=edgeGeo({dataset:{bend:"0"}},A,B);
     const b=Math.round(2*((p.x-geo.mid.x)*geo.perp.x+(p.y-geo.mid.y)*geo.perp.y)); e=edgeEdit(drag.g,{bend:b===0?null:b}); }
   if(!drag.moved && Math.abs(dx)+Math.abs(dy)<1) return; drag.moved=true;
@@ -481,7 +523,8 @@ $("viewA").addEventListener("pointerup", async ev=>{
   if(!drag) return; const d=drag; drag=null;
   while(dragBusy) await new Promise(r=>setTimeout(r,15));
   if(!d.moved || d.text===d.base) return;
-  const n=d.g.dataset, label = d.kind==="state"?`Move ${n.name}`: d.kind==="label"?`Move the name of ${n.name}`:`Bend ${n.src}→${n.tgt}`;
+  const n=d.g.dataset, label = d.kind==="state"?`Move ${n.name}`: d.kind==="label"?`Move the name of ${n.name}`:
+    d.kind==="notchAt"?`Move the notch on ${n.src}→${n.tgt}`: d.kind==="nname"?`Move the name in the notch of ${d.v}`:`Bend ${n.src}→${n.tgt}`;
   push(d.text,label); explain(label,d.base,d.text,"Layout hint only; the formula is unchanged.");
 });
 let ldrag=null;
@@ -506,8 +549,21 @@ $("viewB").addEventListener("pointerdown", ev=>{
   const g=t.closest('g[data-k="notch"], g[data-k="link"]');
   if(!g){ if(block){ selectBlock(null, []); return; } if(sel&&(sel.key.startsWith("notch:")||sel.key.startsWith("link:"))){ sel=null; drawSelection(); renderInspector(); } return; }
   block=null; sel={key:keyOf(g)}; drawSelection(); renderInspector(); describeSel();
+  if(g.dataset.k==="notch"){
+    const p=layoutPt(ev,g), nm=ev.target.closest('[data-part="nname"]');
+    ndrag={g, name:g.dataset.name, path:g.dataset.path, up:g.dataset.up==="1", kind:nm?"name":"stroke", el:nm||g, x0:p.x, y0:p.y, d:0};
+    $("viewB").setPointerCapture(ev.pointerId); ev.preventDefault();
+  }
 });
 $("viewB").addEventListener("pointermove", ev=>{
+  if(ndrag){ const p=layoutPt(ev,ndrag.g);
+    if(ndrag.kind==="name"&&!ndrag.decided){ const ux=p.x-ndrag.x0, uy=p.y-ndrag.y0; if(Math.hypot(ux,uy)<3) return; ndrag.decided=true;
+      if(Math.abs(ux)>Math.abs(uy)){ ndrag.kind="stroke"; ndrag.el=ndrag.g; } }
+    const d=Math.round(ndrag.kind==="stroke"?p.x-ndrag.x0:p.y-ndrag.y0);
+    if(!ndrag.moved && Math.abs(d)<1) return; ndrag.moved=true; ndrag.d=d;
+    document.querySelectorAll('#paperB g[data-k="link"]').forEach(e=>e.style.opacity="0");
+    ndrag.el.setAttribute("transform", ndrag.kind==="stroke"?`translate(${d},0)`:`translate(0,${d})`);
+    $("bState").textContent = ndrag.kind==="stroke" ? `notch of ${ndrag.name}: ${d>0?"+":""}${d}` : `name of ${ndrag.name}: ${nameDyOf(ndrag)}`; return; }
   if(bdrag){ const p=layoutPt(ev,bdrag.r0);
     const d=Math.round(bdrag.kind==="stroke"?p.x-bdrag.x0:p.y-bdrag.y0); bdrag.v=bdrag.v0+d;
     if(bdrag.kind==="stroke"){ bdrag.el.setAttribute("x",+bdrag.r0.dataset.sx-4+d); }
@@ -520,7 +576,15 @@ $("viewB").addEventListener("pointermove", ev=>{
   ldrag.moved=true; ldrag.M=M;
   document.querySelectorAll(".selmark").forEach(e=>e.remove()); drawLinkHandles(ldrag.g,M);
 });
+/* the name offset a drag of a notch's name gives: positive is away from the stroke */
+function nameDyOf(n){ const base = n.g.dataset.dy!=="" ? +n.g.dataset.dy : (figs.find(x=>x.name===fig)||{}).namedy||0; return base + (n.up ? -n.d : n.d); }
+let ndrag=null;
 $("viewB").addEventListener("pointerup", async ()=>{
+  if(ndrag){ const n=ndrag; ndrag=null; $("bState").textContent="";
+    if(!n.moved||n.d===0){ n.el.removeAttribute("transform"); document.querySelectorAll('#paperB g[data-k="link"]').forEach(e=>e.style.opacity=""); return; }
+    if(n.kind==="stroke"){ const r=blockRect(n.path); const dx0=+((r&&r.dataset.dx)||0); enqueue(()=>blockHintEdit("stroke",n.path,dx0+n.d)); }
+    else { const v=nameDyOf(n); enqueue(()=>commitEdit({kind:"namedy",name:n.name,v},`Name of ${n.name} offset ${v}`)); }
+    return; }
   if(bdrag){ const d=bdrag; bdrag=null; $("bState").textContent="";
     if(d.v===null||d.v===d.v0){ document.querySelectorAll('#paperB g[data-k="link"]').forEach(e=>e.style.opacity=""); return; }
     enqueue(()=>blockHintEdit(d.kind,d.path,d.v)); return; }
@@ -566,6 +630,10 @@ document.addEventListener("keydown", ev=>{
   if(sel&&sel.key.startsWith("link:")&&["Delete","Backspace"].includes(ev.key)){
     const g=findSel(); if(!g||g.dataset.pinned!=="1") return; ev.preventDefault();
     enqueue(()=>commitEdit({kind:"route",name:g.dataset.name,polys:null},`Route the links of ${g.dataset.name} automatically again`)); return;
+  }
+  if(sel&&sel.key.startsWith("notch:")&&["ArrowLeft","ArrowRight"].includes(ev.key)&&!ev.altKey){
+    const g=findSel(); if(!g) return; ev.preventDefault(); const p=g.dataset.path, st=(ev.shiftKey?10:1)*(ev.key==="ArrowLeft"?-1:1);
+    enqueue(()=>{ const r=blockRect(p); return blockHintEdit("stroke",p,+((r&&r.dataset.dx)||0)+st); }); return;
   }
   if(sel&&sel.key.startsWith("notch:")&&["ArrowUp","ArrowDown","Delete","Backspace"].includes(ev.key)){
     const g=findSel(); if(!g) return; ev.preventDefault();
@@ -640,7 +708,8 @@ function renderInspector(){
     <div class="r" role="group" aria-label="Side of the notch">
       ${["auto","up","down"].map(v=>`<button data-notchdir="${v}" aria-pressed="${cur===v}" data-help="${v==="auto"?`Remove the hint notch ${esc(d.name)} …: the router chooses the side (it may turn the notch over to save crossings).`:`Hint notch ${esc(d.name)} ${v}: the notch always opens ${v}; the router routes the links around it.`}">${v==="auto"?"automatic":v}</button>`).join("")}
     </div>
-    <p class="muted">Now opens ${d.up==="1"?"up":"down"}${d.fixed?"":" (the router's choice)"}. Keys: <kbd>↑</kbd> up, <kbd>↓</kbd> down, <kbd>Delete</kbd> automatic. With links on, a change routes the links again.</p>`;
+    <div class="r"><label data-help="namedy ${esc(d.name)} N: this binder's name moved N units out of its notch (negative: towards the stroke), in both views. Empty removes the hint.">Name offset <input type="number" id="ndy" value="${d.dy}" placeholder="figure's"></label></div>
+    <p class="muted">Now opens ${d.up==="1"?"up":"down"}${d.fixed?"":" (the router's choice)"}. Drag the notch sideways to move it along its stroke, its name up or down to move the name. Keys: <kbd>←</kbd>/<kbd>→</kbd> along the stroke, <kbd>↑</kbd> up, <kbd>↓</kbd> down, <kbd>Delete</kbd> automatic. With links on, a change routes the links again.</p>`;
     return;
   }
   if(d.k==="state"){
@@ -664,6 +733,7 @@ document.addEventListener("change", async ev=>{
   if(id==="fw"||id==="fh"){ const w=+$("fw").value,h=+$("fh").value; if(!(w>=20&&h>=20)){t.style.borderColor="var(--err)";explain("Not applied",null,null,"Width and height must be at least 20.");return;} commitEdit({kind:"size",w,h},`Canvas ${w}×${h}`); }
   else if(id==="bdx"&&block){ if(num===null||!Number.isFinite(num)){t.style.borderColor="var(--err)";return;} blockHintEdit("stroke",block,Math.round(num)); }
   else if(id==="bgap"&&block){ if(num===null||!Number.isFinite(num)){t.style.borderColor="var(--err)";return;} blockHintEdit("gap",block,Math.round(num)); }
+  else if(id==="ndy"&&d){ if(num!==null&&!Number.isFinite(num)){t.style.borderColor="var(--err)";return;} commitEdit({kind:"namedy",name:d.name,v:num===null?null:Math.round(num)}, num===null?`Name of ${d.name}: the figure's offset`:`Name of ${d.name} offset ${Math.round(num)}`); }
   else if(id==="fj") commitEdit({kind:"judgement",v},`Judgement: ${v}`);
   else if(id==="fnd") commitEdit({kind:"namedy",v:num===null?null:Math.round(num)}, num===null?"Remove namedy":`namedy ${Math.round(num)}`);
   else if(id==="nx"||id==="ny") commitEdit(stateEdit(g,Math.round(+$("nx").value),Math.round(+$("ny").value)),`Move ${d.name}`);

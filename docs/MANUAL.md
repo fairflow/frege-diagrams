@@ -181,13 +181,21 @@ the strip at the top. Hovering over or focusing a control says what it will do.
 **The sketch (view A).** Click a state, a name or an arrow to select it, or
 reach it with Tab. Drag it, or nudge it with the arrow keys (Shift: by 10).
 On an arrow, ↑ and ↓ bend it and ← → slide its notch; a selected arrow also
-has a square handle for bending. The inspector edits the same hints by
+has a square handle for bending. A notch can be grabbed directly: dragged
+along its arrow it moves (`at`), dragged across the arrow it changes side
+(`side`); its name, dragged across the arrow, moves in the notch (`namedy x
+N`, for that binder only, in both views). A drag that starts on the name and
+goes along the arrow moves the notch. The inspector edits the same hints by
 number. These edits change hints only, never the formula.
 
 **The Frege view (view B).**
 
 * Click a notch to select it. The inspector sets its side to *automatic*,
   *up* or *down* (the hint `notch x …`); ↑, ↓ and Delete do the same.
+  Drag the notch sideways, or press ← and →, to move it along its stroke
+  (the `stroke` hint of its block, below); drag its name up or down to move
+  the name (`namedy x N`, also in the sketch, and in the inspector as *Name
+  offset*). Links are hidden during a drag and routed again after it.
 * With *Links* on, click a binder's links to select them. A square handle
   moves a segment sideways (its neighbours stretch); a round handle moves a
   bend or a branch point (the segments through it move with it, keeping their

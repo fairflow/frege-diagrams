@@ -5,7 +5,10 @@ was merged as, the date and time (UTC) of that commit, and the tag if one
 is applied. `framediag --version` prints the version; the editor shows it
 with the commit it runs from.
 
-## Unreleased
+## 0.4.0 (unreleased)
+
+* Notches can be grabbed in both views. Sketch: drag a notch along its arrow (`at`) or across it (`side`). Frege view: drag a notch sideways, or ←/→, to move it along its stroke (the `stroke` hint of its block). In both, drag the name in a notch to move it: the new hint `namedy x N`, one binder's name offset, both views (`namedy N` remains the figure's). The direction of a drag that starts on the name decides: along the stroke moves the notch, across it the name.
+* framedit: the strapline under the title is gone (the version line stays); no browser focus ring on the selected element (the selection marker shows it); a drag in the sketch keeps the coordinates it started in, so the redraws during a drag cannot make it run away.
 
 ## 0.3.0 · a39f575 · 2026-11-12 08:24 UTC · tag `v0.3.0`
 

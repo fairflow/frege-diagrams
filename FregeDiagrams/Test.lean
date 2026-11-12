@@ -98,7 +98,8 @@ def genHints : G Hints := do
   let path : G String := do return "b" ++ String.join ((← genList 0 3 (rand 3)).map (s!"/{·}"))
   let strokes ← genList 0 2 do return (← path, ← genInt)
   let gaps ← genList 0 2 do return (← path, ← genInt)
-  return { size, views, nodes, edges, loops, texts, nameDy, notches, routes, judgement, strokes, gaps }
+  let nameDys ← genList 0 2 do return (← pick names, ← genInt)
+  return { size, views, nodes, edges, loops, texts, nameDy, notches, routes, judgement, strokes, gaps, nameDys }
 
 def genFig : G Fig := do
   return { name := ← pick ["f", "ex_trans", "x1"], hints := ← genHints, body := ← genForm (← rand 5) }
@@ -474,3 +475,30 @@ def svg (f : Fig) : String := f.toTreeDiagram.svg (f.drawOpts {})
 #guard (applyEdit s!"fig f [gap b/0/1 5] = {src}" "f" (.gap "b/0/1" (some 7))).toOption == some s!"fig f [gap b/0/1 7] = {src}"
 
 end FregeDiagrams.Test.Handles
+
+/-! ## One binder's name offset (`namedy x N`) -/
+
+namespace FregeDiagrams.Test.NameDy
+open FregeDiagrams
+
+def fig (h : String) : Fig := (Fig.parse s!"fig f [{h}] = all t. if s <= t then ex u. t R u").toOption.get!
+def plain := fig "size (200,100)"
+def svgs (f : Fig) : List String := (f.pictures (f.drawOpts {})).map (·.2)
+
+#guard (fig "namedy t 3").hints.nameDys == [("t", 3)] && (fig "namedy t 3").hints.nameDy == none
+#guard (fig "namedy 2, namedy u -1").roundTrips
+#guard (fig "namedy 2, namedy u -1").hints.nameDy == some 2
+-- it moves that binder's name in both views, and no other
+#guard (svgs (fig "size (200,100), namedy t 4")).all fun s => !(svgs plain).contains s
+#guard svgs (fig "size (200,100), namedy t 0") == svgs plain
+#guard (fig "namedy zz 3").lint.size == 1 && (fig "namedy t 3").lint.size == 0
+-- edits: set, change, remove; the figure's namedy is a separate hint
+#guard (applyEdit "fig f = all t. s <= t" "f" (.nameDyOf "t" (some 3))).toOption == some "fig f [namedy t 3] = all t. s <= t"
+#guard (applyEdit "fig f [namedy 1, namedy t 3] = all t. s <= t" "f" (.nameDyOf "t" (some 5))).toOption ==
+  some "fig f [namedy 1, namedy t 5] = all t. s <= t"
+#guard (applyEdit "fig f [namedy 1, namedy t 3] = all t. s <= t" "f" (.nameDyOf "t" none)).toOption ==
+  some "fig f [namedy 1] = all t. s <= t"
+#guard (applyEdit "fig f [namedy 1, namedy t 3] = all t. s <= t" "f" (.nameDy none)).toOption ==
+  some "fig f [namedy t 3] = all t. s <= t"
+
+end FregeDiagrams.Test.NameDy

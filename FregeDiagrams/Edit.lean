@@ -25,6 +25,8 @@ inductive Edit where
   | size (w h : Nat)
   /-- set or remove the figure's `namedy` -/
   | nameDy (v : Option Int)
+  /-- set or remove one binder's `namedy x N` -/
+  | nameDyOf (x : String) (v : Option Int)
   /-- set or remove a loop's angle -/
   | loop (k : Key) (angle : Option Int)
   /-- fix a binder's notch in view B to open up (`true`) or down (`false`), or
@@ -92,6 +94,12 @@ def Edit.apply (h : Hints) : Edit → Hints × Act
     | true, false => ({ h with judgement := j }, .add txt)
     | false, true => ({ h with judgement := j }, .delete .judgement)
     | false, false => ({ h with judgement := j }, .replace .judgement txt)
+  | .nameDyOf x v =>
+    match h.nameDys.findIdx? (·.1 == x), v with
+    | some i, some v => ({ h with nameDys := h.nameDys.set i (x, v) }, .replace (.namedyOf i) s!"namedy {x} {v}")
+    | some i, none => ({ h with nameDys := h.nameDys.eraseIdx i }, .delete (.namedyOf i))
+    | none, some v => ({ h with nameDys := h.nameDys ++ [(x, v)] }, .add s!"namedy {x} {v}")
+    | none, none => (h, .nothing)
   | .nameDy v =>
     match h.nameDy, v with
     | some _, some v => ({ h with nameDy := some v }, .replace .namedy s!"namedy {v}")
