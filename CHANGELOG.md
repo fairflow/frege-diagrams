@@ -1,13 +1,26 @@
 # Changelog
 
-## Unreleased
+One section per version, newest first: the version, the commit of main it
+was merged as, the date and time (UTC) of that commit, and the tag if one
+is applied. `framediag --version` prints the version; the editor shows it
+with the commit it runs from.
 
+## 0.3.0 (unreleased)
+
+* Versions: `framediag --version`; the editor's header shows the version, the commit (short hash, "modified" if the working tree has changes), the tag if any, and the commit's date and time. This changelog has one section per version.
 * View B layout hints: `stroke PATH DX` lengthens or shortens the stroke into a block (moving the block, and a quantifier's notch, along the stroke) and `gap PATH DY` gives a hypothesis or fork part more or less room above. Block paths are written `b/1/0`. Lint reports hints naming no block. framedit: with a block selected, a square handle and ←/→ set its stroke, a diamond and ↑/↓ its gap; links are hidden during a drag and routed again after it, with no mode.
-
 * Blocks: every subtree of the formula has a path (`b`, `b/0`, `b/1/2`, …, `blockPath`, `Form.blockAt`). With `annotate`, view B carries each block's extent and hit targets at its start, a fork's dot and a condition stroke's junctions, and view A's arrows and states carry their blocks. framedit selects a block by a click there, shades it in the Frege view, marks its arrows and states in the sketch and shows its formula (`--serve` op `block`); Alt+↑ and Alt+↓ widen and narrow; a selected notch shows its scope.
 * Claims and their theorems: `@[figure_claim "NAME"]` tags the theorem that states a figure; `#figure_claims SRC` fails when a claimed figure of SRC has no tagged theorem (definitions, contents and schematic figures, those with a text leaf without a meaning, are not checked) and otherwise lists each figure with its theorems (`FregeDiagrams.Claims`). `evalString` (of `FregeDiagrams.Elab`) is now public.
+* docs/MANUAL.md, section 2: claims, definitions and contents, with the syntax.
+
+## 0.2.0 · d491de4 · 2026-11-12 00:20 UTC (tag `v0.2.0` proposed)
+
+* docs/design/PROPOSAL.md: judgement strokes, blocks, editing view B, sound transformations, sheets.
 * Route pins and view options: a pin is made for, and used in, the layout with names shown, the figure's own notch-name offset and spacing 1. With `--hide-bound`, another `--notch-name-offset` or `--spacing` (or the editor's toolbar options) it is set aside and the links are routed automatically, with a note instead of an error; framedit asks for those options before it pins links. A pin that no longer fits its own layout is still an error.
 * Judgement strokes: the hint `judgement claim|definition|content` gives view B one judgement stroke (a claim, the default), Frege's double stroke (a definition `"D" {f}`: both views draw `f`, view B writes `D :≡`, LaTeX `\text{D}\ :\equiv\ f`) or none (a content, nothing claimed). Lint reports a definition of another shape; framedit sets it in the figure inspector. Existing figures draw byte-identically.
+
+## 0.1.0 · f6eb77a · 2026-11-11 23:05 UTC (tag `v0.1.0` proposed)
+
 * docs/LANGUAGE.md: the figure language, with its grammar in EBNF and syntax diagrams generated from one source (docs/tools/grammar.py); CI checks the EBNF and that the examples parse.
 * docs/MANUAL.md: the tools (installing, `framediag`, `framedit`, LaTeX, figures with a meaning in Lean); replaces docs/GUIDE.md, whose language part is in docs/LANGUAGE.md.
 * `framediag --fig FILE.lean [--def NAME]` reads the figures from a raw string in a Lean file, so one string serves theorems (`fig_of%`), drawings and the editor; parse errors give the line of the file.

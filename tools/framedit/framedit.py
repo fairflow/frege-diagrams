@@ -145,6 +145,27 @@ def digest(text):
     return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
 
+def tool_info(exe, repo):
+    """The version of the tools in use: `framediag --version`, and the commit
+    of the package (short hash, tag if any, commit date and time, whether the
+    working tree has changes), shown at the top of the page."""
+    def run(*cmd):
+        try:
+            r = subprocess.run(cmd, cwd=repo, capture_output=True, text=True, timeout=10)
+            return r.stdout.strip() if r.returncode == 0 else ''
+        except OSError:
+            return ''
+    version = run(exe, '--version').replace('frege-diagrams ', '')
+    commit = run('git', 'rev-parse', '--short', 'HEAD')
+    tag = run('git', 'describe', '--tags', '--exact-match')
+    date = run('git', 'log', '-1', '--format=%cd', '--date=format:%Y-%m-%d %H:%M')
+    dirty = bool(run('git', 'status', '--porcelain', '--untracked-files=no'))
+    parts = [f'frege-diagrams v{version}' if version else 'frege-diagrams']
+    parts += [p for p in (commit + (' (modified)' if dirty else '') if commit else '', tag, date) if p]
+    return {'version': version, 'commit': commit, 'tag': tag, 'date': date, 'dirty': dirty,
+            'line': ' · '.join(parts)}
+
+
 def main():
     path, port, lake = args()
     if not os.path.exists(path):
@@ -162,6 +183,8 @@ def main():
     if b.returncode != 0:
         sys.exit('framedit: lake build framediag failed')
     exe = os.path.join(lake, '.lake', 'build', 'bin', 'framediag')
+    tool = tool_info(exe, lake)
+    print(f'framedit: {tool["line"]}', flush=True)
     fast, slow = Lean(exe), Lean(exe)
 
     class H(http.server.BaseHTTPRequestHandler):
@@ -184,7 +207,7 @@ def main():
             elif self.path == '/api/file':
                 full, _, t, _, kind, off = src.read()
                 self.send(200, json.dumps({'path': path, 'kind': kind, 'lineOffset': off, 'root': root,
-                                           'text': t, 'hash': digest(full)}, ensure_ascii=False))
+                                           'text': t, 'hash': digest(full), 'tool': tool}, ensure_ascii=False))
             else:
                 self.send(404, json.dumps({'error': 'not found'}))
 

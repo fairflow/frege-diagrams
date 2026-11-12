@@ -27,6 +27,7 @@ import FregeDiagrams.Legend
 import FregeDiagrams.Examples
 import FregeDiagrams.Serve
 import FregeDiagrams.Lint
+import FregeDiagrams.Version
 
 open FregeDiagrams
 
@@ -61,6 +62,9 @@ def rsvgConvert (svg pdf : System.FilePath) : IO Unit := do
 def main (args : List String) : IO UInt32 := do
   -- `framediag --serve`: the drawing server of the editor (`FregeDiagrams/Serve.lean`)
   if args == ["--serve"] then return ← FregeDiagrams.Serve.serve
+  if args == ["--version"] then
+    IO.println s!"frege-diagrams {FregeDiagrams.version}"
+    return 0
   -- typesetting options for the whole set of diagrams
   let opts : DrawOpts := { links := args.contains "--links", hideBound := args.contains "--hide-bound",
                            annotate := args.contains "--annotate" }

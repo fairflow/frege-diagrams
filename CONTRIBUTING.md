@@ -16,7 +16,8 @@ Where each thing is documented:
 | a `framediag` option, an output file, a check | `docs/MANUAL.md` |
 | the editor (`tools/framedit/`) | `docs/MANUAL.md`, section 4; the help texts in the page itself |
 | a design decision, or a plan that changed | `docs/design/` (say what changed and when, rather than deleting the old reasoning) |
-| anything a user would notice | `CHANGELOG.md`, under "Unreleased" |
+| anything a user would notice | `CHANGELOG.md`, in the section of the next version |
+| a merged iteration (one or more pull requests released together) | raise `FregeDiagrams.version` (`FregeDiagrams/Version.lean`); head its `CHANGELOG.md` section with the version, the merge commit's short hash, its date and time (UTC) and the tag, if one is applied |
 
 CI checks the mechanical part: the EBNF in `docs/LANGUAGE.md` must equal the
 grammar, every example in it must parse, and the syntax diagrams and the
