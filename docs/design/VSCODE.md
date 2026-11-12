@@ -1,6 +1,10 @@
 # A VS Code extension: design note
 
-Status 2026-11-12: a proposal for discussion; nothing built. The browser
+Status 2026-11-12: approved by Matthew (every detail, including the three
+decisions below: here, a local `.vsix`, the workspace's `framediag`). Steps 1
+and 2 are built (0.7.0). One change from the plan: the extension is plain
+JavaScript type-checked with `// @ts-check` against the VS Code API
+declarations, not TypeScript, so that it has no build step. The browser
 editor (`tools/framedit/`) stays: it needs nothing but Python and a browser,
 and works one file at a time. The extension is for working inside VS Code
 beside the Lean extension, with VS Code's own file management, undo and

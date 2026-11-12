@@ -24,6 +24,8 @@ jobs:
           lake exe framediag _build/a --no-pdf
           lake exe framediag _build/b --fig examples/basic.fgd --no-pdf
           diff -r -x '*.tex' _build/a _build/b
+      - name: The VS Code extension's request handling (smoke test against framediag)
+        run: node tools/vscode/test/smoke.js
       - name: The editor's file handling (raw strings in Lean files)
         run: python3 -I tools/framedit/test_framedit.py
       - name: docs/LANGUAGE.md matches the grammar, and its examples parse

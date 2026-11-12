@@ -131,10 +131,23 @@ const $ = id => document.getElementById(id);
 
 /* ---------- talking to Lean ---------- */
 let reqId = 0;
+/* Every request to the host goes through `api`: in a browser, an HTTP request
+   to framedit.py; in VS Code, a message to the extension (tools/vscode/), which
+   answers in the same form. Returns {status, body}. */
+const VSC = typeof acquireVsCodeApi === "function" ? acquireVsCodeApi() : null;
+let apiSeq = 0; const apiWait = {};
+if (VSC) window.addEventListener("message", ev => {
+  const m = ev.data; if (m && m.type === "reply" && apiWait[m.id]) { apiWait[m.id](m); delete apiWait[m.id]; }
+  if (m && m.type === "reload") reloadFromHost();
+});
+async function api(path, body){
+  if (VSC) return new Promise(res => { const id = ++apiSeq; apiWait[id] = m => res({status:m.status, body:m.body}); VSC.postMessage({type:"api", id, path, body}); });
+  const r = body===undefined ? await fetch(path) : await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  return {status:r.status, body:await r.json()};
+}
 async function lean(req){
   req.id = ++reqId;
-  const r = await fetch("/api/lean",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(req)});
-  return r.json();
+  return (await api("/api/lean", req)).body;
 }
 
 /* ---------- text diff for the explanation strip ---------- */
@@ -838,7 +851,7 @@ function renderChrome(){
 /* ---------- where figures are used ---------- */
 async function usesOf(names){
   const need=names.filter(n=>!(n in usesCache));
-  if(need.length){ const r=await fetch("/api/uses",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({names:need})}); Object.assign(usesCache, await r.json()); }
+  if(need.length){ const r=await api("/api/uses",{names:need}); Object.assign(usesCache, r.body); }
   const o={}; for(const n of names) o[n]=usesCache[n]||[]; return o;
 }
 function usesHtml(list){ return list.length? list.map(u=>`<code>${esc(u)}</code>`).join(", ") : '<span class="muted">nowhere outside this file</span>'; }
@@ -863,8 +876,8 @@ async function save(){
   doSave();
 }
 async function doSave(){
-  const r=await fetch("/api/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:cur,base:disk.hash})});
-  const j=await r.json();
+  const r=await api("/api/save",{text:cur,base:disk.hash});
+  const j=r.body;
   if(r.status===409){
     $("panel").innerHTML=`<div class="panel" role="alertdialog"><b>${esc(j.error)}</b><p style="margin:4px 0">Your text is kept here. Load the file's new version (your changes stay in the history and can be redone by hand), or keep editing.</p>
       <button id="reload">Load the file's version</button> <button id="keep">Keep editing</button></div>`;
@@ -876,8 +889,16 @@ async function doSave(){
 }
 
 /* ---------- start ---------- */
+/* VS Code: the document changed outside the page (typed in a text editor, or
+   changed on disk); take its text unless the page has changes of its own */
+async function reloadFromHost(){
+  const f=(await api("/api/file")).body;
+  if(f.text===cur){ disk={text:f.text,hash:f.hash}; renderChrome(); return; }
+  if(cur!==disk.text){ explain("The file changed elsewhere",null,null,"The file changed outside this editor while you have unsaved changes here; save to overwrite it, or undo your changes to take its version."); return; }
+  disk={text:f.text,hash:f.hash}; push(f.text,"Changed outside the editor");
+}
 async function loadFile(label){
-  const r=await fetch("/api/file"); const f=await r.json();
+  const f=(await api("/api/file")).body;
   if(f.tool) $("toolVer").textContent=f.tool.line;
   disk={text:f.text,hash:f.hash}; lineOffset=f.lineOffset||0;
   $("filePath").textContent=`${f.path} · ${f.kind}${lineOffset?` (its line 1 is line ${lineOffset+1} of the file)`:""}`;
@@ -893,9 +914,9 @@ document.addEventListener("keydown", ev=>{ if(ev.target.id==="nfName"&&ev.key===
 $("strSel").addEventListener("change", async ev=>{
   const want=ev.target.value;
   if(cur!==disk.text){ ev.target.value=$("strSel").dataset.cur||ev.target.value;
-    const r=await fetch("/api/file"); const f=await r.json(); ev.target.value=f.def;
+    const f=(await api("/api/file")).body; ev.target.value=f.def;
     explain("Not switched",null,null,"This string has unsaved changes: save them, or undo them, before editing another string."); return; }
-  const r=await fetch("/api/select",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:want})}); const j=await r.json();
+  const j=(await api("/api/select",{name:want})).body;
   if(!j.ok){ explain("Not switched",null,null,j.error); return; }
   await loadFile(`Opened the string ${want}`); explain(`Editing the string ${want}`,null,null,"Undo history starts again for this string.");
 });
