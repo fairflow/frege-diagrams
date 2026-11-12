@@ -1,0 +1,67 @@
+{
+  "name": "frege-diagrams",
+  "displayName": "Frege Diagrams",
+  "description": "Edit Frege-style formula trees and Kripke frame pictures, drawn by Lean, inside VS Code.",
+  "version": "0.7.0",
+  "publisher": "fairflow",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fairflow/frege-diagrams"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "languages": [
+      {
+        "id": "fgd",
+        "aliases": [
+          "Figure language",
+          "fgd"
+        ],
+        "extensions": [
+          ".fgd"
+        ]
+      }
+    ],
+    "customEditors": [
+      {
+        "viewType": "fregeDiagrams.figureEditor",
+        "displayName": "Frege Diagrams: figure editor",
+        "selector": [
+          {
+            "filenamePattern": "*.fgd"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "configuration": {
+      "title": "Frege Diagrams",
+      "properties": {
+        "fregeDiagrams.framediagPath": {
+          "type": "string",
+          "default": "",
+          "description": "The framediag program to use. Empty: the one the workspace's Lake build makes (.lake/packages/frege-diagrams/.lake/build/bin/framediag, or .lake/build/bin/framediag in frege-diagrams itself)."
+        },
+        "fregeDiagrams.lakePath": {
+          "type": "string",
+          "default": "",
+          "description": "The lake program used to build framediag when it is missing. Empty: ~/.elan/bin/lake, else lake on the PATH."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "prepare-package": "node scripts/prepare.js",
+    "package": "node scripts/prepare.js && npx --yes @vscode/vsce@3.2.1 package --no-dependencies --out frege-diagrams.vsix",
+    "test": "node test/smoke.js"
+  }
+}

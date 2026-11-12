@@ -282,6 +282,25 @@ canvas size, its `namedy`, and its judgement stroke (*claim*, *definition*,
 The toolbar options (links, hidden names, notch-name offset) are the options
 of `framediag`; they are not stored in the file.
 
+### 4.1 In VS Code
+
+The extension in `tools/vscode/` opens figure files (`*.fgd`) in the same
+editor inside VS Code; *Reopen Editor With… → Text Editor* shows the plain
+text. Saving, and the file itself, are VS Code's; a change made in a text
+editor, or on disk, reaches the figure editor (unless it has unsaved changes
+of its own, which it then reports). The workspace must require
+frege-diagrams in its lakefile: the extension uses the `framediag` that
+Lake builds there (and builds it the first time if needed), and the page of
+that same package. Settings: `fregeDiagrams.framediagPath`,
+`fregeDiagrams.lakePath`. Build and install:
+
+```bash
+cd tools/vscode && npm run package && code --install-extension frege-diagrams.vsix
+```
+
+Figure strings in Lean files, colouring and diagnostics come next
+(docs/design/VSCODE.md).
+
 ## 5. LaTeX
 
 Two macros include the output in a document (here drawn into `figures/`):

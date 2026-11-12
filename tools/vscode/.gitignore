@@ -1,0 +1,4 @@
+media/
+LICENSE
+*.vsix
+node_modules/

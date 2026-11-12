@@ -5,16 +5,21 @@ was merged as, the date and time (UTC) of that commit, and the tag if one
 is applied. `framediag --version` prints the version; the editor shows it
 with the commit it runs from.
 
-## 0.6.0 (unreleased)
+## 0.7.0 (unreleased)
+
+* A VS Code extension, first version (`tools/vscode/`, docs/design/VSCODE.md steps 1 and 2): figure files (`*.fgd`) open in the figure editor inside VS Code, the browser editor's page in a webview talking to the same `framediag --serve`; saving goes through VS Code; a change made in a text editor or on disk reaches the page. framediag is the workspace's (built with Lake when missing), and the page comes from the same package. Plain JavaScript type-checked with `// @ts-check`; a smoke test against a real framediag; `npm run package` writes the `.vsix`.
+* framedit: the page sends every request through one function, `api`, which in VS Code posts a message instead of fetching.
+
+## 0.6.0 · 8e26eba · 2026-11-12 10:02 UTC · tag `v0.6.0`
 
 * The canvas grows instead of reporting an error: a state dragged or nudged past the right or bottom edge enlarges the `size` hint (with a margin); it cannot leave by the left or top. A corner handle resizes the canvas, and with Shift stretches the figure (the new edit `resize {w, h, from}`: hinted states and captions move in proportion). A state outside the canvas in typed text is still reported, now with the fix *Enlarge the canvas*.
 
-## 0.5.0 (unreleased)
+## 0.5.0 · b8f7de4 · 2026-11-12 10:02 UTC · tag `v0.5.0`
 
 * framedit: a Lean file may hold several figure strings; the toolbar's *String* menu switches between them (refused while there are unsaved changes), `--def NAME` picks the first one shown. *New figure* in the figure inspector appends a figure. Tests of the file handling (zero, one or several strings, nested delimiters, unclosed strings, repeated names, the round trip), run in CI.
 * MANUAL: the figure module, a Lean file holding only the figure strings, imported where theorems use them.
 
-## 0.4.0 · 695efc6 · 2026-11-12 09:42 UTC (tag `v0.4.0` proposed)
+## 0.4.0 · 695efc6 · 2026-11-12 09:42 UTC · tag `v0.4.0`
 
 * Notches can be grabbed in both views. Sketch: drag a notch along its arrow (`at`) or across it (`side`). Frege view: drag a notch sideways, or ←/→, to move it along its stroke (the `stroke` hint of its block). In both, drag the name in a notch to move it: the new hint `namedy x N`, one binder's name offset, both views (`namedy N` remains the figure's). The direction of a drag that starts on the name decides: along the stroke moves the notch, across it the name.
 * framedit: the strapline under the title is gone (the version line stays); no browser focus ring on the selected element (the selection marker shows it); a drag in the sketch keeps the coordinates it started in, so the redraws during a drag cannot make it run away.
