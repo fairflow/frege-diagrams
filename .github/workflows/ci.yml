@@ -26,6 +26,10 @@ jobs:
           diff -r -x '*.tex' _build/a _build/b
       - name: The VS Code extension's request handling (smoke test against framediag)
         run: node tools/vscode/test/smoke.js
+      - name: The VS Code grammars are up to date
+        run: |
+          python3 docs/tools/grammar.py --textmate tools/vscode/syntaxes
+          git diff --exit-code -- tools/vscode/syntaxes
       - name: The editor's file handling (raw strings in Lean files)
         run: python3 -I tools/framedit/test_framedit.py
       - name: docs/LANGUAGE.md matches the grammar, and its examples parse

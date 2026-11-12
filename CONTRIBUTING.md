@@ -11,7 +11,7 @@ Where each thing is documented:
 
 | change | update |
 |---|---|
-| the figure language (lexer, parser, printer) | `docs/tools/grammar.py`, then regenerate the EBNF block of `docs/LANGUAGE.md` (`--ebnf`) and the diagrams (`--svg docs/diagrams`); the prose and examples of `docs/LANGUAGE.md` |
+| the figure language (lexer, parser, printer) | `docs/tools/grammar.py`, then regenerate the EBNF block of `docs/LANGUAGE.md` (`--ebnf`) and the diagrams (`--svg docs/diagrams`) and the VS Code grammars (`--textmate tools/vscode/syntaxes`); the prose and examples of `docs/LANGUAGE.md` |
 | what the pictures show, or how they are drawn | `docs/NOTATION.md` (and `docs/MANUAL.md` for options); regenerate the pictures with `sh docs/tools/images.sh` (CI checks they are current) |
 | a `framediag` option, an output file, a check | `docs/MANUAL.md` |
 | the editor (`tools/framedit/`) | `docs/MANUAL.md`, section 4; the help texts in the page itself |

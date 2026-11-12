@@ -321,8 +321,130 @@ async function editFigures(/** @type {vscode.ExtensionContext} */ ctx, /** @type
   await attach(panel, src, ctx.extensionPath);
 }
 
+/* ---------- squiggles: parse errors and the checks of every figure ---------- */
+
+/** One drawing server per framediag program, for diagnostics (started when needed). */
+const diagServers = new Map();
+/** @param {ReturnType<typeof locate>} loc @returns {Server | null} */
+function diagServer(loc) {
+  if (!fs.existsSync(loc.exe)) return null;
+  let srv = diagServers.get(loc.exe);
+  if (!srv || srv.dead) { srv = new Server(loc.exe); diagServers.set(loc.exe, srv); }
+  return srv;
+}
+
+/** The figure texts of a document: a figure file whole, or each string of a Lean file. */
+function figureTexts(/** @type {vscode.TextDocument} */ doc) {
+  const full = doc.getText();
+  if (doc.uri.fsPath.endsWith('.fgd')) return [{ text: full, start: 0 }];
+  if (doc.uri.fsPath.endsWith('.lean')) return rawStrings(full).filter((x) => x.end >= 0).map((x) => ({ text: full.slice(x.start, x.end), start: x.start }));
+  return [];
+}
+
+/**
+ * The problems of one figure text, with positions in the text (0-based line
+ * and column): a parse error where the parser stopped; otherwise the checks
+ * of each figure (`lint`), at the figure's name, with their fixes.
+ * @param {Server} srv @param {string} text
+ * @returns {Promise<{line: number, col: number, len: number, msg: string, sev: string, fix: null | {fig: string, edit: any, label: string}}[]>}
+ */
+async function diagnoseText(srv, text) {
+  const p = await srv.ask({ op: 'parse', text });
+  if (!p.ok) {
+    const m = /^line (\d+), column (\d+): ([\s\S]*)$/.exec(p.error || '');
+    return [{ line: m ? +m[1] - 1 : 0, col: m ? +m[2] - 1 : 0, len: 1, msg: m ? m[3] : String(p.error), sev: 'error', fix: null }];
+  }
+  const out = [];
+  for (const f of p.figs) {
+    const l = await srv.ask({ op: 'lint', text, fig: f.name });
+    if (!l.ok || !l.items.length) continue;
+    const esc = f.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const m = new RegExp('(^|\\n)([ \\t]*fig[ \\t]+)' + esc + '(?![\\w\'′₀-₉])').exec(text);
+    const at = m ? m.index + m[1].length + m[2].length : 0;
+    const before = text.slice(0, at), line = before.split('\n').length - 1, col = at - (before.lastIndexOf('\n') + 1);
+    for (const it of l.items)
+      out.push({ line, col, len: f.name.length, msg: `${f.name}: ${it.msg}`, sev: it.sev, fix: it.fix ? { fig: f.name, edit: it.fix, label: it.fixLabel } : null });
+  }
+  return out;
+}
+
+/** Quick fixes, by document and diagnostic: the edit to apply to that figure text. */
+const fixes = new Map();
+const fixKey = (/** @type {vscode.Uri} */ u, /** @type {vscode.Diagnostic} */ d) => `${u.toString()}|${d.range.start.line}:${d.range.start.character}|${d.message}`;
+
+/** @param {vscode.DiagnosticCollection} coll @param {vscode.TextDocument} doc */
+async function refreshDiagnostics(coll, doc) {
+  const texts = figureTexts(doc);
+  if (!texts.length) { coll.delete(doc.uri); return; }
+  const srv = diagServer(locate(doc.uri));
+  if (!srv) return;
+  const version = doc.version, diags = [];
+  for (const { text, start } of texts) {
+    const lineStart = text.split('\n').reduce((acc, l) => { acc.push(acc[acc.length - 1] + l.length + 1); return acc; }, [0]);
+    for (const p of await diagnoseText(srv, text)) {
+      const a = start + (lineStart[p.line] ?? 0) + p.col;
+      const d = new vscode.Diagnostic(new vscode.Range(doc.positionAt(a), doc.positionAt(a + Math.max(1, p.len))), p.msg,
+        p.sev === 'error' ? vscode.DiagnosticSeverity.Error : vscode.DiagnosticSeverity.Warning);
+      d.source = 'Frege Diagrams';
+      if (p.fix) fixes.set(fixKey(doc.uri, d), { start, len: text.length, ...p.fix });
+      diags.push(d);
+    }
+  }
+  if (doc.version === version) coll.set(doc.uri, diags);
+}
+
+/** @implements {vscode.CodeActionProvider} */
+class FigureFixes {
+  /** @param {vscode.TextDocument} doc @param {vscode.Range} _r @param {vscode.CodeActionContext} ctx */
+  provideCodeActions(doc, _r, ctx) {
+    const out = [];
+    for (const d of ctx.diagnostics) {
+      const f = fixes.get(fixKey(doc.uri, d));
+      if (!f) continue;
+      const a = new vscode.CodeAction(f.label || 'Fix', vscode.CodeActionKind.QuickFix);
+      a.diagnostics = [d];
+      a.command = { title: f.label, command: 'fregeDiagrams.applyFix', arguments: [doc.uri.toString(), f] };
+      out.push(a);
+    }
+    return out;
+  }
+}
+
+/** Apply a check's fix: the server edits the figure text, which replaces it in the document. */
+async function applyFix(/** @type {string} */ uriStr, /** @type {any} */ f) {
+  const doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(uriStr));
+  const srv = diagServer(locate(doc.uri));
+  if (!srv) return;
+  const text = doc.getText().slice(f.start, f.start + f.len);
+  const r = await srv.ask({ op: 'edit', text, fig: f.fig, edit: f.edit });
+  if (!r.ok) { vscode.window.showErrorMessage(`Frege Diagrams: ${r.error}`); return; }
+  const e = new vscode.WorkspaceEdit();
+  e.replace(doc.uri, new vscode.Range(doc.positionAt(f.start), doc.positionAt(f.start + f.len)), r.text);
+  await vscode.workspace.applyEdit(e);
+}
+
 /** @param {vscode.ExtensionContext} ctx */
 function activate(ctx) {
+  const coll = vscode.languages.createDiagnosticCollection('fregeDiagrams');
+  /** @type {Map<string, NodeJS.Timeout>} */
+  const timers = new Map();
+  const schedule = (/** @type {vscode.TextDocument} */ doc, ms = 400) => {
+    if (!figureTexts(doc).length && !coll.has(doc.uri)) return;
+    const k = doc.uri.toString();
+    clearTimeout(timers.get(k));
+    timers.set(k, setTimeout(() => { timers.delete(k); refreshDiagnostics(coll, doc).catch(() => {}); }, ms));
+  };
+  ctx.subscriptions.push(
+    coll,
+    vscode.workspace.onDidOpenTextDocument((d) => schedule(d, 0)),
+    vscode.workspace.onDidChangeTextDocument((e) => schedule(e.document)),
+    vscode.workspace.onDidCloseTextDocument((d) => coll.delete(d.uri)),
+    vscode.languages.registerCodeActionsProvider([{ pattern: '**/*.fgd' }, { pattern: '**/*.lean' }], new FigureFixes(),
+      { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] }),
+    vscode.commands.registerCommand('fregeDiagrams.applyFix', applyFix),
+    { dispose: () => { for (const s of diagServers.values()) s.dispose(); } },
+  );
+  for (const d of vscode.workspace.textDocuments) schedule(d, 0);
   ctx.subscriptions.push(
     vscode.window.registerCustomEditorProvider('fregeDiagrams.figureEditor', new FigureEditor(ctx), {
       webviewOptions: { retainContextWhenHidden: true },
@@ -334,4 +456,4 @@ function activate(ctx) {
 
 function deactivate() {}
 
-module.exports = { activate, deactivate, Server, handle, uses, locate, digest, rawStrings, makeSource };
+module.exports = { activate, deactivate, Server, handle, uses, locate, digest, rawStrings, makeSource, diagnoseText };

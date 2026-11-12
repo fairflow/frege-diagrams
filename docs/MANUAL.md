@@ -306,8 +306,11 @@ so the theorems that use the figures (`fig_of%`) are checked again at once;
 editing the Lean file elsewhere (a proof) does not disturb the editor. A file
 with several strings has the *String* menu, as in the browser.
 
-Colouring and diagnostics for the figure language come next
-(docs/design/VSCODE.md).
+The figure language is coloured in `.fgd` files and inside the figure strings
+of Lean files, and its problems are squiggles in the editor and the Problems
+panel: a parse error where the parser stopped, and the checks of section 3.3
+that need no routing at the name of their figure, each with its fix (*Enlarge
+the canvas*, *Remove the hint*, …) as a quick fix (⌘.).
 
 ## 5. LaTeX
 

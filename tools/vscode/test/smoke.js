@@ -84,6 +84,15 @@ const ext = require('../extension.js');
   assert.deepStrictEqual(ext.rawStrings('def f : String := r#"\n-- def g : String := r#"\n"#').map((x) => x.name), ['f']);
   assert.strictEqual(ext.rawStrings('def f : String := r#"x').at(0).end, -1);
 
+  // squiggles: a parse error at its line and column; a check at the figure's name, with its fix
+  const d1 = await ext.diagnoseText(ed.fast, '\nfig a = s <= t\nfig b = s $ t\n');
+  assert.deepStrictEqual(d1.map((x) => [x.line, x.col, x.sev]), [[2, 10, 'error']]);
+  const d2 = await ext.diagnoseText(ed.fast, '\nfig ok = s <= t\n  fig far [size (100,50), s@(10,30), t@(130,70)] = s <= t\n');
+  assert.strictEqual(d2.length, 1);
+  assert.deepStrictEqual([d2[0].line, d2[0].col, d2[0].len], [2, 6, 3]);
+  assert.ok(d2[0].msg.startsWith('far: The state t') && d2[0].fix && d2[0].fix.label === 'Enlarge the canvas');
+  assert.deepStrictEqual(await ext.diagnoseText(ed.fast, 'fig a = s <= t\n'), []);
+
   ed.fast.dispose(); ed.slow.dispose();
   console.log('smoke test: ok');
 })().catch((err) => { console.error(err); process.exit(1); });
