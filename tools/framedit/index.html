@@ -122,7 +122,7 @@ let typingErr = null;
 let lastNudge = null;
 let checked = null;
 let lineOffset = 0, usesCache = {}, lintItems = [], staleItems = [], pinsApply = true;
-/* the selected block (a subtree of the formula, view B), by its path b, b.0, b.1.2, …; null if none */
+/* the selected block (a subtree of the formula, view B), by its path b, b/0, b/1/2, …; null if none */
 let block = null, blockTrail = [];
 const opts = {links:false, hideBound:false, nameDy:0};
 const $ = id => document.getElementById(id);
@@ -356,7 +356,7 @@ function decorate(){
 function findSel(){ if(!sel) return null; const svg=$(sel.key.startsWith("notch:")||sel.key.startsWith("link:")?"paperB":"paperA"); if(!svg) return null; return [...svg.querySelectorAll("g[data-k]")].find(g=>keyOf(g)===sel.key)||null; }
 function nodeG(name,panel){ return [...($("paperA")?.querySelectorAll('g[data-k="state"][data-part="dot"]')||[])].find(g=>g.dataset.name===name&&g.dataset.panel===String(panel)); }
 /* the selected block: a shaded box in view B, its arrows and states marked in view A */
-const inBlock=(p,b)=>p===b||p.startsWith(b+".");
+const inBlock=(p,b)=>p===b||p.startsWith(b+"/");
 function drawBlock(){
   document.querySelectorAll(".blockmark").forEach(e=>e.remove());
   const b = block || (sel&&sel.key.startsWith("notch:")&&findSel()?findSel().dataset.path:null);
@@ -523,10 +523,10 @@ document.addEventListener("keydown", ev=>{
     const B=$("paperB"); if(!B) return; ev.preventDefault();
     const has=p=>!!B.querySelector(`rect[data-k="block"][data-path="${p}"]`);
     if(!cur_){ if(has("b")) selectBlock("b", []); return; }
-    if(ev.key==="ArrowUp"){ const i=cur_.lastIndexOf("."); if(i<0) return; selectBlock(cur_.slice(0,i), blockTrail.concat([cur_])); }
+    if(ev.key==="ArrowUp"){ const i=cur_.lastIndexOf("/"); if(i<0) return; selectBlock(cur_.slice(0,i), blockTrail.concat([cur_])); }
     else { const back=blockTrail.length?blockTrail[blockTrail.length-1]:null;
-      if(back&&back.startsWith(cur_+".")) selectBlock(back, blockTrail.slice(0,-1));
-      else if(has(cur_+".0")) selectBlock(cur_+".0", []); }
+      if(back&&back.startsWith(cur_+"/")) selectBlock(back, blockTrail.slice(0,-1));
+      else if(has(cur_+"/0")) selectBlock(cur_+"/0", []); }
     return;
   }
   const k={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[ev.key];

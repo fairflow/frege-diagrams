@@ -18,7 +18,7 @@ Requests (`op`):
   LaTeX (the editor compares formulas to tell a layout change from a change
   of meaning).
 * `block` `{text, fig, path}` → `{ok, formula, tex}`: the block (subformula) at
-  `path` (`blockPath`: `b`, `b.0`, `b.1.2`, …), as printed and as LaTeX.
+  `path` (`blockPath`: `b`, `b/0`, `b/1/2`, …), as printed and as LaTeX.
 * `lint` `{text, fig}` → `{ok, items: [{sev, msg, sel, fix, fixLabel}]}`: the
   checks of `FregeDiagrams.Lint`; `fix` is an `edit` object, or `null`.
 * `check` `{text, fig, opts}` → `{ok, problems: [string], notes: [string]}`:

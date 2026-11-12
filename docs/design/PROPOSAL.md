@@ -67,8 +67,9 @@ The regions are not drawn; they are selected:
 Loops and shared states belong to view A and the link graph, never to the
 place graph, so the tree structure of blocks is exact.
 
-**Implementation.** Each block gets an id from its path in the formula (`b.1.0`:
-the conclusion's first hypothesis), as planned in EDITOR.md step 3, written on
+**Implementation.** Each block gets an id from its path in the formula (`b/1/0`:
+the conclusion's first hypothesis; written with `.` until 2026-11-12, changed
+to `/` because hints name blocks and `0.1` reads as a decimal), as planned in EDITOR.md step 3, written on
 its SVG group by `DrawOpts.annotate`. Paths are stable under hint edits.
 
 ## 3. Editing view B

@@ -146,7 +146,7 @@ where
 
 /-- The block of a formula at a path (`blockPath`): `b` is the formula itself. -/
 def Form.blockAt (f : Form) (path : String) : Option Form :=
-  match path.splitOn "." with
+  match path.splitOn "/" with
   | "b" :: rest => go f (rest.map String.toNat?)
   | _ => none
 where

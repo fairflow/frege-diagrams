@@ -425,19 +425,19 @@ def f := (Fig.parse "fig f = all t. if s <= u, u <= t then (s <= t & not t R t)"
 def at_ (p : String) : Option String := (f.shown.blockAt p).map Form.print
 
 #guard at_ "b" == some f.body.print
-#guard at_ "b.0.0" == some "(s <= t & not t R t)"
-#guard at_ "b.0.1" == some "s <= u"
-#guard at_ "b.0.2" == some "u <= t"
-#guard at_ "b.0.0.1.0" == some "t R t"
-#guard at_ "b.0.3" == none && at_ "x" == none && at_ "b.z" == none
+#guard at_ "b/0/0" == some "(s <= t & not t R t)"
+#guard at_ "b/0/1" == some "s <= u"
+#guard at_ "b/0/2" == some "u <= t"
+#guard at_ "b/0/0/1/0" == some "t R t"
+#guard at_ "b/0/3" == none && at_ "x" == none && at_ "b/z" == none
 -- every block of view B is annotated, with a hit target at its start; the
 -- arrows of view A carry their block
 def svgB := (f.toTreeDiagram.render { annotate := true }).svg
 def count (s pat : String) : Nat := (s.splitOn pat).length - 1
-#guard ["b", "b.0", "b.0.0", "b.0.1", "b.0.2", "b.0.0.0", "b.0.0.1", "b.0.0.1.0"].all fun p =>
+#guard ["b", "b/0", "b/0/0", "b/0/1", "b/0/2", "b/0/0/0", "b/0/0/1", "b/0/0/1/0"].all fun p =>
   count svgB s!"data-k=\"block\" data-path=\"{p}\"" == 1 &&
   count svgB s!"data-k=\"branch\" data-path=\"{p}\"" ≥ 1
-#guard count ((f.toDiagram { annotate := true }).svg) "data-path=\"b.0.1\"" == 1
+#guard count ((f.toDiagram { annotate := true }).svg) "data-path=\"b/0/1\"" == 1
 -- without annotate the drawing has none of this
 #guard count (f.toTreeDiagram.svg {}) "data-k" == 0
 

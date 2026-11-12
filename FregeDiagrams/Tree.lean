@@ -201,11 +201,11 @@ deriving Inhabited
 
 def sh (xs : Array Shape) : Array Mark := xs.map .shape
 
-/-- The path of child `i` of the block at `p`: the root block is `b`; the
+/-- The path of child `i` of the block at `p` (`b/1/0`): the root block is `b`; the
 children of a block are numbered as in view B: the body of a quantifier or a
 negation is 0, the conclusion of an `if` is 0 and its hypotheses 1, 2, …,
 the parts of `&` and `|` are 0, 1, …. -/
-def blockPath (p : String) (i : Nat) : String := s!"{p}.{i}"
+def blockPath (p : String) (i : Nat) : String := s!"{p}/{i}"
 
 /-- The colour of the opposite polarity. -/
 def flipCol (c : String) : String := if c == RED then BLACK else RED
