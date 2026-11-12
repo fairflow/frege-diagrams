@@ -2,7 +2,7 @@
   "name": "frege-diagrams",
   "displayName": "Frege Diagrams",
   "description": "Edit Frege-style formula trees and Kripke frame pictures, drawn by Lean, inside VS Code.",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "publisher": "fairflow",
   "license": "Apache-2.0",
   "repository": {
@@ -19,6 +19,7 @@
   "main": "./extension.js",
   "activationEvents": [
     "onLanguage:lean4",
+    "onLanguage:fgd",
     "workspaceContains:**/*.fgd"
   ],
   "contributes": {
@@ -75,7 +76,24 @@
           "when": "resourceExtname == .lean"
         }
       ]
-    }
+    },
+    "grammars": [
+      {
+        "language": "fgd",
+        "scopeName": "source.fgd",
+        "path": "./syntaxes/fgd.tmLanguage.json"
+      },
+      {
+        "scopeName": "fgd.injection.lean",
+        "path": "./syntaxes/fgd-in-lean.tmLanguage.json",
+        "injectTo": [
+          "source.lean4"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.fgd": "fgd"
+        }
+      }
+    ]
   },
   "scripts": {
     "prepare-package": "node scripts/prepare.js",
