@@ -527,6 +527,7 @@ function renderInspector(){
     <div class="r"><label data-help="Canvas width (size hint).">W <input type="number" id="fw" value="${w}"></label><label data-help="Canvas height (size hint).">H <input type="number" id="fh" value="${h}"></label></div>
     <p class="muted">${f.hasSize?"":"No size hint: the size is computed. "}Printed at scale 1: ${cm(w)} × ${cm(h)} cm.</p>
     <div class="r"><label data-help="namedy N: this figure's bound-name offset, both views; overrides the toolbar option. Empty removes the hint.">namedy <input type="number" id="fnd" value="${f.namedy??""}" placeholder="none"></label></div>
+    <div class="r"><label data-help="The judgement stroke of view B. Claim (one stroke, the default): a result. Definition (two strokes): the figure must be &quot;D&quot; {formula}; both views draw the formula, view B writes D :≡ on the left. Content (no stroke): a formula displayed, nothing claimed.">Judgement <select id="fj">${["claim","definition","content"].map(k=>`<option value="${k}" ${(f.judgement||"claim")===k?"selected":""}>${k}</option>`).join("")}</select></label></div>
     <h2 style="margin-top:10px">Used in</h2><p id="usesP" class="muted">…</p>
     <p class="muted">Select a state, a name or an arrow in the sketch to edit it. <kbd>Esc</kbd> comes back here.</p>`;
     const name=fig; usesOf([name]).then(u=>{ const e=$("usesP"); if(e&&fig===name) e.innerHTML=usesHtml(u[name]); });
@@ -569,6 +570,7 @@ document.addEventListener("change", async ev=>{
   const t=ev.target, id=t.id, g=findSel(), d=g?g.dataset:null, v=t.value.trim(), num=v===""?null:Number(v);
   if(["fw","fh","fnd","nx","ny","lx","ly","eb","ea","es"].includes(id) && v!=="" && id!=="es" && !Number.isFinite(num)){ t.style.borderColor="var(--err)"; return; }
   if(id==="fw"||id==="fh"){ const w=+$("fw").value,h=+$("fh").value; if(!(w>=20&&h>=20)){t.style.borderColor="var(--err)";explain("Not applied",null,null,"Width and height must be at least 20.");return;} commitEdit({kind:"size",w,h},`Canvas ${w}×${h}`); }
+  else if(id==="fj") commitEdit({kind:"judgement",v},`Judgement: ${v}`);
   else if(id==="fnd") commitEdit({kind:"namedy",v:num===null?null:Math.round(num)}, num===null?"Remove namedy":`namedy ${Math.round(num)}`);
   else if(id==="nx"||id==="ny") commitEdit(stateEdit(g,Math.round(+$("nx").value),Math.round(+$("ny").value)),`Move ${d.name}`);
   else if(id==="lx"||id==="ly") commitEdit(stateEdit(g,+d.x,+d.y,[Math.round(+$("lx").value),Math.round(+$("ly").value)]),`Move the name of ${d.name}`);

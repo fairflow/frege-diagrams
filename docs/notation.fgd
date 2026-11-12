@@ -12,3 +12,8 @@ fig n_states [size (440,130),
 -- existential, so the notch stands before the bead (for every y, some m)
 fig n_order [size (300,100), s@(30,60), y@(260,60) label (10,4), edge s>y at 0.25] =
   all y. s <=°;R y
+
+-- The three judgement strokes: a claim, a definition, a content
+fig n_claim [views B] = all t. if s <= u, u <= t then s <= t
+fig n_definition [views B, judgement definition] = "dead(u)" {not ex x. u R x}
+fig n_content [views B, judgement content] = ex u. (s <= u° & u R u)

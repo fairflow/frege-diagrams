@@ -113,6 +113,9 @@ structure Hints where
   /-- view B with links: binders whose links are pinned to these polylines
   (in the tree's own coordinates, whole units) instead of being routed -/
   routes : List (String × List (List (Int × Int))) := []
+  /-- the figure's judgement stroke: a claim (default), a definition, or a
+  content (no stroke) -/
+  judgement : Judgement := .claim
 deriving BEq, DecidableEq, Repr, Inhabited
 
 /-- A figure: `fig NAME [hints] = form`. -/
@@ -121,6 +124,19 @@ structure Fig where
   hints : Hints := {}
   body : Form
 deriving BEq, Repr, Inhabited
+
+/-- What the pictures of a figure draw: the formula, except that a
+definition `"D" {f}` draws its definiens `f`. -/
+def Fig.shown (d : Fig) : Form :=
+  match d.hints.judgement, d.body with
+  | .definition, .text _ (some f) => f
+  | _, b => b
+
+/-- The name a definition defines (`D` of `"D" {f}`), if the figure is one. -/
+def Fig.defines (d : Fig) : Option String :=
+  match d.hints.judgement, d.body with
+  | .definition, .text s (some _) => some s
+  | _, _ => none
 
 /-! ## Names and well-formedness -/
 
@@ -140,7 +156,7 @@ def isIdentChar (c : Char) : Bool :=
 def reserved : List String := ["fig", "all", "ex", "not", "if", "then", "R"]
 
 /-- Words with a fixed meaning at the start of a hint. -/
-def hintWords : List String := ["size", "views", "edge", "loop", "text", "namedy", "notch", "route"]
+def hintWords : List String := ["size", "views", "edge", "loop", "text", "namedy", "notch", "route", "judgement"]
 
 def isIdent (s : String) : Bool :=
   match s.toList with

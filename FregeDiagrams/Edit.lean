@@ -32,6 +32,8 @@ inductive Edit where
   | notch (x : String) (up : Option Bool)
   /-- pin binder `x`'s links to these polylines, or route them automatically (`none`) -/
   | route (x : String) (ps : Option (List (List (Int × Int))))
+  /-- set the figure's judgement stroke (`claim`, the default, removes the hint) -/
+  | judgement (j : Judgement)
 deriving Repr, Inhabited
 
 /-- What an edit does to the text of the hints. -/
@@ -63,6 +65,15 @@ def Edit.apply (h : Hints) : Edit → Hints × Act
   | .size w ht =>
     let t := s!"size {printPair w ht}"
     ({ h with size := some (w, ht) }, if h.size.isSome then .replace .size t else .add t)
+  | .judgement j =>
+    let txt := match j with
+      | .claim => "judgement claim" | .definition => "judgement definition"
+      | .content => "judgement content"
+    match h.judgement == .claim, j == .claim with
+    | true, true => (h, .nothing)
+    | true, false => ({ h with judgement := j }, .add txt)
+    | false, true => ({ h with judgement := j }, .delete .judgement)
+    | false, false => ({ h with judgement := j }, .replace .judgement txt)
   | .nameDy v =>
     match h.nameDy, v with
     | some _, some v => ({ h with nameDy := some v }, .replace .namedy s!"namedy {v}")

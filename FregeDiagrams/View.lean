@@ -153,8 +153,8 @@ partial def Form.bound : Form → List String
   | .and ps | .or ps => (ps.map Form.bound).foldl (· ++ ·) []
 
 def Fig.toDiagram (d : Fig) (o : DrawOpts := {}) : Diagram := Id.run do
-  let bound := d.body.bound
-  let ((), fl) := (flatten d.body 1 true false).run {}
+  let bound := d.shown.bound
+  let ((), fl) := (flatten d.shown 1 true false).run {}
   let h := d.hints
   -- crossed / new marks
   let mut nodes := fl.nodes
@@ -227,12 +227,16 @@ def Fig.drawOpts (d : Fig) (o : DrawOpts) : DrawOpts :=
            pinned := d.hints.routes.map fun (x, ps) =>
              (x, ps.toArray.map fun p => p.toArray.map fun (a, b) => (⟨Float.ofInt a, Float.ofInt b⟩ : P)) }
 
+/-- View B of a figure: its formula tree, with its judgement stroke. -/
+def Fig.toTreeDiagram (d : Fig) : TreeDiagram :=
+  { name := d.name, tree := d.shown.toTree, judgement := d.hints.judgement, defines := d.defines }
+
 /-- The pictures of a figure: `(file stem, SVG)`.  With both views, view A is
 `NAME` and view B `NAME_B`. -/
 def Fig.pictures (d : Fig) (o : DrawOpts := {}) : List (String × String) :=
   let o := d.drawOpts o
   let a := (d.name, (d.toDiagram o).svg)
-  let b := ({ name := d.name, tree := d.body.toTree : TreeDiagram }).svg o
+  let b := d.toTreeDiagram.svg o
   match d.hints.views with
   | .both => [a, (d.name ++ "_B", b)]
   | .a => [a]

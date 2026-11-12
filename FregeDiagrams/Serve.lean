@@ -7,7 +7,7 @@ text, so the editor's undo history is a list of texts and is exact.
 
 Requests (`op`):
 
-* `parse` `{text}` → `{ok, figs: [{name, views, hasSize, w, h}]}` or `{ok: false, error}`
+* `parse` `{text}` → `{ok, figs: [{name, views, hasSize, w, h, namedy, judgement}]}` or `{ok: false, error}`
 * `render` `{text, fig, opts}` → `{ok, a, b}`: view A (annotated, see
   `DrawOpts.annotate`) and view B as SVG text, `null` for a view the figure
   does not have (or did not ask for: `only` is `"a"` or `"b"`).  `opts`: `links`, `hideBound` (booleans), `nameDy`,
@@ -24,7 +24,7 @@ Requests (`op`):
 
 `edit` objects (`kind`): `node {name, panel, x, y, label: [dx,dy] | null}`,
 `unnode {name, panel}`, `edge {src, tgt, occ, panel, bend, side: "+"|"-"|null, at}`,
-`size {w, h}`, `namedy {v}`, `loop {name, panel, angle}`, `notch {name, dir: "up"|"down"}`,
+`size {w, h}`, `namedy {v}`, `judgement {v: "claim"|"definition"|"content"}`, `loop {name, panel, angle}`, `notch {name, dir: "up"|"down"}`,
 `route {name, polys: [[[x,y],…],…]}` (`null` removes).  `render` also returns `stale`: the
 binders whose `route` pin no longer fits (drawn routed automatically), `setAside`: the
 binders whose pin was set aside because the view options change the layout (names
@@ -88,6 +88,12 @@ def decodeEdit (j : Json) : Except String Edit := do
                    bend := ← getOpt j "bend", side, at_ := ← getOpt j "at" }
   | "size" => return .size (← getNat j "w") (← getNat j "h")
   | "namedy" => return .nameDy (← getOpt j "v")
+  | "judgement" =>
+    match ← getStr j "v" with
+    | "claim" => return .judgement .claim
+    | "definition" => return .judgement .definition
+    | "content" => return .judgement .content
+    | s => throw s!"judgement must be claim, definition or content, not {s}"
   | "loop" => return .loop (← keyOf j) (← getOpt j "angle")
   | "route" =>
     let ps : Option (List (List (Int × Int))) ← match j.getObjVal? "polys" with
@@ -104,6 +110,9 @@ def decodeEdit (j : Json) : Except String Edit := do
       | some s => throw s!"dir must be up or down, not {s}"
     return .notch (← getStr j "name") up
   | k => throw s!"unknown edit kind {k}"
+
+def judgementStr : Judgement → String
+  | .claim => "claim" | .definition => "definition" | .content => "content"
 
 def optJson {α} [ToJson α] : Option α → Json
   | some a => toJson a
@@ -122,6 +131,7 @@ def encodeEdit : Edit → Json
       ("at", optJson e.at_)]
   | .size w h => Json.mkObj [("kind", "size"), ("w", w), ("h", h)]
   | .nameDy v => Json.mkObj [("kind", "namedy"), ("v", optJson v)]
+  | .judgement j => Json.mkObj [("kind", "judgement"), ("v", judgementStr j)]
   | .loop k a => Json.mkObj ([("kind", ("loop" : Json))] ++ keyFields k ++ [("angle", optJson a)])
   | .route x ps => Json.mkObj [("kind", "route"), ("name", x),
       ("polys", match ps with
@@ -154,7 +164,8 @@ def handle (j : Json) : Except String Json := do
       let (w, h) := f.hints.size.getD (0, 0)
       Json.mkObj [("name", f.name), ("views", viewsStr f.hints.views),
                   ("hasSize", f.hints.size.isSome), ("w", w), ("h", h),
-                  ("namedy", match f.hints.nameDy with | some v => toJson v | none => Json.null)]))]
+                  ("namedy", match f.hints.nameDy with | some v => toJson v | none => Json.null),
+                  ("judgement", judgementStr f.hints.judgement)]))]
   | "render" =>
     let f ← findFig text (← getStr j "fig")
     let o := optsOf j
@@ -163,7 +174,7 @@ def handle (j : Json) : Except String Json := do
     let a : Json := if f.hints.views == .b || only == "b" then .null
       else (f.toDiagram { o with annotate := true }).svg
     let rb := if f.hints.views == .a || only == "a" then none
-      else some (({ name := f.name, tree := f.body.toTree : TreeDiagram }).render { o with annotate := true })
+      else some (f.toTreeDiagram.render { o with annotate := true })
     let b : Json := match rb with | some r => r.svg | none => .null
     let stale : Json := Json.arr ((rb.map (·.stalePins)).getD #[] |>.map toJson)
     let setAside : Json := Json.arr ((rb.map (·.setAside)).getD #[] |>.map toJson)
@@ -190,7 +201,7 @@ def handle (j : Json) : Except String Json := do
     let mut probs : Array Json := #[]
     let mut notes : Array Json := #[]
     for hb in [false, true] do
-      let t : TreeDiagram := { name := f.name, tree := f.body.toTree }
+      let t : TreeDiagram := f.toTreeDiagram
       let r := t.render { o with links := true, hideBound := hb }
       let tag := if hb then " (names hidden)" else ""
       if !r.problems.isEmpty then

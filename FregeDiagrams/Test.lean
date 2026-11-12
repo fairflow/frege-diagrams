@@ -93,7 +93,8 @@ def genHints : G Hints := do
     return { x := ← genInt, y := ← genInt, s := ← pick texts, color := ← pick [Color.black, .red, .grey],
              size := ← rand 30, middle := (← rand 2) == 0, italic := (← rand 2) == 0 : TextHint }
   let nameDy ← (do if (← rand 2) == 0 then pure none else some <$> genInt : G (Option Int))
-  return { size, views, nodes, edges, loops, texts, nameDy, notches, routes }
+  let judgement ← pick [Judgement.claim, .definition, .content]
+  return { size, views, nodes, edges, loops, texts, nameDy, notches, routes, judgement }
 
 def genFig : G Fig := do
   return { name := ← pick ["f", "ex_trans", "x1"], hints := ← genHints, body := ← genForm (← rand 5) }
@@ -335,3 +336,38 @@ end FregeDiagrams.Test.Pins
 #guard FregeDiagrams.leanRawStrings "def a : String := r#\"x\"#\n\ndef  b :String:=r##\"y\"#z\"##\ndef c : Nat := 3" ==
   [("a", "x", 1), ("b", "y\"#z", 3)]
 #guard (FregeDiagrams.leanRawStrings ("-- figures\ndef figs : String := r#\"" ++ "\nfig f = s <= t\n" ++ "\"#")).map (·.2.2) == [2]
+
+/-! ## Judgement strokes (`judgement claim|definition|content`) -/
+
+namespace FregeDiagrams.Test.Judge
+open FregeDiagrams
+
+def fig (s : String) : Fig := (Fig.parse s).toOption.get!
+def defn := fig "fig inf [judgement definition] = \"inf(u)\" {all t. if u R t then t°}"
+def cont := fig "fig c [judgement content] = all t. s <= t"
+def claim := fig "fig c = all t. s <= t"
+
+-- the default is not printed; the others round-trip
+#guard claim.hints.judgement == .claim && !claim.print.contains 'j'
+#guard (fig "fig c [judgement claim] = all t. s <= t").print == claim.print
+#guard defn.roundTrips && cont.roundTrips
+#guard cont.print == "fig c [judgement content] =\n  all t. s <= t\n"
+#guard (Fig.parse "fig c [judgement maybe] = s").toOption.isNone
+-- a definition draws its definiens, and its formula is D :≡ f
+#guard defn.defines == some "inf(u)" && defn.shown == (fig "fig x = all t. if u R t then t°").body
+#guard defn.toLatex == "\\text{inf(u)}\\ :\\equiv\\ \\forall t.\\ u\\mathrel{R} t\\ \\imp\\ t\\nF"
+#guard defn.lint.size == 0
+-- a definition must be "D" {f}
+#guard ((fig "fig d [judgement definition] = s <= t").lint.map (·.msg.startsWith "A definition must be")).toList == [true]
+-- view B: one judgement bar for a claim, two for a definition, none for a content
+def bars (f : Fig) : Nat := ((f.pictures.getLast!.2).splitOn "stroke-width=\"2.0\"").length - 1
+#guard bars claim == 1 && bars cont == 0 && bars defn == 2
+-- the editor's edit: add, change, remove
+#guard (applyEdit "fig c = s <= t" "c" (.judgement .content)).toOption ==
+  some "fig c [judgement content] = s <= t"
+#guard (applyEdit "fig c [judgement content] = s <= t" "c" (.judgement .definition)).toOption ==
+  some "fig c [judgement definition] = s <= t"
+#guard (applyEdit "fig c [size (10,20), judgement content] = s <= t" "c" (.judgement .claim)).toOption ==
+  some "fig c [size (10,20)] = s <= t"
+
+end FregeDiagrams.Test.Judge
