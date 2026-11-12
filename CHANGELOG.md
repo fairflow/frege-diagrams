@@ -5,6 +5,10 @@ was merged as, the date and time (UTC) of that commit, and the tag if one
 is applied. `framediag --version` prints the version; the editor shows it
 with the commit it runs from.
 
+## 0.11.0 (unreleased)
+
+* Dash patterns in the figure language. `dash x "PATTERN"` or `dash x morse "WORD"` dashes the links of binder `x` (view B); `dash REL …` the lines of a relation in both views; and a file statement `default dash REL "PATTERN"` sets a relation's style for every figure of the file (a figure's own hint wins). A pattern reads like typed text, one 4-unit cell per character: `-` ink (neighbours join), `.` a dot, space blank; it repeats, and with no blank it is solid. The strokes of view B's tree are never affected. A `dash x` naming no binder is reported, with *Remove the hint* as its fix. LANGUAGE, NOTATION, the syntax diagrams and the VS Code colouring follow.
+
 ## 0.10.0 (unreleased)
 
 * A softer default style: thinner lines (the assertion stroke 1.6 instead of 2.0, strokes and links 1.0 to 1.15 instead of 1.3 to 1.9), round joins, and every bend of a stroke or link rounded (radius 3.5, at most half of either segment). Layout is unchanged. `--style classic` (and `style: "classic"` for `--serve`) draws as before, byte for byte. The editor keeps square bends. The pictures of the documentation are redrawn.

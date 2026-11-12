@@ -102,6 +102,7 @@ def decodeEdit (j : Json) : Except String Edit := do
     | none => return .nameDy (← getOpt j "v")
   | "stroke" => return .stroke (← getStr j "path") (← getOpt j "v")
   | "gap" => return .gap (← getStr j "path") (← getOpt j "v")
+  | "undash" => return .unDash (← getNat j "i")
   | "judgement" =>
     match ← getStr j "v" with
     | "claim" => return .judgement .claim
@@ -152,6 +153,7 @@ def encodeEdit : Edit → Json
   | .judgement j => Json.mkObj [("kind", "judgement"), ("v", judgementStr j)]
   | .stroke p v => Json.mkObj [("kind", "stroke"), ("path", p), ("v", optJson v)]
   | .gap p v => Json.mkObj [("kind", "gap"), ("path", p), ("v", optJson v)]
+  | .unDash i => Json.mkObj [("kind", "undash"), ("i", i)]
   | .loop k a => Json.mkObj ([("kind", ("loop" : Json))] ++ keyFields k ++ [("angle", optJson a)])
   | .route x ps => Json.mkObj [("kind", "route"), ("name", x),
       ("polys", match ps with

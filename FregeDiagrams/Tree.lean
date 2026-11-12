@@ -91,6 +91,12 @@ structure DrawOpts where
   strokes : List (String × Float) := []
   /-- view B: extra room above a hypothesis or fork part, by path (`gap PATH DY`) -/
   gaps : List (String × Float) := []
+  /-- dash arrays by relation, both views (`dash REL …`, `default dash REL …`),
+  the first entry for a relation winning -/
+  relDash : List (Rel × String) := []
+  /-- view B: dash arrays of binders' links (`dash x …`), instead of the
+  binder's name in Morse -/
+  linkDash : List (String × String) := []
 deriving Inhabited
 
 /-- A figure's `route` pins hold for the layout they were made on: names
@@ -171,6 +177,11 @@ def morseDash (name : String) : String := Id.run do
         else if li + 1 == letters.length then "2.6,0.8,2.6,0.8,2.6"   -- between repeats
         else "2.2,0.8,2.2")                                           -- between letters
   return if parts.isEmpty then "4,2.5" else ",".intercalate parts.toList
+
+/-- The SVG dash array of a dashing (`""`: solid). -/
+def Dash.array : Dash → String
+  | .pattern s => patternArray s
+  | .morse w => morseDash w
 
 /-- A bound occurrence of a state, for the link router: its binder (named,
 and identified by the midpoint of its notch's own line, where every link
@@ -335,14 +346,15 @@ def drawLeaf (s : String) (steps : List (Composite × String)) (x y : Float) (co
         let pts := bezier ⟨p - 4.0, y - NODE_R - 2.0⟩ ⟨p - 18.0, y - 32.0⟩ ⟨p, y - 30.0⟩ 15 ++
           (bezier ⟨p, y - 30.0⟩ ⟨p + 18.0, y - 32.0⟩ ⟨p + 4.0, y - NODE_R - 2.0⟩ 15).extract 1
         -- Python passes a composite name here, which draws solid
-        out := out ++ sh (stroke pts (if r.length == 1 then r.head! else .R) col)
+        let r1 := if r.length == 1 then r.head! else .R
+        out := out ++ sh (stroke pts r1 col (dash := relDashFor o.relDash r1))
         out := out ++ sh (arrowHead pts col)
         continue
       let nx := cx + relLen r
       -- sampled densely, so that a wavy (⇝) stretch really waves
       let pts := trim (bezier ⟨cx, y⟩ ⟨(cx + nx) / 2.0, y⟩ ⟨nx, y⟩) (NODE_R + 2.0) (NODE_R + 2.0)
       out := out.push (.bar #[⟨cx + NODE_R, y⟩, pts[0]!]) |>.push (.bar #[pts.back!, ⟨nx - NODE_R, y⟩])
-      out := out ++ sh (stretches pts r col)
+      out := out ++ sh (stretches pts r col o.relDash)
       out := out ++ sh (beads pts r col) ++ sh (relLabels pts r col)
       if r.getLast!.headed then out := out ++ sh (arrowHead pts col)
       cx := nx

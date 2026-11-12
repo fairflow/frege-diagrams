@@ -60,6 +60,73 @@ def Rel.headed : Rel → Bool
   | .named _ d => d
   | _ => true
 
+/-- The dashing of a line, written in the figure language (`dash` hints and
+`default dash`): a pattern of cells, or a word in Morse code. -/
+inductive Dash where
+  /-- A pattern read like typed text, one character per cell of `DASH_CELL`
+  units: `-` ink (neighbouring `-` join into one longer dash), `.` a dot in
+  the middle of its cell, a space blank.  It repeats along the line.  The
+  empty pattern, or one with no blank, is a solid line. -/
+  | pattern (s : String)
+  /-- A word spelled in Morse code (as the binding links of view B are by
+  default, with the binder's name). -/
+  | morse (word : String)
+deriving BEq, DecidableEq, Inhabited, Repr
+
+/-- The width of one cell of a dash pattern. -/
+def DASH_CELL : Float := 4.0
+/-- The length of a dot's ink (lines with a pattern have square ends). -/
+def DASH_DOT : Float := 1.2
+
+/-- Is this a dash pattern: only `-`, `.` and spaces, and some ink unless
+empty? -/
+def dashPatternOK (s : String) : Bool :=
+  s.all (fun c => c == '-' || c == '.' || c == ' ') && (s.isEmpty || s.any (· != ' '))
+
+/-- The SVG `stroke-dasharray` of a pattern: alternating ink and blank
+lengths, starting with ink (a leading blank goes to the end, as the pattern
+repeats); `""` for a solid line. -/
+def patternArray (s : String) : String := Id.run do
+  -- runs of ink and blank, in cells' lengths
+  let mut runs : Array (Bool × Float) := #[]
+  let push (rs : Array (Bool × Float)) (ink : Bool) (l : Float) : Array (Bool × Float) :=
+    if l == 0.0 then rs else
+    match rs.back? with
+    | some (k, m) => if k == ink then rs.pop.push (k, m + l) else rs.push (ink, l)
+    | none => rs.push (ink, l)
+  for c in s.toList do
+    if c == '-' then runs := push runs true DASH_CELL
+    else if c == '.' then
+      let side := (DASH_CELL - DASH_DOT) / 2.0
+      runs := push (push (push runs false side) true DASH_DOT) false side
+    else runs := push runs false DASH_CELL
+  if !runs.any (·.1 == false) || !runs.any (·.1) then return ""
+  -- start with ink: rotate a leading blank to the end
+  if let some (false, l) := runs[0]? then
+    runs := push (runs.extract 1) false l
+  -- end with blank: ink at the end continues the ink at the start (an odd
+  -- number of lengths would swap ink and blank on every other repeat)
+  if let some (true, l) := runs.back? then
+    runs := runs.pop.modify 0 fun (k, m) => (k, m + l)
+  -- two decimals, without trailing zeros
+  let short (x : Float) : String :=
+    let t := fixed x 2
+    let cs := t.toList.reverse
+    let cs := if cs.contains '.' then cs.dropWhile (· == '0') else cs
+    String.ofList (cs.dropWhile (· == '.')).reverse
+  return ",".intercalate (runs.toList.map fun (_, l) => short l)
+
+/-- The relation a dash entry is looked up by: a labelled relation by its
+label alone (directed or not). -/
+def Rel.dashKey : Rel → Rel
+  | .named l _ => .named l false
+  | r => r
+
+/-- The dash array for a relation in a table of `(relation, array)`, the first
+entry winning. -/
+def relDashFor (tbl : List (Rel × String)) (r : Rel) : Option String :=
+  (tbl.find? (·.1.dashKey == r.dashKey)).map (·.2)
+
 /-- A composite relation `r₁;r₂;…;rₙ` (relational composition), drawn as one
 arrow in `n` equal stretches.  A singleton list is a basic relation. -/
 abbrev Composite := List Rel
@@ -149,6 +216,9 @@ structure Diagram where
   `attrs` attributes.  Off by default, so the output is unchanged. -/
   annotate : Bool := false
   style : Style := .soft
+  /-- dash arrays by relation (`dash` hints and `default dash`), the first
+  entry for a relation winning -/
+  relDash : List (Rel × String) := []
 deriving Inhabited
 
 namespace Diagram
@@ -247,12 +317,20 @@ def textBox (p : P) (s : String) (anchor : String) (size : Nat := 12) : Float ×
 /-! ## Rendering primitives -/
 
 /-- Draw a polyline in the style of a basic relation. -/
-def stroke (pts : Polyline) (rel : Rel) (color : String) (width : Float := STROKE) :
-    Array Shape :=
-  let eqLines := #[-1.7, 1.7].map fun d => Shape.poly (offset pts d) color (pyRepr (width * 0.8))
+def stroke (pts : Polyline) (rel : Rel) (color : String) (width : Float := STROKE)
+    (dash : Option String := none) : Array Shape :=
+  -- a dash array set by a `dash` hint: square ends, so that a dot is a dot;
+  -- `""` solid
+  let dashed (base : String) : String := match dash with
+    | some "" => " stroke-linecap=\"round\""
+    | some a => s!" stroke-dasharray=\"{a}\""
+    | none => base
+  let eqLines := #[-1.7, 1.7].map fun d =>
+    Shape.poly (offset pts d) color (pyRepr (width * 0.8))
+      (match dash with | some a => if a == "" then "" else s!" stroke-dasharray=\"{a}\"" | none => "")
   match rel with
   | .eq => eqLines
-  | .named .. => #[.poly pts color (pyRepr (width * 0.85)) " stroke-linecap=\"round\" stroke-dasharray=\"0.1,4.2\""]
+  | .named .. => #[.poly pts color (pyRepr (width * 0.85)) (dashed " stroke-linecap=\"round\" stroke-dasharray=\"0.1,4.2\"")]
   | .ne =>
     let (m, d) := pointAt pts (arclen pts / 2.0)
     let n := d.perp
@@ -262,7 +340,7 @@ def stroke (pts : Polyline) (rel : Rel) (color : String) (width : Float := STROK
   | _ =>
     let pts := if rel == .reach then wavy pts else pts
     let da := if rel == .le || rel == .sqle then " stroke-dasharray=\"5,3.2\"" else ""
-    #[.poly pts color (pyRepr width) (" stroke-linecap=\"round\"" ++ da)]
+    #[.poly pts color (pyRepr width) (dashed (" stroke-linecap=\"round\"" ++ da))]
 
 /-- Hollow beads at the joints of a composite that follow a `⊑` or `R°`
 stretch: the intermediate state there is infallible. -/
@@ -318,7 +396,8 @@ further in (positive) or towards the line (negative); beyond `NOTCH_SLACK`
 the notch deepens by the excess, widening a pointed one in proportion.
 Returns the SVG and the gap `(lo, hi)` (arc lengths) it bridges. -/
 def notch (pts : Polyline) (s : Float) (kind : Quant) (var color : String) (rels : Composite)
-    (side : Option Float) (dy : Float := 0.0) : Array Shape × Float × Float :=
+    (side : Option Float) (dy : Float := 0.0) (dashes : List (Rel × String) := []) :
+    Array Shape × Float × Float :=
   let (p, d) := pointAt pts s
   let side := side.getD (if kind == .all then -1.0 else 1.0)
   let n := d.perp * side
@@ -333,7 +412,7 @@ def notch (pts : Polyline) (s : Float) (kind : Quant) (var color : String) (rels
   let (shape, tc) := match kind with
     | .all => (#[a, a + n * h, b + n * h, b], p + n * (h0 * 0.5 + dy))
     | .ex => (#[a, p + n * h, b], p + n * (h0 * 0.30 + dy))
-  let out := stroke shape rel color |>.push (.text ⟨tc.x, tc.y + NAME_HALF_X⟩ var color 12 "middle")
+  let out := stroke shape rel color (dash := relDashFor dashes rel) |>.push (.text ⟨tc.x, tc.y + NAME_HALF_X⟩ var color 12 "middle")
   (out, s - g / 2.0, s + g / 2.0)
 
 /-- Sorted, without duplicates (Python `sorted(set(xs))`). -/
@@ -359,9 +438,11 @@ def relLabels (pts : Polyline) (rels : Composite) (color : String) : Array Shape
   return out
 
 /-- Draw the stretches of a composite arrow. -/
-def stretches (pts : Polyline) (rels : Composite) (color : String) : Array Shape :=
+def stretches (pts : Polyline) (rels : Composite) (color : String)
+    (dashes : List (Rel × String) := []) : Array Shape :=
   let pieces := if rels.length > 1 then split pts (stretchCuts rels.length) else #[pts]
-  (rels.zip pieces.toList).foldl (fun out (r, piece) => out ++ stroke piece r color) #[]
+  (rels.zip pieces.toList).foldl
+    (fun out (r, piece) => out ++ stroke piece r color (dash := relDashFor dashes r)) #[]
 
 namespace Diagram
 
@@ -373,7 +454,7 @@ def notched (d : Diagram) (pts : Polyline) (rels : Composite) (color : String) (
   -- the binder is the target state, `NAME/PANEL`
   let x := (e.b.splitOn "/").headD e.b
   let dy := (d.nameDys.lookup x).getD d.nameDy
-  let (out, lo, hi) := notch pts (L * e.qpos) q var color rels e.qside dy
+  let (out, lo, hi) := notch pts (L * e.qpos) q var color rels e.qside dy d.relDash
   -- for the editor: the notch, and the name in it, as elements of their own
   let out := if !d.annotate then out else
     #[Shape.raw s!"<g data-part=\"notch\" data-var=\"{xmlEsc x}\" data-dy=\"{((d.nameDys.lookup x).map (toString ·.toInt64)).getD ""}\">"] ++
@@ -386,7 +467,7 @@ def notched (d : Diagram) (pts : Polyline) (rels : Composite) (color : String) (
     let mid := (edges[k]! + edges[k+1]!) / 2.0
     if lo / L < mid && mid < hi / L then continue
     let rel := rels[min (mid * rels.length.toF).toUInt64.toNat (rels.length - 1)]!
-    out := out ++ stroke pieces[k]! rel color
+    out := out ++ stroke pieces[k]! rel color (dash := relDashFor d.relDash rel)
   return out
 
 def renderEdge (d : Diagram) (e : Edge) : Array Shape := Id.run do
@@ -399,7 +480,7 @@ def renderEdge (d : Diagram) (e : Edge) : Array Shape := Id.run do
   let rels := e.rel
   let mut out := match e.q with
     | some q => d.notched pts rels color e q
-    | none => stretches pts rels color
+    | none => stretches pts rels color d.relDash
   out := out ++ beads pts rels color ++ relLabels pts rels color
   if e.head && rels.getLast!.headed then out := out ++ arrowHead pts color
   if e.twin then
@@ -414,7 +495,8 @@ def renderEdge (d : Diagram) (e : Edge) : Array Shape := Id.run do
       let ca := Float.cos (sgn * ang); let sa := Float.sin (sgn * ang)
       let r : P := ⟨dir.x * ca - dir.y * sa, dir.x * sa + dir.y * ca⟩
       let r0 := rels.head!
-      out := out ++ stroke #[src, src + r * Lw] (if r0 == .reach then .R else r0) color 1.1
+      let r0 := if r0 == .reach then .R else r0
+      out := out ++ stroke #[src, src + r * Lw] r0 color 1.1 (relDashFor d.relDash r0)
   return out
 
 def renderLoop (d : Diagram) (a : String) (rel : Rel) (concl : Bool) (angle : Float) :
@@ -432,7 +514,7 @@ def renderLoop (d : Diagram) (a : String) (rel : Rel) (concl : Bool) (angle : Fl
   let ctl1 := top + p * (2.0 * r)
   let ctl2 := top + p * (-2.0 * r)
   let pts := bezier start ctl1 top 20 ++ (bezier top ctl2 stop 20).extract 1
-  stroke pts rel color ++ arrowHead pts color
+  stroke pts rel color (dash := relDashFor d.relDash rel) ++ arrowHead pts color
 
 /-- The dot of a state (and its cross). -/
 def renderDot (n : State) : Array String := Id.run do
