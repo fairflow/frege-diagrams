@@ -287,6 +287,26 @@ cannot break such a theorem; formula edits can, and the editor says which
 uses to check. Legend and bracketing figures (`legend_*` in the examples)
 have no meaning.
 
+**Every claim has its theorem.** A figure with one judgement stroke claims its
+formula. Tag the theorem that states it, and check the whole source:
+
+```lean
+import FregeDiagrams.Claims
+
+@[figure_claim "serial"] theorem fig_serial : … := …
+
+#figure_claims myFigs
+```
+
+`#figure_claims SRC` fails, naming the figures, when a claimed figure has no
+tagged theorem; on success it lists every figure of SRC with what it is and
+its theorems. Not checked: definitions and contents, which claim nothing, and
+**schematic** figures, those with a text leaf without a meaning (`"A"`,
+`"hypothesis 1"`), such as the legends, which stand for a form of statement.
+The tag must be on a theorem; that the theorem is about that figure is yours
+to ensure (the library gives figures no meaning). Tags are matched by figure
+name.
+
 ## 7. Status
 
 * **Tested, not proved:** the round trip `parse (print d) = d` for every
@@ -315,6 +335,7 @@ have no meaning.
 | `Edit` | hint edits written back into the text |
 | `Serve` | the drawing server of the editor |
 | `Elab` | `fig_of%` |
+| `Claims` | `@[figure_claim]` and `#figure_claims` |
 | `Examples`, `Legend` | the built-in example figures and the key to view A |
 | `Main` | `framediag` |
 | `Test` | the `#guard` tests |

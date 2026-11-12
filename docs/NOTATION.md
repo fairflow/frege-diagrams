@@ -167,7 +167,8 @@ not valid in intuitionistic logic.)
 | ![](images/n_claim.svg) | ![](images/n_definition.svg) | ![](images/n_content.svg) |
 | one judgement stroke: the formula is asserted | two strokes: `dead(u)` is defined as what follows | no stroke: the formula is only shown |
 
-A figure is a **claim** by default. A **definition** (`judgement definition`)
+A figure is a **claim** by default (in Lean, `#figure_claims` checks that
+each claim has its theorem: MANUAL.md, section 6). A **definition** (`judgement definition`)
 has Frege's double judgement stroke (§24) and the name it defines on its
 left; its formula reads `dead(u) :≡ ¬∃x. u R x`. A **content**
 (`judgement content`) has no judgement stroke: Frege's content stroke alone,

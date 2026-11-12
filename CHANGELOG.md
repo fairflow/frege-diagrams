@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Claims and their theorems: `@[figure_claim "NAME"]` tags the theorem that states a figure; `#figure_claims SRC` fails when a claimed figure of SRC has no tagged theorem (definitions, contents and schematic figures, those with a text leaf without a meaning, are not checked) and otherwise lists each figure with its theorems (`FregeDiagrams.Claims`). `evalString` (of `FregeDiagrams.Elab`) is now public.
+
 * Route pins and view options: a pin is made for, and used in, the layout with names shown, the figure's own notch-name offset and spacing 1. With `--hide-bound`, another `--notch-name-offset` or `--spacing` (or the editor's toolbar options) it is set aside and the links are routed automatically, with a note instead of an error; framedit asks for those options before it pins links. A pin that no longer fits its own layout is still an error.
 * Judgement strokes: the hint `judgement claim|definition|content` gives view B one judgement stroke (a claim, the default), Frege's double stroke (a definition `"D" {f}`: both views draw `f`, view B writes `D :≡`, LaTeX `\text{D}\ :\equiv\ f`) or none (a content, nothing claimed). Lint reports a definition of another shape; framedit sets it in the figure inspector. Existing figures draw byte-identically.
 * docs/LANGUAGE.md: the figure language, with its grammar in EBNF and syntax diagrams generated from one source (docs/tools/grammar.py); CI checks the EBNF and that the examples parse.
