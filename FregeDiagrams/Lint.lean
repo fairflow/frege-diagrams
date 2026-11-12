@@ -178,6 +178,11 @@ def Fig.lintBlocks (d : Fig) : Array Lint := Id.run do
     unless d.shown.bound.contains x do
       out := out.push { sev := .error, msg := s!"The hint namedy {x} {v} names no quantified state, so it has no effect.",
                         fix := some (.nameDyOf x none), fixLabel := "Remove the hint" }
+  for ((t, a), i) in d.hints.dashes.zipIdx do
+    if let .binder x := t then
+      unless d.shown.bound.contains x do
+        out := out.push { sev := .error, msg := s!"The hint {dashPrint (t, a)} names no quantified state, so it has no effect.",
+                          fix := some (.unDash i), fixLabel := "Remove the hint" }
   for (p, v) in d.hints.gaps do
     if (d.shown.blockAt p).isNone then
       out := out.push { sev := .error, msg := s!"The hint gap {p} {v} names no block of the formula, so it has no effect.",

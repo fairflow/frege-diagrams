@@ -45,7 +45,8 @@ def S(*xs):
 # (section, [(rule, expression)])
 GRAMMAR = [
     ("Files and figures", [
-        ("file", Star(N("figure"))),
+        ("file", Star(Alt(N("default"), N("figure")))),
+        ("default", Seq(T("default"), T("dash"), N("base"), N("dashing"))),
         ("figure", Seq(T("fig"), N("name"), Opt(N("hints")), T("="), N("form"))),
     ]),
     ("Formulas", [
@@ -67,7 +68,7 @@ GRAMMAR = [
     ("Hints", [
         ("hints", Seq(T("["), Opt(Seq(N("hint"), Star(Seq(T(","), N("hint"))))), T("]"))),
         ("hint", Alt(N("size-hint"), N("views-hint"), N("judgement-hint"), N("position-hint"), N("edge-hint"),
-                     N("loop-hint"), N("namedy-hint"), N("notch-hint"), N("route-hint"), N("stroke-hint"), N("gap-hint"), N("text-hint"))),
+                     N("loop-hint"), N("namedy-hint"), N("notch-hint"), N("route-hint"), N("stroke-hint"), N("gap-hint"), N("dash-hint"), N("text-hint"))),
         ("size-hint", Seq(T("size"), N("pair"))),
         ("views-hint", Seq(T("views"), Alt(T("A"), T("B")))),
         ("judgement-hint", Seq(T("judgement"), Alt(T("claim"), T("definition"), T("content")))),
@@ -84,6 +85,8 @@ GRAMMAR = [
         ("stroke-hint", Seq(T("stroke"), N("block"), N("int"))),
         ("gap-hint", Seq(T("gap"), N("block"), N("int"))),
         ("block", Seq(T("b"), Star(Seq(T("/"), N("int"))))),
+        ("dash-hint", Seq(T("dash"), Alt(N("base"), N("name")), N("dashing"))),
+        ("dashing", Alt(N("string"), Seq(T("morse"), N("string")))),
         ("text-hint", Seq(T("text"), N("pair"), Star(N("text-option")), N("string"))),
         ("text-option", Alt(T("black"), T("red"), T("grey"), N("int"), T("middle"), T("italic"))),
         ("key", Seq(N("name"), Opt(Seq(T("/"), N("int"))))),
@@ -227,7 +230,7 @@ def textmate(outdir):
             {"name": "keyword.operator.labelled.fgd", "match": "-\\[[^\\]]*\\]->?"},
             {"match": "\\b(fig)\\s+([^\\s\\[=]+)",
              "captures": {"1": {"name": "keyword.other.fig.fgd"}, "2": {"name": "entity.name.function.fgd"}}},
-            {"name": "keyword.control.fgd", "match": "\\b(" + alt(formula + [w for w in figure if w != "fig"]) + ")\\b"},
+            {"name": "keyword.control.fgd", "match": "\\b(" + alt(formula + [w for w in figure if w not in ("fig", "dash")]) + ")\\b"},
             {"name": "support.function.hint.fgd", "match": "\\b(" + alt(hints) + ")\\b"},
             {"name": "keyword.operator.relation.fgd", "match": "<=|~>|!=|°|;|\\bR\\b|="},
             {"name": "keyword.operator.logical.fgd", "match": "[&|]"},

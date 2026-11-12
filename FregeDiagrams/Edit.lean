@@ -46,6 +46,8 @@ inductive Edit where
   | stroke (path : String) (v : Option Int)
   /-- set or remove (`none` or 0) the extra room above a block, view B -/
   | gap (path : String) (v : Option Int)
+  /-- remove dash hint `i` (in the order of the dash hints) -/
+  | unDash (i : Nat)
 deriving Repr, Inhabited
 
 /-- What an edit does to the text of the hints. -/
@@ -134,6 +136,9 @@ def Edit.apply (h : Hints) : Edit → Hints × Act
     | some i, none => ({ h with notches := h.notches.eraseIdx i }, .delete (.notch i))
     | none, some u => ({ h with notches := h.notches ++ [(x, u)] }, .add (notchPrint (x, u)))
     | none, none => (h, .nothing)
+  | .unDash i =>
+    if i < h.dashes.length then ({ h with dashes := h.dashes.eraseIdx i }, .delete (.dash i))
+    else (h, .nothing)
   | .route x ps =>
     match h.routes.findIdx? (·.1 == x), ps with
     | some i, some p => ({ h with routes := h.routes.set i (x, p) }, .replace (.route i) (routePrint (x, p)))

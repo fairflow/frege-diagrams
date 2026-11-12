@@ -98,6 +98,13 @@ inductive Views where
   | both | a | b
 deriving BEq, DecidableEq, Repr, Inhabited
 
+/-- What a `dash` hint dashes: the links of one binder (view B), or every
+line of one relation (both views). -/
+inductive DashTarget where
+  | binder (x : String)
+  | rel (r : Rel)
+deriving BEq, DecidableEq, Inhabited, Repr
+
 structure Hints where
   size : Option (Nat × Nat) := none
   views : Views := .both
@@ -124,6 +131,9 @@ structure Hints where
   /-- the notch-name offset of one binder's name, both views (`namedy x N`);
   overrides the figure's `namedy` and `--notch-name-offset` -/
   nameDys : List (String × Int) := []
+  /-- dashing of a binder's links or of a relation's lines (`dash x "-."`,
+  `dash x morse "word"`, `dash <= ". "`); overrides `default dash` -/
+  dashes : List (DashTarget × Dash) := []
 deriving BEq, DecidableEq, Repr, Inhabited
 
 /-- A figure: `fig NAME [hints] = form`. -/
@@ -131,6 +141,9 @@ structure Fig where
   name : String
   hints : Hints := {}
   body : Form
+  /-- the `default dash` statements of the file the figure is in, latest
+  first; not part of the figure's own text -/
+  defaults : List (Rel × Dash) := []
 deriving BEq, Repr, Inhabited
 
 /-- What the pictures of a figure draw: the formula, except that a
@@ -164,7 +177,7 @@ def isIdentChar (c : Char) : Bool :=
 def reserved : List String := ["fig", "all", "ex", "not", "if", "then", "R"]
 
 /-- Words with a fixed meaning at the start of a hint. -/
-def hintWords : List String := ["size", "views", "edge", "loop", "text", "namedy", "notch", "route", "judgement", "stroke", "gap"]
+def hintWords : List String := ["size", "views", "edge", "loop", "text", "namedy", "notch", "route", "judgement", "stroke", "gap", "dash"]
 
 def isIdent (s : String) : Bool :=
   match s.toList with
@@ -207,7 +220,10 @@ def Hints.WellFormed (h : Hints) : Bool :=
   h.notches.all (isIdent ·.1) &&
   h.routes.all (fun (x, ps) => isIdent x && !ps.isEmpty && ps.all (·.length ≥ 2)) &&
   h.strokes.all (isBlockPath ·.1) && h.gaps.all (isBlockPath ·.1) &&
-  h.nameDys.all (isIdent ·.1)
+  h.nameDys.all (isIdent ·.1) &&
+  h.dashes.all fun (t, d) =>
+    (match t with | .binder x => isIdent x && x != "R" | .rel _ => true) &&
+    (match d with | .pattern p => dashPatternOK p | .morse w => isTextOK w)
 
 def Fig.WellFormed (d : Fig) : Bool := isIdent d.name && d.hints.WellFormed && d.body.WellFormed
 

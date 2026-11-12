@@ -99,7 +99,13 @@ def genHints : G Hints := do
   let strokes ← genList 0 2 do return (← path, ← genInt)
   let gaps ← genList 0 2 do return (← path, ← genInt)
   let nameDys ← genList 0 2 do return (← pick names, ← genInt)
-  return { size, views, nodes, edges, loops, texts, nameDy, notches, routes, judgement, strokes, gaps, nameDys }
+  let dashes ← genList 0 2 do
+    let t ← if (← rand 2) == 0 then pure (DashTarget.binder (← pick names))
+      else pure (DashTarget.rel (← pick [.le, .sqle, .R, .Rinf, .reach, .eq, .ne, .named "ag" false]))
+    let d ← if (← rand 3) == 0 then pure (Dash.morse (← pick ["help", "σ"]))
+      else pure (Dash.pattern (← pick ["", "-", "- ", ". . ", "-.-.-.-", "  -- . "]))
+    return (t, d)
+  return { size, views, nodes, edges, loops, texts, nameDy, notches, routes, judgement, strokes, gaps, nameDys, dashes }
 
 def genFig : G Fig := do
   return { name := ← pick ["f", "ex_trans", "x1"], hints := ← genHints, body := ← genForm (← rand 5) }
@@ -522,3 +528,36 @@ def out := "fig o [size (100,50), s@(10,30), t@(130,70)] = s <= t"
            let t ← (applyEdit out "o" e).toOption; let g ← (Fig.parse t).toOption; pure g.lint.size) == some 0
 
 end FregeDiagrams.Test.Canvas
+
+/-! ## Dash patterns (`dash` hints, `default dash`) -/
+
+-- a pattern is read like typed text: `-` cells join, `.` a dot in its cell
+#guard FregeDiagrams.patternArray "" == "" && FregeDiagrams.patternArray "----" == ""
+#guard FregeDiagrams.patternArray "- " == "4,4"
+#guard FregeDiagrams.patternArray "-- " == "8,4"
+#guard FregeDiagrams.patternArray ". . " == "1.2,6.8,1.2,6.8"
+-- ink at both ends joins across the repeat: an even number of lengths
+#guard FregeDiagrams.patternArray "-.-" == "8,1.4,1.2,1.4"
+#guard FregeDiagrams.patternArray " -" == "4,4"
+#guard !FregeDiagrams.dashPatternOK "   " && !FregeDiagrams.dashPatternOK "-x" && FregeDiagrams.dashPatternOK ""
+#guard ((FregeDiagrams.patternArray "-.-.-.-").splitOn ",").length % 2 == 0
+
+def dashFigs (s : String) : List FregeDiagrams.Fig := (FregeDiagrams.parseFile s).toOption.getD []
+def dashSrc : String := "default dash <= \". \"\nfig a [dash t \"-- \", dash R morse \"ok\"] = all t. if s <= t then t R u\nfig b [dash <= \"\"] = s <= t\ndefault dash R° \"- \""
+-- defaults apply to every figure of the file, wherever they stand, latest first
+#guard (dashFigs dashSrc).map (·.defaults.length) == [2, 2]
+#guard ((dashFigs dashSrc).head!.hints.dashes) ==
+  [(.binder "t", .pattern "-- "), (.rel .R, .morse "ok")]
+#guard (dashFigs dashSrc).all fun d => (FregeDiagrams.Fig.parse d.print).toOption.map (·.hints) == some d.hints
+-- the dashing reaches the drawing: the default for <= in a, and the link of t
+#guard let p := ((dashFigs dashSrc).head!.pictures { links := true }); (p.head!.2.splitOn "1.2,6.8").length > 1 && (p.getLast!.2.splitOn "8,4").length > 1
+-- the figure's own hint wins: <= solid in b
+#guard !(((dashFigs dashSrc).getLast!.pictures).head!.2.splitOn "stroke-dasharray").length > 1
+-- a default for R does not touch the strokes of the tree
+#guard let plain := (dashFigs "fig c = if s <= t then t <= u").head!.pictures
+       plain == (dashFigs "default dash R \". \"\nfig c = if s <= t then t <= u").head!.pictures
+-- errors and checks
+#guard errOf "fig a [dash t \"-x\"] = s <= t" != "ok"
+#guard errOf "default dash t \"-\"\nfig a = s <= t" != "ok"
+#guard (dashFigs "fig a [dash zz \"- \"] = all t. s <= t").head!.lint.size == 1
+#guard (FregeDiagrams.applyEdit "fig a [dash zz \"- \"] = all t. s <= t" "a" (.unDash 0)).toOption == some "fig a = all t. s <= t"

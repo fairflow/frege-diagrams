@@ -252,7 +252,8 @@ def Fig.toDiagram (d : Fig) (o : DrawOpts := {}) : Diagram := Id.run do
     g := g.text t.x t.y t.s (color := t.color.svg) (size := t.size)
       (anchor := if t.middle then "middle" else "start") (italic := t.italic)
   let (w, ht) := h.size.getD ((maxX + 40).toNat, (maxY + 40).toNat)
-  return { g with w, h := ht, nameDy := o.nameDy, nameDys := o.nameDys, annotate := o.annotate, style := o.style }
+  return { g with w := w, h := ht, nameDy := o.nameDy, nameDys := o.nameDys, annotate := o.annotate,
+                  style := o.style, relDash := o.relDash }
 
 /-- The drawing options of a figure: its `namedy` and `notch` hints over the
 options of the run. -/
@@ -265,6 +266,13 @@ def Fig.drawOpts (d : Fig) (o : DrawOpts) : DrawOpts :=
            strokes := d.hints.strokes.map fun (p, v) => (p, Float.ofInt v),
            gaps := d.hints.gaps.map fun (p, v) => (p, Float.ofInt v),
            nameDys := d.hints.nameDys.map fun (x, v) => (x, Float.ofInt v),
+           -- the figure's own `dash` hints first, then the file's defaults
+           relDash := (d.hints.dashes.filterMap fun
+                         | (.rel r, a) => some (r, a.array)
+                         | _ => none) ++ d.defaults.map fun (r, a) => (r, a.array),
+           linkDash := d.hints.dashes.filterMap fun
+                         | (.binder x, a) => some (x, a.array)
+                         | _ => none,
            pinned := d.hints.routes.map fun (x, ps) =>
              (x, ps.toArray.map fun p => p.toArray.map fun (a, b) => (⟨Float.ofInt a, Float.ofInt b⟩ : P)) }
 

@@ -28,11 +28,11 @@
     },
     {
       "name": "keyword.control.fgd",
-      "match": "\\b(then|all|not|ex|if)\\b"
+      "match": "\\b(default|then|all|not|ex|if)\\b"
     },
     {
       "name": "support.function.hint.fgd",
-      "match": "\\b(definition|judgement|content|italic|middle|namedy|stroke|black|claim|label|notch|route|views|bend|down|edge|grey|loop|side|size|text|gap|red|at|up)\\b"
+      "match": "\\b(definition|judgement|content|italic|middle|namedy|stroke|black|claim|label|morse|notch|route|views|bend|dash|down|edge|grey|loop|side|size|text|gap|red|at|up)\\b"
     },
     {
       "name": "keyword.operator.relation.fgd",

@@ -62,6 +62,8 @@ state:
 One line style per relation (see the key): `≤` dashed, `R` solid, `⇝` wavy,
 `=` a double line, a labelled relation dotted with its label at the middle
 (an arrowhead only when it is directed). Inequality `≠` is not drawn in view A.
+These are the defaults: a file or a figure may dash a relation otherwise
+(`default dash`, `dash`; [LANGUAGE.md](LANGUAGE.md#dashing)), in both views.
 
 A **composite** relation such as `s (⊑;R;≤) y` is one arrow whose stretches
 change style; a hollow **bead** after a `⊑` or `R°` stretch marks the
@@ -193,7 +195,8 @@ With `--links`, each notch is joined to every occurrence of the state it binds
 by one tree of links, with a dot where it branches. Each binder has its own
 pastel colour, and its links are dashed in the **Morse code of its name**
 (dot 1.6 units, dash 5.5, with a short mark in the longer gaps), so that
-binders stay distinct in black and white. Links run around the tree; to save
+binders stay distinct in black and white (a hint `dash x …` gives one
+binder's links another pattern). Links run around the tree; to save
 crossings the router may turn a notch over (⊔ for ∀, ∧ for ∃, as the ∃ notch
 of `u` above). A figure can fix the side of a notch with the hint
 `notch x up` or `notch x down`; the router then leaves that notch as it is and

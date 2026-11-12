@@ -212,6 +212,16 @@ def notchPrint (n : String × Bool) : String := s!"notch {n.1} {if n.2 then "up"
 def routePrint (r : String × List (List (Int × Int))) : String :=
   s!"route {r.1} " ++ "; ".intercalate (r.2.map fun ps => " ".intercalate (ps.map fun (a, b) => printPair a b))
 
+def Dash.print : Dash → String
+  | .pattern p => s!"\"{p}\""
+  | .morse w => s!"morse \"{w}\""
+
+def DashTarget.print : DashTarget → String
+  | .binder x => x
+  | .rel r => r.syntax
+
+def dashPrint (d : DashTarget × Dash) : String := s!"dash {d.1.print} {d.2.print}"
+
 def Hints.print (h : Hints) : List String :=
   (match h.size with | some (w, ht) => [s!"size {printPair w ht}"] | none => []) ++
   (match h.views with | .both => [] | .a => ["views A"] | .b => ["views B"]) ++
@@ -226,6 +236,7 @@ def Hints.print (h : Hints) : List String :=
   h.routes.map routePrint ++
   h.strokes.map (fun (p, v) => s!"stroke {p} {v}") ++
   h.gaps.map (fun (p, v) => s!"gap {p} {v}") ++
+  h.dashes.map dashPrint ++
   h.texts.map TextHint.print
 
 /-- The canonical text of a figure. -/
@@ -404,8 +415,29 @@ def blockPathP : Parser String := do
     | fuel + 1 => if ← optSym "/" then more s!"{acc}/{← nat}" fuel else return acc
   more "b" 1000
 
+/-- A dashing: a pattern string, or `morse` and a word. -/
+def dashSpec : Parser Dash := do
+  let morse ← if ← isWord "morse" then do discard next; pure true else pure false
+  match ← peek with
+  | some (.str w) =>
+    discard next
+    if morse then return .morse w
+    if dashPatternOK w then return .pattern w
+    fail "a dash pattern has only '-' (ink), '.' (a dot) and spaces (blank), and some ink"
+  | _ => fail (if morse then "expected a word in quotes" else "expected a dash pattern in quotes, or 'morse'")
+
+/-- What a `dash` hint dashes: a relation, else a binder's name. -/
+def dashTarget : Parser DashTarget := do
+  match ← base? with
+  | some r => return .rel r
+  | none => return .binder (← name)
+
 def hint (h : Hints) : Parser Hints := do
   match ← peek with
+  | some (.ident "dash") =>
+    discard next
+    let t ← dashTarget
+    return { h with dashes := h.dashes ++ [(t, ← dashSpec)] }
   | some (.ident "size") =>
     discard next
     let (w, ht) ← pair
@@ -501,7 +533,7 @@ breaks, the order of hints) as it was. -/
 /-- Which hint a span holds: an index into the list of its kind. -/
 inductive HintRef where
   | size | views | namedy | judgement | namedyOf (i : Nat)
-  | stroke (i : Nat) | gap (i : Nat)
+  | stroke (i : Nat) | gap (i : Nat) | dash (i : Nat)
   | node (i : Nat) | edge (i : Nat) | loop (i : Nat) | text (i : Nat) | notch (i : Nat) | route (i : Nat)
 deriving BEq, Repr, Inhabited
 
@@ -531,6 +563,7 @@ def hintS (h : Hints) : Parser (Hints × HintRef × Span) := do
     | some (.ident "judgement") => .judgement
     | some (.ident "stroke") => .stroke h.strokes.length
     | some (.ident "gap") => .gap h.gaps.length
+    | some (.ident "dash") => .dash h.dashes.length
     | some (.ident "edge") => .edge h.edges.length
     | some (.ident "loop") => .loop h.loops.length
     | some (.ident "text") => .text h.texts.length
@@ -579,11 +612,23 @@ def figureS : Parser (Fig × FigSpans) := do
 
 def figure : Parser Fig := (·.1) <$> figureS
 
-partial def figuresS (acc : Array (Fig × FigSpans)) : Parser (List (Fig × FigSpans)) := do
-  if (← get).toks.isEmpty then return acc.toList else figuresS (acc.push (← figureS))
+/-- A statement of the file: `default dash REL PATTERN`. -/
+def defaultStmt : Parser (Rel × Dash) := do
+  expectWord "default"
+  expectWord "dash"
+  let some r ← base? | fail "expected a relation: <=, <=°, R, R°, ~>, =, != or -[label]-"
+  return (r, ← dashSpec)
 
-partial def figures (acc : Array Fig) : Parser (List Fig) := do
-  if (← get).toks.isEmpty then return acc.toList else figures (acc.push (← figure))
+/-- A file's figures with their spans, and its `default` statements (latest
+first), which apply to every figure of the file wherever they stand. -/
+partial def figuresS (acc : Array (Fig × FigSpans)) (defs : List (Rel × Dash)) :
+    Parser (List (Fig × FigSpans)) := do
+  if (← get).toks.isEmpty then
+    return acc.toList.map fun (f, sp) => ({ f with defaults := defs }, sp)
+  if ← isWord "default" then figuresS acc ((← defaultStmt) :: defs)
+  else figuresS (acc.push (← figureS)) defs
+
+partial def figures : Parser (List Fig) := (·.map (·.1)) <$> figuresS #[] []
 
 def runP {α} (p : Parser α) (s : String) : Except String α := do
   let (ts, eof) ← lexSpans s
@@ -596,10 +641,10 @@ def runP {α} (p : Parser α) (s : String) : Except String α := do
 def Fig.parse (s : String) : Except String Fig := runP figure s
 
 /-- Parse a file of figures. -/
-def parseFile (s : String) : Except String (List Fig) := runP (figures #[]) s
+def parseFile (s : String) : Except String (List Fig) := runP figures s
 
 /-- Parse a file of figures, with the source spans of each. -/
-def parseFileSpans (s : String) : Except String (List (Fig × FigSpans)) := runP (figuresS #[]) s
+def parseFileSpans (s : String) : Except String (List (Fig × FigSpans)) := runP (figuresS #[] []) s
 
 /-- The round trip, for one figure, as a test. -/
 def Fig.roundTrips (d : Fig) : Bool :=

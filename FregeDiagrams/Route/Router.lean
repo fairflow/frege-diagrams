@@ -692,7 +692,9 @@ def TreeDiagram.render (d : TreeDiagram) (o : DrawOpts := {}) : Rendered := Id.r
       linkSvg := linkSvg.push s!"<g data-k=\"link\" data-name=\"{xmlEsc binders[i]!.name}\" data-pinned=\"{if (pins[i]?.bind id).isSome then 1 else 0}\">"
     for pl in rs[i]!.polys do
       links := links.push pl
-      linkSvg := linkSvg.push (Shape.poly pl colr "1.9" s!" stroke-linejoin=\"round\" stroke-dasharray=\"{morseDash binders[i]!.name}\"").svg
+      let da := (o.linkDash.lookup binders[i]!.name).getD (morseDash binders[i]!.name)
+      let da := if da == "" then "" else s!" stroke-dasharray=\"{da}\""
+      linkSvg := linkSvg.push (Shape.poly pl colr "1.9" s!" stroke-linejoin=\"round\"{da}").svg
     for j in rs[i]!.junctions do
       linkSvg := linkSvg.push (Shape.circle j 2.4 colr).svg
     if o.annotate then linkSvg := linkSvg.push "</g>"
