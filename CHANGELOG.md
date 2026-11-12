@@ -5,15 +5,19 @@ was merged as, the date and time (UTC) of that commit, and the tag if one
 is applied. `framediag --version` prints the version; the editor shows it
 with the commit it runs from.
 
-## 0.11.0 (unreleased)
+## 0.11.1 (unreleased)
+
+* Docs: after installing the VS Code extension, reload every open window (VS Code does not start a new extension in windows already open).
+
+## 0.11.0 · 0d82ee4 · 2026-11-12 22:53 UTC · tag `v0.11.0`
 
 * Dash patterns in the figure language. `dash x "PATTERN"` or `dash x morse "WORD"` dashes the links of binder `x` (view B); `dash REL …` the lines of a relation in both views; and a file statement `default dash REL "PATTERN"` sets a relation's style for every figure of the file (a figure's own hint wins). A pattern reads like typed text, one 4-unit cell per character: `-` ink (neighbours join), `.` a dot, space blank; it repeats, and with no blank it is solid. The strokes of view B's tree are never affected. A `dash x` naming no binder is reported, with *Remove the hint* as its fix. LANGUAGE, NOTATION, the syntax diagrams and the VS Code colouring follow.
 
-## 0.10.0 (unreleased)
+## 0.10.0 · 1ff2650 · 2026-11-12 22:53 UTC · tag `v0.10.0`
 
 * A softer default style: thinner lines (the assertion stroke 1.6 instead of 2.0, strokes and links 1.0 to 1.15 instead of 1.3 to 1.9), round joins, and every bend of a stroke or link rounded (radius 3.5, at most half of either segment). Layout is unchanged. `--style classic` (and `style: "classic"` for `--serve`) draws as before, byte for byte. The editor keeps square bends. The pictures of the documentation are redrawn.
 
-## 0.9.0 · d97ce0a · 2026-11-12 22:16 UTC
+## 0.9.0 · d97ce0a · 2026-11-12 22:16 UTC · tag `v0.9.0`
 
 * VS Code: the figure language is coloured, in `.fgd` files and inside the figure strings of Lean files (TextMate grammars generated from the grammar source, `docs/tools/grammar.py --textmate`, checked in CI); parse errors and the checks of every figure are squiggles, at the parser's position or the figure's name, with each check's fix as a quick fix.
 

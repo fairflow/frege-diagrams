@@ -34,5 +34,10 @@ npm run package          # writes frege-diagrams.vsix
 code --install-extension frege-diagrams.vsix
 ```
 
+Then run *Developer: Reload Window* in **every** VS Code window that is
+already open: VS Code does not start a newly installed extension (or a new
+version) in open windows, and until it starts, Lean files show no *Edit
+figures* link and `.fgd` files open as plain text.
+
 `npm test` runs a smoke test of the message handling against a real
 `framediag` (built with `lake build framediag` at the repository root).

@@ -300,6 +300,11 @@ that same package. Settings: `fregeDiagrams.framediagPath`,
 cd tools/vscode && npm run package && code --install-extension frege-diagrams.vsix
 ```
 
+Then run *Developer: Reload Window* in **every** VS Code window that is
+already open: VS Code does not start a newly installed extension (or a new
+version) in open windows, and until it starts, Lean files show no *Edit
+figures* link and `.fgd` files open as plain text.
+
 In a Lean file, an *Edit figures* link appears above each figure string
 (`def NAME : String := r#"…"#`); it opens the editor on that string beside
 the Lean file (also *Frege Diagrams: Edit figures* in the command palette).
