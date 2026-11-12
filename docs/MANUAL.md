@@ -41,6 +41,20 @@ figures from it with `fig_of%` (section 6), `framediag --fig FILE.lean`
 draws them, and the editor edits them in place. Prefer it whenever a figure
 has a meaning you prove something about.
 
+**Claims, definitions, contents.** Every figure is a claim (one judgement
+stroke in view B) unless its hints say otherwise:
+
+```
+fig trans = all t. if s <= u, u <= t then s <= t                  -- a claim
+fig inf_def [judgement definition] = "inf(u)" {all t. if u R t then t°}
+fig shown [judgement content] = ex u. (s <= u° & u R u)          -- shown only
+```
+
+A definition must be `"D" {formula}`; it gets the double stroke and
+`D :≡` on its left. A content has no judgement stroke. The hint is in
+[LANGUAGE.md](LANGUAGE.md) (Hints), the pictures in [NOTATION.md](NOTATION.md)
+(Claims, definitions, contents); in the editor it is the Judgement control.
+
 Lean's `include_str "figures.fgd"` also works with `fig_of%`, but Lake does
 not rebuild a module when the included file changes, so a theorem can go on
 using an old figure. Keep the text in the Lean file instead.
