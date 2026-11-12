@@ -164,6 +164,7 @@ def optsOf (j : Json) : DrawOpts :=
   let o := (j.getObjVal? "opts").toOption.getD (Json.mkObj [])
   let d : DrawOpts := { links := getBool o "links", hideBound := getBool o "hideBound" }
   let d := match getFloat o "nameDy" with | some v => { d with nameDy := v } | none => d
+  let d := if (o.getObjValAs? String "style").toOption == some "classic" then { d with style := .classic } else d
   match getFloat o "spacing" with | some v => { d with spacing := v } | none => d
 
 def findFig (text name : String) : Except String Fig := do

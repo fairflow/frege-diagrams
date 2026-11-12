@@ -5,7 +5,11 @@ was merged as, the date and time (UTC) of that commit, and the tag if one
 is applied. `framediag --version` prints the version; the editor shows it
 with the commit it runs from.
 
-## 0.9.0 (unreleased)
+## 0.10.0 (unreleased)
+
+* A softer default style: thinner lines (the assertion stroke 1.6 instead of 2.0, strokes and links 1.0 to 1.15 instead of 1.3 to 1.9), round joins, and every bend of a stroke or link rounded (radius 3.5, at most half of either segment). Layout is unchanged. `--style classic` (and `style: "classic"` for `--serve`) draws as before, byte for byte. The editor keeps square bends. The pictures of the documentation are redrawn.
+
+## 0.9.0 · d97ce0a · 2026-11-12 22:16 UTC
 
 * VS Code: the figure language is coloured, in `.fgd` files and inside the figure strings of Lean files (TextMate grammars generated from the grammar source, `docs/tools/grammar.py --textmate`, checked in CI); parse errors and the checks of every figure are squiggles, at the parser's position or the figure's name, with each check's fix as a quick fix.
 
