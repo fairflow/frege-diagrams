@@ -124,11 +124,16 @@ function toolInfo(/** @type {ReturnType<typeof locate>} */ loc) {
   return { version, commit, tag, date, dirty, line: parts.join(' · ') + ' · VS Code' };
 }
 
-/** The page: from the package the program comes from, else the copy in the extension. */
+/** The page: from the package the program comes from, so that the two
+match; else (no page there, or one older than 0.7.0 that cannot talk to VS
+Code) the copy in the extension. */
 function pageHtml(/** @type {ReturnType<typeof locate>} */ loc, /** @type {string} */ extDir) {
   const fromPkg = path.join(loc.pkg, 'tools', 'framedit', 'index.html');
-  const p = fs.existsSync(fromPkg) ? fromPkg : path.join(extDir, 'media', 'index.html');
-  return fs.readFileSync(p, 'utf8');
+  if (fs.existsSync(fromPkg)) {
+    const html = fs.readFileSync(fromPkg, 'utf8');
+    if (html.includes('acquireVsCodeApi')) return html;
+  }
+  return fs.readFileSync(path.join(extDir, 'media', 'index.html'), 'utf8');
 }
 
 const SKIP = new Set(['.git', '.lake', '_build', 'node_modules', '.claude', 'archive']);
