@@ -48,6 +48,8 @@ structure NodeInfo where
   inf : Bool := false
   new : Bool := false
   cross : Bool := false
+  /-- the blocks (`blockPath`) of the chains this state occurs in -/
+  paths : Array String := #[]
 
 structure FlatEdge where
   panel : Nat
@@ -60,6 +62,8 @@ structure FlatEdge where
   /-- the binder's quantifier in prenex form: as written if the binder sits
   in a positive place, its dual if in a negative one (for `FregeDiagrams.Lint`) -/
   prenex : Option Quant := none
+  /-- the block (`blockPath`) of the chain this arrow comes from -/
+  path : String := ""
 
 inductive FlatItem where
   | edge (e : FlatEdge)
@@ -77,10 +81,11 @@ structure Flat where
 
 namespace Flat
 
-def note (f : Flat) (panel : Nat) (st : St) : Flat :=
+def note (f : Flat) (panel : Nat) (st : St) (path : String := "") : Flat :=
   match f.nodes.findIdx? (fun n => n.panel == panel && n.name == st.name) with
-  | some i => { f with nodes := f.nodes.modify i fun n => { n with inf := n.inf || st.inf } }
-  | none => { f with nodes := f.nodes.push { panel, name := st.name, inf := st.inf } }
+  | some i => { f with nodes := f.nodes.modify i fun n =>
+      { n with inf := n.inf || st.inf, paths := if n.paths.contains path then n.paths else n.paths.push path } }
+  | none => { f with nodes := f.nodes.push { panel, name := st.name, inf := st.inf, paths := #[path] } }
 
 /-- Take the innermost pending quantifier binding `t`, if any. -/
 def consume (f : Flat) (t : String) : Flat × Option (Quant × Quant) :=
@@ -88,54 +93,73 @@ def consume (f : Flat) (t : String) : Flat × Option (Quant × Quant) :=
   | some (id, _, q, p) => ({ f with pending := f.pending.filter (·.1 != id) }, some (q, p))
   | none => (f, none)
 
-def addEdge (f : Flat) (panel : Nat) (src tgt : String) (rel : Composite) (concl : Bool) : Flat :=
+def addEdge (f : Flat) (panel : Nat) (src tgt : String) (rel : Composite) (concl : Bool)
+    (path : String := "") : Flat :=
   let (f, qp) := f.consume tgt
   let q := qp.map (·.1)
   let prenex := qp.map (·.2)
   let occ := 1 + (f.items.filter fun
     | .edge e => e.panel == panel && e.src == src && e.tgt == tgt
     | _ => false).size
-  { f with items := f.items.push (.edge { panel, src, tgt, occ, rel, concl, q, prenex }) }
+  { f with items := f.items.push (.edge { panel, src, tgt, occ, rel, concl, q, prenex, path }) }
 
 end Flat
 
-partial def flatten (fm : Form) (panel : Nat) (concl neg : Bool) : StateM Flat Unit := do
+partial def flatten (fm : Form) (panel : Nat) (concl neg : Bool) (path : String := "b") :
+    StateM Flat Unit := do
   match fm with
   | .chain st steps =>
-    modify (·.note panel st)
+    modify (·.note panel st path)
     let mut prev := st
     for (r, t) in steps do
       if r.contains .ne then pure ()
       else if prev.name == t.name then
         modify fun f => { f with items := f.items.push (.loop panel t.name (r.headD .R) concl) }
-      else modify (·.addEdge panel prev.name t.name r concl)
-      modify (·.note panel t)
+      else modify (·.addEdge panel prev.name t.name r concl path)
+      modify (·.note panel t path)
       prev := t
   | .text _ _ => pure ()
   | .all x b => binder x .all (if concl then .all else .ex) false b
   | .ex x b => binder x (if neg then .all else .ex) (if concl then .ex else .all) true b
-  | .not b => flatten b panel (!concl) (!neg)
+  | .not b => flatten b panel (!concl) (!neg) (blockPath path 0)
   | .imp hs c =>
-    for h in hs do flatten h panel (!concl) neg
-    flatten c panel concl neg
-  | .and ps => for p in ps do flatten p panel concl neg
+    for (i, h) in (List.range hs.length).zip hs do flatten h panel (!concl) neg (blockPath path (i + 1))
+    flatten c panel concl neg (blockPath path 0)
+  | .and ps => for (i, p) in (List.range ps.length).zip ps do flatten p panel concl neg (blockPath path i)
   | .or ps =>
     let mut first := true
-    for p in ps do
+    for (i, p) in (List.range ps.length).zip ps do
       if first then
-        flatten p panel concl neg
+        flatten p panel concl neg (blockPath path i)
         first := false
       else
         let k := (← get).nextPanel
         modify fun f => { f with nextPanel := k + 1 }
-        flatten p k concl neg
+        flatten p k concl neg (blockPath path i)
 where
   binder (x : String) (q prenex : Quant) (isEx : Bool) (b : Form) : StateM Flat Unit := do
     let id := (← get).fresh
     modify fun f => { f with fresh := id + 1, pending := (id, x, q, prenex) :: f.pending,
                              marks := if isEx then f.marks.push (panel, x, neg) else f.marks }
-    flatten b panel concl neg
+    flatten b panel concl neg (blockPath path 0)
     modify fun f => { f with pending := f.pending.filter (·.1 != id) }
+
+/-- The block of a formula at a path (`blockPath`): `b` is the formula itself. -/
+def Form.blockAt (f : Form) (path : String) : Option Form :=
+  match path.splitOn "." with
+  | "b" :: rest => go f (rest.map String.toNat?)
+  | _ => none
+where
+  go (f : Form) : List (Option Nat) → Option Form
+    | [] => some f
+    | none :: _ => none
+    | some i :: rest =>
+      let child : Option Form := match f with
+        | .all _ b | .ex _ b | .not b => if i == 0 then some b else none
+        | .imp hs c => if i == 0 then some c else hs[i - 1]?
+        | .and ps | .or ps => ps[i]?
+        | .chain .. | .text .. => none
+      child.bind (go · rest)
 
 /-! ## View A: placing -/
 
@@ -180,7 +204,8 @@ def Fig.toDiagram (d : Fig) (o : DrawOpts := {}) : Diagram := Id.run do
     let (lx, ly) := (nh.bind (·.label)).getD (0, -10)
     let attrs := if !o.annotate then "" else
       s!" data-k=\"state\" data-name=\"{xmlEsc n.name}\" data-panel=\"{n.panel}\" data-x=\"{x}\" data-y=\"{y}\"" ++
-      s!" data-lx=\"{lx}\" data-ly=\"{ly}\" data-labelled=\"{if (nh.bind (·.label)).isSome then 1 else 0}\" data-hinted=\"{if nh.isSome then 1 else 0}\""
+      s!" data-lx=\"{lx}\" data-ly=\"{ly}\" data-labelled=\"{if (nh.bind (·.label)).isSome then 1 else 0}\" data-hinted=\"{if nh.isSome then 1 else 0}\"" ++
+      s!" data-paths=\"{" ".intercalate n.paths.toList}\""
     g := g.node (nodeId n.panel n.name) x y (label := if n.cross || (o.hideBound && bound.contains n.name) then "" else dispName n.name)
       -- a free state is the implicit outer one, an arbitrary infallible state
       (inf := n.inf || (!bound.contains n.name && !n.cross)) (new := n.new) (lx := lx) (ly := ly) (cross := n.cross)
@@ -202,7 +227,8 @@ def Fig.toDiagram (d : Fig) (o : DrawOpts := {}) : Diagram := Id.run do
         s!" data-bend=\"{((eh.bind (·.bend)).map toString).getD ""}\"" ++
         s!" data-side=\"{match eh.bind (·.side) with | some true => "+" | some false => "-" | none => ""}\"" ++
         s!" data-at=\"{((eh.bind (·.at_)).map toString).getD ""}\"" ++
-        s!" data-q=\"{match e.q with | some .all => "all" | some .ex => "ex" | none => ""}\""
+        s!" data-q=\"{match e.q with | some .all => "all" | some .ex => "ex" | none => ""}\"" ++
+        s!" data-path=\"{e.path}\""
       g := g.edge { a := nodeId e.panel e.src, b := nodeId e.panel e.tgt, rel := e.rel,
                     concl := e.concl, q := e.q, qside, qpos, bend,
                     qvar := if o.hideBound then some "" else none, attrs }

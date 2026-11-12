@@ -17,6 +17,8 @@ Requests (`op`):
 * `body` `{text, fig}` → `{ok, body, tex}`: the formula as printed, and as
   LaTeX (the editor compares formulas to tell a layout change from a change
   of meaning).
+* `block` `{text, fig, path}` → `{ok, formula, tex}`: the block (subformula) at
+  `path` (`blockPath`: `b`, `b.0`, `b.1.2`, …), as printed and as LaTeX.
 * `lint` `{text, fig}` → `{ok, items: [{sev, msg, sel, fix, fixLabel}]}`: the
   checks of `FregeDiagrams.Lint`; `fix` is an `edit` object, or `null`.
 * `check` `{text, fig, opts}` → `{ok, problems: [string], notes: [string]}`:
@@ -186,6 +188,12 @@ def handle (j : Json) : Except String Json := do
   | "body" =>
     let f ← findFig text (← getStr j "fig")
     return okWith [("body", f.body.print), ("tex", f.toLatex)]
+  | "block" =>
+    let f ← findFig text (← getStr j "fig")
+    let path ← getStr j "path"
+    match f.shown.blockAt path with
+    | some b => return okWith [("formula", b.print), ("tex", (b.tex ["s"]).1)]
+    | none => throw s!"no block {path} in {f.name}"
   | "lint" =>
     let f ← findFig text (← getStr j "fig")
     return okWith [("items", Json.arr (f.lint.map fun l => Json.mkObj [

@@ -78,6 +78,8 @@ structure DrawOpts where
   /-- for the editor: ids and current hint values on the SVG elements of
   view A (`Diagram.annotate`).  Off by default; the output is then unchanged. -/
   annotate : Bool := false
+  /-- internal: the block being drawn (`blockPath`), for the annotations -/
+  block : String := "b"
 deriving Inhabited
 
 /-- A figure's `route` pins hold for the layout they were made on: names
@@ -198,6 +200,12 @@ inductive Mark where
 deriving Inhabited
 
 def sh (xs : Array Shape) : Array Mark := xs.map .shape
+
+/-- The path of child `i` of the block at `p`: the root block is `b`; the
+children of a block are numbered as in view B: the body of a quantifier or a
+negation is 0, the conclusion of an `if` is 0 and its hypotheses 1, 2, …,
+the parts of `&` and `|` are 0, 1, …. -/
+def blockPath (p : String) (i : Nat) : String := s!"{p}.{i}"
 
 /-- The colour of the opposite polarity. -/
 def flipCol (c : String) : String := if c == RED then BLACK else RED
@@ -331,10 +339,34 @@ def drawLeafBoxed (s : String) (steps : List (Composite × String)) (x y : Float
   let (w, up, dn) := measure o (.leaf s steps)
   (drawLeaf s steps x y col env o).push (.box x (y - up) (x + w) (y + dn))
 
-/-- Draw a tree with its stroke starting at `(x, y)`, in colour `col`. -/
+/-- For the editor (`DrawOpts.annotate`): the extent of a block, and its
+hit targets, each a small invisible disc selecting the block `path`. -/
+def blockBox (path : String) (x0 y0 x1 y1 : Float) : Mark :=
+  .shape (.raw s!"<rect data-k=\"block\" data-path=\"{path}\" x=\"{fmt1 x0}\" y=\"{fmt1 y0}\" width=\"{fmt1 (x1 - x0)}\" height=\"{fmt1 (y1 - y0)}\" fill=\"none\" stroke=\"none\" pointer-events=\"none\"/>")
+
+def blockHit (path : String) (p : P) : Mark :=
+  .shape (.raw s!"<circle data-k=\"branch\" data-path=\"{path}\" cx=\"{fmt1 p.x}\" cy=\"{fmt1 p.y}\" r=\"5\" fill=\"transparent\"/>")
+
+mutual
+/-- Draw a tree with its stroke starting at `(x, y)`, in colour `col`; with `annotate`, also
+the block's extent and its hit targets (after the drawing, so on top). -/
 partial def draw (t : Tree) (x y : Float) (col : String)
     (env : List Bind := []) (o : DrawOpts := {}) : Array Mark :=
+  let out := drawBody t x y col env o
+  if !o.annotate then out else
+  let (w, up, dn) := measure o t
+  let p := o.block
+  let hits : Array Mark := match t with
+    | .and _ | .or _ => #[blockHit p ⟨x + STUB, y⟩]
+    | .cond _ hyps => ((List.range hyps.length).map fun i =>
+        blockHit (blockPath p (i + 1)) ⟨x + STUB * (i + 1).toF, y⟩).toArray
+    | _ => #[]
+  out.push (blockBox p x (y - up) (x + w) (y + dn)) ++ hits |>.push (blockHit p ⟨x, y⟩)
+
+partial def drawBody (t : Tree) (x y : Float) (col : String)
+    (env : List Bind := []) (o : DrawOpts := {}) : Array Mark :=
   let line (x0 x1 : Float) := sh (stroke #[⟨x0, y⟩, ⟨x1, y⟩] .R col 1.3)
+  let child (i : Nat) : DrawOpts := { o with block := blockPath o.block i }
   match t with
   | .leaf s steps => drawLeafBoxed s steps x y col (extendAll env ⟨x, y⟩) o
   | .text s =>
@@ -350,7 +382,7 @@ partial def draw (t : Tree) (x y : Float) (col : String)
       (some (if upw then -1.0 else 1.0)) o.nameDy
     -- for the editor: the notch as one element carrying its binder
     let svg := if !o.annotate then svg else
-      #[Shape.raw s!"<g data-k=\"notch\" data-name=\"{xmlEsc var}\" data-kind=\"{if kind == .all then "all" else "ex"}\" data-up=\"{if upw then 1 else 0}\" data-fixed=\"{match o.fixedNotches.lookup var with | some true => "up" | some false => "down" | none => ""}\">"] ++
+      #[Shape.raw s!"<g data-k=\"notch\" data-path=\"{o.block}\" data-name=\"{xmlEsc var}\" data-kind=\"{if kind == .all then "all" else "ex"}\" data-up=\"{if upw then 1 else 0}\" data-fixed=\"{match o.fixedNotches.lookup var with | some true => "up" | some false => "down" | none => ""}\">"] ++
         svg ++ #[Shape.raw "</g>"]
     -- the new binder's rail starts under the notch
     let nb : Bind := { name := var, path := #[⟨x + STUB + g / 2.0, y⟩], lane := env.length, free := false,
@@ -359,10 +391,10 @@ partial def draw (t : Tree) (x y : Float) (col : String)
                          (⟨b.path[0]!.x, b.path[0]!.y + b.notchDy⟩ : P) }
     let env := extendAll env ⟨x1, y⟩
     sh svg ++ line x (x + lo) ++ line (x + hi) x1 ++
-      draw body x1 y col (nb :: env.filter (·.name != var)) o
+      draw body x1 y col (nb :: env.filter (·.name != var)) (child 0)
   | .neg body =>
     line x (x + STUB + 8.0) ++ sh (stroke #[⟨x + STUB, y⟩, ⟨x + STUB, y + 9.0⟩] .R col 1.3) ++
-      draw body (x + STUB + 8.0) y (flipCol col) (extendAll env ⟨x + STUB + 8.0, y⟩) o
+      draw body (x + STUB + 8.0) y (flipCol col) (extendAll env ⟨x + STUB + 8.0, y⟩) (child 0)
   | .cond concl hyps => Id.run do
     -- `if H₀, …, Hₙ₋₁ then C` is H₀ → (… → (Hₙ₋₁ → C)): one condition stroke
     -- per hypothesis, staggered along the main stroke (Frege).  The outermost
@@ -372,13 +404,13 @@ partial def draw (t : Tree) (x y : Float) (col : String)
     let xc := x + STUB * n.toF
     let mut out := line x xc
     let (_, _, dn) := measure o concl
-    out := out ++ draw concl xc y col (extendAll env ⟨xc, y⟩) o
+    out := out ++ draw concl xc y col (extendAll env ⟨xc, y⟩) (child 0)
     let mut cur := dn
     for (i, h) in ((List.range n).zip hyps).reverse do
       let xj := x + STUB * (i + 1).toF
       let (_, uh, dh) := measure o h
       let yh := y + cur + 12.0 + o.gap + uh
-      out := out ++ draw h xj yh (flipCol col) (extendAll (extendAll env ⟨xj, y⟩) ⟨xj, yh⟩) o
+      out := out ++ draw h xj yh (flipCol col) (extendAll (extendAll env ⟨xj, y⟩) ⟨xj, yh⟩) (child (i + 1))
       out := out ++ sh (stroke #[⟨xj, y⟩, ⟨xj, yh⟩] .R (flipCol col) 1.3)
       cur := (yh - y) + dh
     return out
@@ -395,10 +427,11 @@ where
     let tot := pySum (ms.map fun (_, u, d) => u + d) + (10.0 + o.gap) * (parts.length - 1).toF
     let mut yy := y - tot / 2.0
     let mut ends : Array Float := #[]
-    for (p, (_, up, dn)) in parts.zip ms do
+    for (i, p, (_, up, dn)) in (List.range parts.length).zip (parts.zip ms) do
       let yp := yy + up
       out := out ++ sh (stroke #[⟨xj, y⟩, ⟨xj + FORK, yp⟩] .R col 1.3)
-      out := out ++ draw p (xj + FORK) yp col (extendAll (extendAll env ⟨xj, y⟩) ⟨xj + FORK, yp⟩) o
+      out := out ++ draw p (xj + FORK) yp col (extendAll (extendAll env ⟨xj, y⟩) ⟨xj + FORK, yp⟩)
+        { o with block := blockPath o.block i }
       ends := ends.push yp
       yy := yp + dn + 10.0 + o.gap
     if isOr then
@@ -411,6 +444,7 @@ where
       out := out ++ sh (stroke pts .R col 1.3)
       return out.push (.shape (.circle ⟨xj, y⟩ 2.6 "white" col))
     return out.push (.shape (.circle ⟨xj, y⟩ 2.2 col))
+end
 
 /-- What a figure's leftmost stroke says (Begriffsschrift §2, §24): a
 **claim** has the judgement stroke `⊢` (the default), a **definition** the

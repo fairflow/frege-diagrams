@@ -271,7 +271,7 @@ default output stays byte-identical throughout.
 |---|---|---|
 | 1 | parse errors with line and column; token positions | done |
 | 2 | source spans of figures, hints and formulas | done (`parseFileSpans`) |
-| 3 | `DrawOpts.annotate`: ids on SVG elements (edges, links, strokes, notches, states, blocks) | view A done (states, labels, arrows, with their current hints); view B later |
+| 3 | `DrawOpts.annotate`: ids on SVG elements (edges, links, strokes, notches, states, blocks) | view A done (states, labels, arrows, with their current hints); view B: notches, links, and blocks with their paths (2026-11-12, PROPOSAL.md step 3) |
 | 4 | edit operations on hints, span-preserving text output, property tests | done (`FregeDiagrams/Edit.lean`); a comment next to a deleted hint goes with it |
 | 5 | `framediag --serve` (JSON lines) and `tools/framedit/` (bridge + page): select, drag, nudge, undo, save with the rules of 1a and 3 — **first live version** | done: v0.1 (`tools/framedit/`); v0.2 also edits figures inside a Lean raw string (such as `exampleSource`) and lists the uses of a figure |
 | 6 | new checks (unmatched hints, overlaps, off-canvas, notch reading of 2) in `--check` and the editor | done (`FregeDiagrams/Lint.lean`); the editor shows each problem with a fix instead of clamping drags |
