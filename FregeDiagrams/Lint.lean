@@ -16,6 +16,8 @@ Run by `framediag --check` (errors fail it) and shown live by the editor.
   first stretch.  When they agree the place is free (same quantifiers
   commute).
 * **Notch hints on an arrow without a notch** (warning): no effect.
+* **`stroke` and `gap` hints that name no block** (error), or a `gap` on a
+  block without room above it.
 * **A definition that is not `"D" {f}`** (error): `judgement definition` needs
   the name it defines and its definiens.
 * **Overlapping states** (warning) and **states or names outside the canvas**
@@ -160,7 +162,24 @@ def Fig.lintJudgement (d : Fig) : Array Lint :=
         fix := some (.judgement .claim), fixLabel := "Make it a claim" }]
   else #[]
 
+/-- `stroke` and `gap` hints must name a block of the formula, and a `gap`
+one that can take it (a hypothesis, or a fork part other than the first). -/
+def Fig.lintBlocks (d : Fig) : Array Lint := Id.run do
+  let mut out := #[]
+  for (p, v) in d.hints.strokes do
+    if (d.shown.blockAt p).isNone then
+      out := out.push { sev := .error, msg := s!"The hint stroke {p} {v} names no block of the formula, so it has no effect.",
+                        fix := some (.stroke p none), fixLabel := "Remove the hint" }
+  for (p, v) in d.hints.gaps do
+    if (d.shown.blockAt p).isNone then
+      out := out.push { sev := .error, msg := s!"The hint gap {p} {v} names no block of the formula, so it has no effect.",
+                        fix := some (.gap p none), fixLabel := "Remove the hint" }
+    else if !d.shown.gapable p then
+      out := out.push { sev := .error, msg := s!"The hint gap {p} {v} has no effect: only a hypothesis, or a part of a fork other than the first, has room above it.",
+                        fix := some (.gap p none), fixLabel := "Remove the hint" }
+  return out
+
 /-- The checks of one figure. -/
-def Fig.lint (d : Fig) : Array Lint := d.lintJudgement ++ d.lintPictures
+def Fig.lint (d : Fig) : Array Lint := d.lintJudgement ++ d.lintBlocks ++ d.lintPictures
 
 end FregeDiagrams

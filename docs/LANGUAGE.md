@@ -38,7 +38,7 @@ starts a labelled relation, not a comment).
 
 Reserved words, which cannot be names: `fig`, `all`, `ex`, `not`, `if`,
 `then`, `R`. The words that begin hints (`size`, `views`, `edge`, `loop`,
-`text`, `namedy`, `notch`, `route`, `judgement`) are names elsewhere but cannot be given a position hint,
+`text`, `namedy`, `notch`, `route`, `judgement`, `stroke`, `gap`) are names elsewhere but cannot be given a position hint,
 since a hint starting with one of them is read as that hint.
 
 Unicode beyond the characters above can be used in strings, labels and
@@ -96,6 +96,8 @@ hint           ::= size-hint
                  | namedy-hint
                  | notch-hint
                  | route-hint
+                 | stroke-hint
+                 | gap-hint
                  | text-hint
 size-hint      ::= "size" pair
 views-hint     ::= "views" ( "A" | "B" )
@@ -108,6 +110,9 @@ namedy-hint    ::= "namedy" int
 notch-hint     ::= "notch" name ( "up" | "down" )
 route-hint     ::= "route" name polyline ( ";" polyline )*
 polyline       ::= pair pair+
+stroke-hint    ::= "stroke" block int
+gap-hint       ::= "gap" block int
+block          ::= "b" ( "/" int )*
 text-hint      ::= "text" pair text-option* string
 text-option    ::= "black"
                  | "red"
@@ -217,6 +222,18 @@ own, the boxes link to the rules they name).
 `judgement-hint`
 
 ![judgement-hint](diagrams/judgement-hint.svg)
+
+`stroke-hint`
+
+![stroke-hint](diagrams/stroke-hint.svg)
+
+`gap-hint`
+
+![gap-hint](diagrams/gap-hint.svg)
+
+`block`
+
+![block](diagrams/block.svg)
 
 `text-hint`
 
@@ -356,6 +373,8 @@ the last one counts.
 | `namedy N` | this figure's bound-name offset in the notches, both views (overrides `--notch-name-offset`) |
 | `notch x up`, `notch x down` | view B: the notch of the binder `x` always opens up (or down); without it the side is the default (∀ up, ∃ down) or, with links, the router's choice |
 | `route x (X,Y) (X,Y) …; (X,Y) …` | view B with links: the links of binder `x` are pinned to these polylines (in the tree's own coordinates, whole units, every segment horizontal or vertical) instead of being routed; the other binders are routed around them. Written by the editor. A pin holds for the layout it was made on, with names shown, the figure's own `namedy` and spacing 1; with other view options it is set aside (routed automatically, not an error); if the notch or the states have moved, it is reported and the links are routed automatically |
+| `stroke PATH DX` | view B: the stroke leading into the block at PATH is DX units longer (negative: shorter, down to 2 units), which moves the block to the right, and with it a quantifier's notch. A block is a subtree of the formula: `b` is the whole formula; then `/0` is the body of a quantifier or negation, or the conclusion of an `if`, `/1`, `/2`, … its hypotheses, and `/0`, `/1`, … the parts of `&` and `\|`. Written by the editor |
+| `gap PATH DY` | view B: DY units more room (negative: less, down to 4) above the block at PATH, which must be a hypothesis or a part of a fork other than the first. Written by the editor |
 | `text (X,Y) …"caption"` | a caption: optional colour `black`, `red` or `grey` (default grey), size, `middle`, `italic`, in any order, then the text |
 
 A hint that names nothing in the picture has no effect; `framediag --check`
@@ -366,6 +385,14 @@ fig lang_hints [size (300,140), s@(30,100), y@(250,100) label (12,4),
     edge s>y bend -40 at 0.17, edge s>y#2 bend 12, loop y -90,
     text (150,130) grey 10 middle italic "a composite, a loop, reachability"] =
   all y. if s <=°;R;<= y° then (y R y & s ~> y)
+```
+
+Moving parts of view B: the second hypothesis lower, the first one's leaf
+to the right, and the notch of `t` further from the judgement stroke:
+
+```fgd
+fig lang_blocks [views B, gap b/0/2 12, stroke b/0/1 20, stroke b 8] =
+  all t. if s <= u, u <= t then s <= t
 ```
 
 A claim, a definition and a content:

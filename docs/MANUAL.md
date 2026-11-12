@@ -203,8 +203,15 @@ of a stroke, a fork's dot or the junction of a condition stroke in the Frege
 view to select the block that starts there: it is shaded in the Frege view,
 its arrows and states are marked in the sketch, and the inspector shows its
 formula. Alt+↑ widens the selection to the enclosing block, Alt+↓ narrows it
-again; Esc clears it. A selected notch shows its scope the same way. Blocks
-are selected, not yet moved (moving them changes the formula: a later step).
+again; Esc clears it. A selected notch shows its scope the same way. With a
+block selected, the square handle at the end of the stroke leading into it,
+or ← and →, lengthens or shortens that stroke (the hint `stroke PATH DX`): the
+block moves sideways, and a quantifier's block takes its notch with it. For a
+hypothesis or a fork part other than the first, the diamond at its start, or
+↑ and ↓, gives it more or less room above (`gap PATH DY`). Shift moves by 10.
+During a drag the links are hidden; they are routed again afterwards. Blocks
+are not moved to other places in the formula: that changes the formula (a
+later step).
 
 **The text.** The source can be edited directly. It is parsed after a pause;
 an error shows its line and column with a caret (and, for a Lean file, the

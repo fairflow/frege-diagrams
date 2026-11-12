@@ -26,7 +26,8 @@ Requests (`op`):
 
 `edit` objects (`kind`): `node {name, panel, x, y, label: [dx,dy] | null}`,
 `unnode {name, panel}`, `edge {src, tgt, occ, panel, bend, side: "+"|"-"|null, at}`,
-`size {w, h}`, `namedy {v}`, `judgement {v: "claim"|"definition"|"content"}`, `loop {name, panel, angle}`, `notch {name, dir: "up"|"down"}`,
+`size {w, h}`, `namedy {v}`, `judgement {v: "claim"|"definition"|"content"}`, `stroke {path, v}`, `gap {path, v}`
+(`v` null or 0 removes), `loop {name, panel, angle}`, `notch {name, dir: "up"|"down"}`,
 `route {name, polys: [[[x,y],…],…]}` (`null` removes).  `render` also returns `stale`: the
 binders whose `route` pin no longer fits (drawn routed automatically), `setAside`: the
 binders whose pin was set aside because the view options change the layout (names
@@ -90,6 +91,8 @@ def decodeEdit (j : Json) : Except String Edit := do
                    bend := ← getOpt j "bend", side, at_ := ← getOpt j "at" }
   | "size" => return .size (← getNat j "w") (← getNat j "h")
   | "namedy" => return .nameDy (← getOpt j "v")
+  | "stroke" => return .stroke (← getStr j "path") (← getOpt j "v")
+  | "gap" => return .gap (← getStr j "path") (← getOpt j "v")
   | "judgement" =>
     match ← getStr j "v" with
     | "claim" => return .judgement .claim
@@ -134,6 +137,8 @@ def encodeEdit : Edit → Json
   | .size w h => Json.mkObj [("kind", "size"), ("w", w), ("h", h)]
   | .nameDy v => Json.mkObj [("kind", "namedy"), ("v", optJson v)]
   | .judgement j => Json.mkObj [("kind", "judgement"), ("v", judgementStr j)]
+  | .stroke p v => Json.mkObj [("kind", "stroke"), ("path", p), ("v", optJson v)]
+  | .gap p v => Json.mkObj [("kind", "gap"), ("path", p), ("v", optJson v)]
   | .loop k a => Json.mkObj ([("kind", ("loop" : Json))] ++ keyFields k ++ [("angle", optJson a)])
   | .route x ps => Json.mkObj [("kind", "route"), ("name", x),
       ("polys", match ps with

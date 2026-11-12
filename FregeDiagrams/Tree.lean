@@ -80,6 +80,13 @@ structure DrawOpts where
   annotate : Bool := false
   /-- internal: the block being drawn (`blockPath`), for the annotations -/
   block : String := "b"
+  /-- internal: whether the block being drawn can take a `gap` (a hypothesis,
+  or a part of a fork other than the first), for the annotations -/
+  gapable : Bool := false
+  /-- view B: extra stroke length into a block, by path (`stroke PATH DX`) -/
+  strokes : List (String × Float) := []
+  /-- view B: extra room above a hypothesis or fork part, by path (`gap PATH DY`) -/
+  gaps : List (String × Float) := []
 deriving Inhabited
 
 /-- A figure's `route` pins hold for the layout they were made on: names
@@ -240,8 +247,28 @@ def notchUp (o : DrawOpts) (kind : Quant) (var : String) : Bool :=
   | some up => up
   | none => (kind == .all) != o.flips.contains var
 
-/-- `(width, above, below)`: the extent of a tree around its stroke. -/
-partial def measure (o : DrawOpts := {}) : Tree → Float × Float × Float
+/-- The extra stroke length into the block being drawn (`stroke`), at least
+`2 - STUB`, so that some stroke is left. -/
+def DrawOpts.strokeDx (o : DrawOpts) : Float :=
+  max (2.0 - STUB) ((o.strokes.lookup o.block).getD 0.0)
+
+/-- The room above child `i` of the block being drawn: `base` plus its `gap`,
+at least 4. -/
+def DrawOpts.gapAbove (o : DrawOpts) (i : Nat) (base : Float) : Float :=
+  max 4.0 (base + ((o.gaps.lookup (blockPath o.block i)).getD 0.0))
+
+/-- The options for child `i` of the block being drawn. -/
+def DrawOpts.child (o : DrawOpts) (i : Nat) (gapable : Bool := false) : DrawOpts :=
+  { o with block := blockPath o.block i, gapable }
+
+mutual
+/-- Width, extent above and extent below the stroke of a tree (with its
+`stroke` hint, if any). -/
+partial def measure (o : DrawOpts := {}) (t : Tree) : Float × Float × Float :=
+  let (w, up, dn) := measureBody o t
+  (w + o.strokeDx, up, dn)
+
+partial def measureBody (o : DrawOpts := {}) : Tree → Float × Float × Float
   | .leaf s steps => Id.run do
     let states := s :: steps.map (·.2)
     let mut w := 8.0
@@ -254,31 +281,33 @@ partial def measure (o : DrawOpts := {}) : Tree → Float × Float × Float
     return (STUB + w + 10.0, if isLoop then 36.0 else 22.0, 8.0)
   | .text s => (STUB + 6.6 * s.length.toF + 8.0, 12.0, 6.0)
   | .q kind var body =>
-    let (w, up, dn) := measure o body
+    let (w, up, dn) := measure (o.child 0) body
     let (g, h) := notchDims kind (if o.hideBound then "" else var) o.nameDy
     let (up, dn) := if notchUp o kind var then (max up (h + 3.0), dn) else (up, max dn (h + 3.0))
     (STUB + g + w, up, dn)
   | .neg body =>
-    let (w, up, dn) := measure o body
+    let (w, up, dn) := measure (o.child 0) body
     (STUB + 8.0 + w, up, max dn 10.0)
   | .cond concl hyps => Id.run do
     -- Frege's staggering: hypothesis i hangs from its own junction, the i-th
     -- along the stroke; the outermost (first) attaches leftmost and lowest
     let n := hyps.length
-    let (wc, up, dn) := measure o concl
+    let (wc, up, dn) := measure (o.child 0) concl
     let mut w := STUB * n.toF + wc
     let mut cur := dn
     for (i, h) in ((List.range n).zip hyps).reverse do
-      let (wh, uh, dh) := measure o h
-      cur := cur + (12.0 + o.gap + uh + dh)
+      let (wh, uh, dh) := measure (o.child (i + 1) true) h
+      cur := cur + (o.gapAbove (i + 1) (12.0 + o.gap) + uh + dh)
       w := max w (STUB * (i + 1).toF + wh)
     return (w, up, cur)
   | .and parts | .or parts =>
     -- a fork: the parts stacked symmetrically about the stroke
-    let ms := parts.map (measure o)
+    let ms := (List.range parts.length).zip parts |>.map fun (i, p) => measure (o.child i (i > 0)) p
     let w := (ms.map (·.1)).foldl max 0.0 + FORK
-    let tot := pySum (ms.map fun (_, u, d) => u + d) + (10.0 + o.gap) * (parts.length - 1).toF
+    let tot := pySum (ms.map fun (_, u, d) => u + d) +
+      pySum ((List.range parts.length).drop 1 |>.map fun i => o.gapAbove i (10.0 + o.gap))
     (STUB + w, tot / 2.0, tot / 2.0)
+end
 
 /-- Draw a leaf chain with its stroke starting at `(x, y)`. -/
 def drawLeaf (s : String) (steps : List (Composite × String)) (x y : Float) (col : String)
@@ -336,13 +365,13 @@ def drawLeaf (s : String) (steps : List (Composite × String)) (x y : Float) (co
 /-- Draw a leaf, plus its box for the link router. -/
 def drawLeafBoxed (s : String) (steps : List (Composite × String)) (x y : Float) (col : String)
     (env : List Bind) (o : DrawOpts) : Array Mark :=
-  let (w, up, dn) := measure o (.leaf s steps)
+  let (w, up, dn) := measureBody o (.leaf s steps)
   (drawLeaf s steps x y col env o).push (.box x (y - up) (x + w) (y + dn))
 
 /-- For the editor (`DrawOpts.annotate`): the extent of a block, and its
 hit targets, each a small invisible disc selecting the block `path`. -/
-def blockBox (path : String) (x0 y0 x1 y1 : Float) : Mark :=
-  .shape (.raw s!"<rect data-k=\"block\" data-path=\"{path}\" x=\"{fmt1 x0}\" y=\"{fmt1 y0}\" width=\"{fmt1 (x1 - x0)}\" height=\"{fmt1 (y1 - y0)}\" fill=\"none\" stroke=\"none\" pointer-events=\"none\"/>")
+def blockBox (path : String) (x0 y0 x1 y1 : Float) (extra : String := "") : Mark :=
+  .shape (.raw s!"<rect data-k=\"block\" data-path=\"{path}\"{extra} x=\"{fmt1 x0}\" y=\"{fmt1 y0}\" width=\"{fmt1 (x1 - x0)}\" height=\"{fmt1 (y1 - y0)}\" fill=\"none\" stroke=\"none\" pointer-events=\"none\"/>")
 
 def blockHit (path : String) (p : P) : Mark :=
   .shape (.raw s!"<circle data-k=\"branch\" data-path=\"{path}\" cx=\"{fmt1 p.x}\" cy=\"{fmt1 p.y}\" r=\"5\" fill=\"transparent\"/>")
@@ -352,25 +381,31 @@ mutual
 the block's extent and its hit targets (after the drawing, so on top). -/
 partial def draw (t : Tree) (x y : Float) (col : String)
     (env : List Bind := []) (o : DrawOpts := {}) : Array Mark :=
-  let out := drawBody t x y col env o
+  -- a `stroke` hint: a longer (or shorter) stroke into the block
+  let dx := o.strokeDx
+  let xs := x + dx
+  let out := if dx == 0.0 then drawBody t x y col env o
+    else sh (stroke #[⟨x, y⟩, ⟨xs, y⟩] .R col 1.3) ++ drawBody t xs y col (extendAll env ⟨xs, y⟩) o
   if !o.annotate then out else
   let (w, up, dn) := measure o t
   let p := o.block
+  let hv (l : List (String × Float)) := match l.lookup p with | some v => toString v.toInt64 | none => ""
+  let extra := s!" data-sx=\"{fmt1 xs}\" data-sy=\"{fmt1 y}\" data-dx=\"{hv o.strokes}\"" ++
+    s!" data-gapable=\"{if o.gapable then 1 else 0}\" data-gap=\"{hv o.gaps}\""
   let hits : Array Mark := match t with
     | .and _ | .or _ => #[blockHit p ⟨x + STUB, y⟩]
     | .cond _ hyps => ((List.range hyps.length).map fun i =>
         blockHit (blockPath p (i + 1)) ⟨x + STUB * (i + 1).toF, y⟩).toArray
     | _ => #[]
-  out.push (blockBox p x (y - up) (x + w) (y + dn)) ++ hits |>.push (blockHit p ⟨x, y⟩)
+  out.push (blockBox p x (y - up) (x + w) (y + dn) extra) ++ hits |>.push (blockHit p ⟨x, y⟩)
 
 partial def drawBody (t : Tree) (x y : Float) (col : String)
     (env : List Bind := []) (o : DrawOpts := {}) : Array Mark :=
   let line (x0 x1 : Float) := sh (stroke #[⟨x0, y⟩, ⟨x1, y⟩] .R col 1.3)
-  let child (i : Nat) : DrawOpts := { o with block := blockPath o.block i }
   match t with
   | .leaf s steps => drawLeafBoxed s steps x y col (extendAll env ⟨x, y⟩) o
   | .text s =>
-    let (w, up, dn) := measure o (.text s)
+    let (w, up, dn) := measureBody o (.text s)
     line x (x + STUB) |>.push (.shape (.text ⟨x + STUB + 4.0, y + 4.2⟩ s col))
       |>.push (.box x (y - up) (x + w) (y + dn))
   | .q kind var body =>
@@ -391,10 +426,10 @@ partial def drawBody (t : Tree) (x y : Float) (col : String)
                          (⟨b.path[0]!.x, b.path[0]!.y + b.notchDy⟩ : P) }
     let env := extendAll env ⟨x1, y⟩
     sh svg ++ line x (x + lo) ++ line (x + hi) x1 ++
-      draw body x1 y col (nb :: env.filter (·.name != var)) (child 0)
+      draw body x1 y col (nb :: env.filter (·.name != var)) (o.child 0)
   | .neg body =>
     line x (x + STUB + 8.0) ++ sh (stroke #[⟨x + STUB, y⟩, ⟨x + STUB, y + 9.0⟩] .R col 1.3) ++
-      draw body (x + STUB + 8.0) y (flipCol col) (extendAll env ⟨x + STUB + 8.0, y⟩) (child 0)
+      draw body (x + STUB + 8.0) y (flipCol col) (extendAll env ⟨x + STUB + 8.0, y⟩) (o.child 0)
   | .cond concl hyps => Id.run do
     -- `if H₀, …, Hₙ₋₁ then C` is H₀ → (… → (Hₙ₋₁ → C)): one condition stroke
     -- per hypothesis, staggered along the main stroke (Frege).  The outermost
@@ -403,14 +438,15 @@ partial def drawBody (t : Tree) (x y : Float) (col : String)
     let n := hyps.length
     let xc := x + STUB * n.toF
     let mut out := line x xc
-    let (_, _, dn) := measure o concl
-    out := out ++ draw concl xc y col (extendAll env ⟨xc, y⟩) (child 0)
+    let (_, _, dn) := measure (o.child 0) concl
+    out := out ++ draw concl xc y col (extendAll env ⟨xc, y⟩) (o.child 0)
     let mut cur := dn
     for (i, h) in ((List.range n).zip hyps).reverse do
       let xj := x + STUB * (i + 1).toF
-      let (_, uh, dh) := measure o h
-      let yh := y + cur + 12.0 + o.gap + uh
-      out := out ++ draw h xj yh (flipCol col) (extendAll (extendAll env ⟨xj, y⟩) ⟨xj, yh⟩) (child (i + 1))
+      let oh := o.child (i + 1) true
+      let (_, uh, dh) := measure oh h
+      let yh := y + cur + o.gapAbove (i + 1) (12.0 + o.gap) + uh
+      out := out ++ draw h xj yh (flipCol col) (extendAll (extendAll env ⟨xj, y⟩) ⟨xj, yh⟩) oh
       out := out ++ sh (stroke #[⟨xj, y⟩, ⟨xj, yh⟩] .R (flipCol col) 1.3)
       cur := (yh - y) + dh
     return out
@@ -423,17 +459,18 @@ where
   fork (isOr : Bool) (parts : List Tree) : Array Mark := Id.run do
     let xj := x + STUB
     let mut out := sh (stroke #[⟨x, y⟩, ⟨xj, y⟩] .R col 1.3)
-    let ms := parts.map (measure o)
-    let tot := pySum (ms.map fun (_, u, d) => u + d) + (10.0 + o.gap) * (parts.length - 1).toF
+    let ms := (List.range parts.length).zip parts |>.map fun (i, p) => measure (o.child i (i > 0)) p
+    let tot := pySum (ms.map fun (_, u, d) => u + d) +
+      pySum ((List.range parts.length).drop 1 |>.map fun i => o.gapAbove i (10.0 + o.gap))
     let mut yy := y - tot / 2.0
     let mut ends : Array Float := #[]
     for (i, p, (_, up, dn)) in (List.range parts.length).zip (parts.zip ms) do
       let yp := yy + up
       out := out ++ sh (stroke #[⟨xj, y⟩, ⟨xj + FORK, yp⟩] .R col 1.3)
       out := out ++ draw p (xj + FORK) yp col (extendAll (extendAll env ⟨xj, y⟩) ⟨xj + FORK, yp⟩)
-        { o with block := blockPath o.block i }
+        (o.child i (i > 0))
       ends := ends.push yp
-      yy := yp + dn + 10.0 + o.gap
+      yy := yp + dn + o.gapAbove (i + 1) (10.0 + o.gap)
     if isOr then
       let r := 9.0
       let a0 := Float.atan2 (ends[0]! - y) FORK

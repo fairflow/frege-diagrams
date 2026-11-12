@@ -116,6 +116,11 @@ structure Hints where
   /-- the figure's judgement stroke: a claim (default), a definition, or a
   content (no stroke) -/
   judgement : Judgement := .claim
+  /-- view B: extra length of the stroke leading into a block (`stroke PATH DX`),
+  which moves the block, and with it a quantifier's notch, along the stroke -/
+  strokes : List (String × Int) := []
+  /-- view B: extra room above a hypothesis or a part of a fork (`gap PATH DY`) -/
+  gaps : List (String × Int) := []
 deriving BEq, DecidableEq, Repr, Inhabited
 
 /-- A figure: `fig NAME [hints] = form`. -/
@@ -156,7 +161,7 @@ def isIdentChar (c : Char) : Bool :=
 def reserved : List String := ["fig", "all", "ex", "not", "if", "then", "R"]
 
 /-- Words with a fixed meaning at the start of a hint. -/
-def hintWords : List String := ["size", "views", "edge", "loop", "text", "namedy", "notch", "route", "judgement"]
+def hintWords : List String := ["size", "views", "edge", "loop", "text", "namedy", "notch", "route", "judgement", "stroke", "gap"]
 
 def isIdent (s : String) : Bool :=
   match s.toList with
@@ -185,13 +190,20 @@ end Form
 
 def Key.WellFormed (k : Key) : Bool := isIdent k.name
 
+/-- A block path as written in hints: `b`, then `/N` per level (`b/1/0`). -/
+def isBlockPath (s : String) : Bool :=
+  match s.splitOn "/" with
+  | "b" :: rest => rest.all fun t => !t.isEmpty && t.all Char.isDigit
+  | _ => false
+
 def Hints.WellFormed (h : Hints) : Bool :=
   h.nodes.all (fun n => n.key.WellFormed && !hintWords.contains n.key.name) &&
   h.edges.all (fun e => isIdent e.src && isIdent e.tgt) &&
   h.loops.all (·.key.WellFormed) &&
   h.texts.all (isTextOK ·.s) &&
   h.notches.all (isIdent ·.1) &&
-  h.routes.all (fun (x, ps) => isIdent x && !ps.isEmpty && ps.all (·.length ≥ 2))
+  h.routes.all (fun (x, ps) => isIdent x && !ps.isEmpty && ps.all (·.length ≥ 2)) &&
+  h.strokes.all (isBlockPath ·.1) && h.gaps.all (isBlockPath ·.1)
 
 def Fig.WellFormed (d : Fig) : Bool := isIdent d.name && d.hints.WellFormed && d.body.WellFormed
 

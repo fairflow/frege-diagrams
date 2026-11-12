@@ -65,7 +65,7 @@ GRAMMAR = [
     ("Hints", [
         ("hints", Seq(T("["), Opt(Seq(N("hint"), Star(Seq(T(","), N("hint"))))), T("]"))),
         ("hint", Alt(N("size-hint"), N("views-hint"), N("judgement-hint"), N("position-hint"), N("edge-hint"),
-                     N("loop-hint"), N("namedy-hint"), N("notch-hint"), N("route-hint"), N("text-hint"))),
+                     N("loop-hint"), N("namedy-hint"), N("notch-hint"), N("route-hint"), N("stroke-hint"), N("gap-hint"), N("text-hint"))),
         ("size-hint", Seq(T("size"), N("pair"))),
         ("views-hint", Seq(T("views"), Alt(T("A"), T("B")))),
         ("judgement-hint", Seq(T("judgement"), Alt(T("claim"), T("definition"), T("content")))),
@@ -79,6 +79,9 @@ GRAMMAR = [
         ("notch-hint", Seq(T("notch"), N("name"), Alt(T("up"), T("down")))),
         ("route-hint", Seq(T("route"), N("name"), N("polyline"), Star(Seq(T(";"), N("polyline"))))),
         ("polyline", Seq(N("pair"), Plus(N("pair")))),
+        ("stroke-hint", Seq(T("stroke"), N("block"), N("int"))),
+        ("gap-hint", Seq(T("gap"), N("block"), N("int"))),
+        ("block", Seq(T("b"), Star(Seq(T("/"), N("int"))))),
         ("text-hint", Seq(T("text"), N("pair"), Star(N("text-option")), N("string"))),
         ("text-option", Alt(T("black"), T("red"), T("grey"), N("int"), T("middle"), T("italic"))),
         ("key", Seq(N("name"), Opt(Seq(T("/"), N("int"))))),

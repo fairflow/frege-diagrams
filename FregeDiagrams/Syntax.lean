@@ -21,6 +21,7 @@ base   ::= "<=" | "<=°" | "R" | "R°" | "~>" | "=" | "!="
 hints  ::= "[" (hint ("," hint)*)? "]"
 hint   ::= "size" "(" NAT "," NAT ")" | "views" ("A" | "B")
          | "judgement" ("claim" | "definition" | "content")
+         | "stroke" path INT | "gap" path INT            path ::= "b" ("/" NAT)*
          | key "@" "(" INT "," INT ")" ("label" "(" INT "," INT ")")?
          | "edge" NAME ">" NAME ("#" NAT)? ("/" NAT)?
              ("bend" INT | "side" ("+" | "-") | "at" DEC)*        any order
@@ -222,6 +223,8 @@ def Hints.print (h : Hints) : List String :=
   (match h.nameDy with | some v => [s!"namedy {v}"] | none => []) ++
   h.notches.map notchPrint ++
   h.routes.map routePrint ++
+  h.strokes.map (fun (p, v) => s!"stroke {p} {v}") ++
+  h.gaps.map (fun (p, v) => s!"gap {p} {v}") ++
   h.texts.map TextHint.print
 
 /-- The canonical text of a figure. -/
@@ -390,6 +393,16 @@ partial def textOpts (t : TextHint) : Parser TextHint := do
   | some (.str s) => discard next; return { t with s }
   | _ => fail "expected a text option or a string"
 
+/-- A block path: `b`, then `/N` per level. -/
+def blockPathP : Parser String := do
+  unless ← isWord "b" do fail "expected a block path such as b/0/1"
+  discard next
+  let rec more (acc : String) (fuel : Nat) : Parser String := do
+    match fuel with
+    | 0 => return acc
+    | fuel + 1 => if ← optSym "/" then more s!"{acc}/{← nat}" fuel else return acc
+  more "b" 1000
+
 def hint (h : Hints) : Parser Hints := do
   match ← peek with
   | some (.ident "size") =>
@@ -402,6 +415,14 @@ def hint (h : Hints) : Parser Hints := do
     if ← isWord "A" then discard next; return { h with views := .a }
     else if ← isWord "B" then discard next; return { h with views := .b }
     else fail "expected 'A' or 'B'"
+  | some (.ident "stroke") =>
+    discard next
+    let p ← blockPathP
+    return { h with strokes := h.strokes ++ [(p, ← int)] }
+  | some (.ident "gap") =>
+    discard next
+    let p ← blockPathP
+    return { h with gaps := h.gaps ++ [(p, ← int)] }
   | some (.ident "judgement") =>
     discard next
     if ← isWord "claim" then discard next; return { h with judgement := .claim }
@@ -475,6 +496,7 @@ breaks, the order of hints) as it was. -/
 /-- Which hint a span holds: an index into the list of its kind. -/
 inductive HintRef where
   | size | views | namedy | judgement
+  | stroke (i : Nat) | gap (i : Nat)
   | node (i : Nat) | edge (i : Nat) | loop (i : Nat) | text (i : Nat) | notch (i : Nat) | route (i : Nat)
 deriving BEq, Repr, Inhabited
 
@@ -502,6 +524,8 @@ def hintS (h : Hints) : Parser (Hints × HintRef × Span) := do
     | some (.ident "views") => .views
     | some (.ident "namedy") => .namedy
     | some (.ident "judgement") => .judgement
+    | some (.ident "stroke") => .stroke h.strokes.length
+    | some (.ident "gap") => .gap h.gaps.length
     | some (.ident "edge") => .edge h.edges.length
     | some (.ident "loop") => .loop h.loops.length
     | some (.ident "text") => .text h.texts.length

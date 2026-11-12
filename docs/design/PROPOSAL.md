@@ -191,7 +191,7 @@ Rules for keeping the editor non-modal as it grows:
 | 1 | judgement strokes (section 1): hint, drawing, field, docs, tests | small; done 2026-11-12 (PR #10) |
 | 2 | pins and view options, remedy (a) (section 3) | small; done 2026-11-12 (PR #11) |
 | 3 | block ids in view B, block selection, highlight in view A (section 2) | medium; done 2026-11-12 |
-| 4 | view B layout hints and handles; notches along their segment (section 3) | medium |
+| 4 | view B layout hints and handles; notches along their segment (section 3) | medium; done 2026-11-12, with two hints instead of four: `stroke PATH DX` (stroke length, which also moves a notch) and `gap PATH DY` (room above a hypothesis or fork part, which also spreads a fork) |
 | 5 | `Form.interp`, the rules with pinned soundness theorems, structure edits and rules in the editor (section 4) | large |
 | 6 | `@[figure_claim]` and `#figure_claims` (section 1) | small; done 2026-11-12: schematic figures (a text leaf without a meaning) are not checked |
 | 7 | sheets and derivations (section 5) | large |
