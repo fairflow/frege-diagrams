@@ -627,6 +627,9 @@ structure Rendered where
   /-- binders with a `route` pin that does not fit the layout (routed
   automatically instead) -/
   stalePins : Array String := #[]
+  /-- binders with a `route` pin that was set aside because the pins do not
+  apply to this layout (`DrawOpts.pinsApply`); routed automatically -/
+  setAside : Array String := #[]
 
 /-! ## Rendering -/
 
@@ -637,7 +640,7 @@ def TreeDiagram.render (d : TreeDiagram) (o : DrawOpts := {}) : Rendered := Id.r
   -- routed once; the three cheapest are routed again with more rounds
   let bs := d.tree.binders.filter fun b => (o.fixedNotches.lookup b).isNone
   let pinsFor (binders : Array Binder) : Array (Option Routed) :=
-    binders.map fun b => (o.pinned.lookup b.name).bind (fitPin b)
+    binders.map fun b => if !o.pinsApply then none else (o.pinned.lookup b.name).bind (fitPin b)
   let flipSets : List (List String) :=
     if !o.links || bs.length > 4 then [[]]
     else (List.range (2 ^ bs.length)).map fun m =>
@@ -719,7 +722,8 @@ def TreeDiagram.render (d : TreeDiagram) (o : DrawOpts := {}) : Rendered := Id.r
            problems := probs, nLink, nTree,
            nesting := if o.links then nestingViolations sc binders rs else #[],
            names := if o.links then nameViolations sc names links else #[],
-           stalePins := if !o.links then #[] else
+           setAside := if o.links && !o.pinsApply then (o.pinned.map (·.1)).toArray else #[],
+           stalePins := if !o.links || !o.pinsApply then #[] else
              (o.pinned.filter fun (x, _) => (binders.zip pins).any fun (b, p) => b.name == x && p.isNone).toArray.map (·.1) }
 
 def TreeDiagram.svg (d : TreeDiagram) (o : DrawOpts := {}) : String := (d.render o).svg

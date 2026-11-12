@@ -219,8 +219,11 @@ def Fig.toDiagram (d : Fig) (o : DrawOpts := {}) : Diagram := Id.run do
 /-- The drawing options of a figure: its `namedy` and `notch` hints over the
 options of the run. -/
 def Fig.drawOpts (d : Fig) (o : DrawOpts) : DrawOpts :=
+  -- the pins are laid out with the figure's own offset (its namedy, or none)
+  -- and spacing 1
+  let layoutOk := (d.hints.nameDy.isSome || o.nameDy == 0.0) && o.spacing == 1.0
   let o := match d.hints.nameDy with | some v => { o with nameDy := Float.ofInt v } | none => o
-  { o with fixedNotches := d.hints.notches,
+  { o with fixedNotches := d.hints.notches, pinsLayoutOk := layoutOk,
            pinned := d.hints.routes.map fun (x, ps) =>
              (x, ps.toArray.map fun p => p.toArray.map fun (a, b) => (⟨Float.ofInt a, Float.ofInt b⟩ : P)) }
 

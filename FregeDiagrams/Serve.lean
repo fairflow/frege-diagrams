@@ -26,7 +26,10 @@ Requests (`op`):
 `unnode {name, panel}`, `edge {src, tgt, occ, panel, bend, side: "+"|"-"|null, at}`,
 `size {w, h}`, `namedy {v}`, `judgement {v: "claim"|"definition"|"content"}`, `loop {name, panel, angle}`, `notch {name, dir: "up"|"down"}`,
 `route {name, polys: [[[x,y],…],…]}` (`null` removes).  `render` also returns `stale`: the
-binders whose `route` pin no longer fits (drawn routed automatically).
+binders whose `route` pin no longer fits (drawn routed automatically), `setAside`: the
+binders whose pin was set aside because the view options change the layout (names
+hidden, another notch-name offset; not an error), and `pinsApply`: whether pins are
+used with these options (`DrawOpts.pinsApply`).
 -/
 import Lean.Data.Json
 import FregeDiagrams.View
@@ -174,7 +177,9 @@ def handle (j : Json) : Except String Json := do
       else some (f.toTreeDiagram.render { o with annotate := true })
     let b : Json := match rb with | some r => r.svg | none => .null
     let stale : Json := Json.arr ((rb.map (·.stalePins)).getD #[] |>.map toJson)
-    return okWith [("a", a), ("b", b), ("stale", stale)]
+    let setAside : Json := Json.arr ((rb.map (·.setAside)).getD #[] |>.map toJson)
+    return okWith [("a", a), ("b", b), ("stale", stale), ("setAside", setAside),
+                   ("pinsApply", o.pinsApply)]
   | "edit" =>
     let e ← decodeEdit (← j.getObjVal? "edit")
     return okWith [("text", ← applyEdit text (← getStr j "fig") e)]
@@ -201,9 +206,8 @@ def handle (j : Json) : Except String Json := do
       let tag := if hb then " (names hidden)" else ""
       if !r.problems.isEmpty then
         probs := probs.push s!"view B{tag}: {r.problems.size} empty bigon(s) or monogon(s)"
-      if hb == o.hideBound then
-        for x in r.stalePins do
-          probs := probs.push s!"view B: the route of {x} no longer fits the layout (its notch or its states moved); it is routed automatically"
+      for x in r.stalePins do
+        probs := probs.push s!"view B: the route of {x} no longer fits the layout (its notch or its states moved); it is routed automatically"
       if !r.names.isEmpty then
         probs := probs.push s!"view B{tag}: misplaced names {r.names}"
       for (outer, inner, side) in r.nesting do
