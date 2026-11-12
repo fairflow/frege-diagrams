@@ -302,6 +302,32 @@ def pinCases : List Bool :=
 #guard ((FregeDiagrams.Fig.parse "fig r [route zz (0,0) (0,9)] = all x. s <= x").toOption.map (·.lint.size)) == some 1
 #guard ((FregeDiagrams.Fig.parse "fig r [route x (0,0) (5,9)] = all x. s <= x").toOption.map (·.lint.size)) == some 1
 
+/-! ## Pins and view options
+
+A pin holds for names shown, the figure's own notch-name offset and spacing 1.
+With other options it is set aside (routed automatically, not an error);
+with these it is checked.  The pin below fits no layout. -/
+
+namespace FregeDiagrams.Test.Pins
+open FregeDiagrams
+
+def bad := (Fig.parse "fig r [route x (0,0) (0,9)] = all x. s <= x").toOption.get!
+def badDy := (Fig.parse "fig r [namedy 2, route x (0,0) (0,9)] = all x. s <= x").toOption.get!
+def run (f : Fig) (o : DrawOpts) : Array String × Array String :=
+  let r := ({ name := f.name, tree := f.body.toTree : TreeDiagram }).render (f.drawOpts { o with links := true })
+  (r.stalePins, r.setAside)
+
+#guard run bad {} == (#["x"], #[])
+#guard run bad { hideBound := true } == (#[], #["x"])
+#guard run bad { nameDy := 2.0 } == (#[], #["x"])
+#guard run bad { spacing := 1.4 } == (#[], #["x"])
+-- the figure's own namedy overrides the option, so its pins still apply
+#guard run badDy { nameDy := 3.0 } == (#["x"], #[])
+-- without links nothing is reported
+#guard (({ name := "r", tree := bad.body.toTree : TreeDiagram }).render (bad.drawOpts { hideBound := true })).setAside.isEmpty
+
+end FregeDiagrams.Test.Pins
+
 /-! ## Figures in a Lean file (`framediag --fig FILE.lean`) -/
 
 -- name, contents, the line where the contents start; any number of `#`; a

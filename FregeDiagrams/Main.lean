@@ -144,11 +144,14 @@ def main (args : List String) : IO UInt32 := do
         let o := f.drawOpts opts
         let r := t.render { o with links := true, hideBound := hb }
         let tag := s!"{f.name}{if hb then " (names hidden)" else ""}"
-        -- a pin is made for one layout: checked with the run's own --hide-bound
+        -- a pin holds for one layout (names shown, the figure's own offset,
+        -- spacing 1: `DrawOpts.pinsApply`); in others it is set aside
+        for x in r.stalePins do
+          IO.println s!"framediag --check: {f.name}: error: the route of {x} no longer fits the layout (its notch or its states moved); it is routed automatically"
+          lintErrs := lintErrs + 1
         if hb == opts.hideBound then
-          for x in r.stalePins do
-            IO.println s!"framediag --check: {f.name}: error: the route of {x} no longer fits the layout (its notch or its states moved); it is routed automatically"
-            lintErrs := lintErrs + 1
+          for x in r.setAside do
+            IO.println s!"framediag --check: {tag}: note: the route of {x} is pinned for names shown, the figure's own notch-name offset and spacing 1; with these options it is routed automatically"
         if args0.contains "--stats" then
           IO.println s!"{tag}: {r.nLink} link-link, {r.nTree} link-stroke crossings, {r.nesting.size} nesting violations"
         if !r.problems.isEmpty then

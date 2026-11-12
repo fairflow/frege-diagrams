@@ -105,9 +105,13 @@ in the header of `FregeDiagrams/Route/Router.lean`.
 Two hints override the router (both written by the editor, section 4):
 
 * `notch x up`, `notch x down` fixes the side a binder's notch opens to;
-* `route x …` pins a binder's links to given polylines. A pin holds for the
-  layout it was made on; when the notch or a bound state has moved since, it is
-  not used (the links are routed automatically) and `--check` reports it.
+* `route x …` pins a binder's links to given polylines. A pin is made for,
+  and used in, the layout with names shown, the figure's own notch-name offset
+  (its `namedy`, or none) and spacing 1. With `--hide-bound`, another
+  `--notch-name-offset` or another `--spacing` the layout differs, so the pin
+  is set aside and the links are routed automatically; `--check` prints a
+  note, not an error. When the notch or a bound state has moved since the pin
+  was made, it is not used either, and `--check` reports it as an error.
 
 ### 3.3 Checks
 
@@ -120,7 +124,8 @@ Two hints override the router (both written by the editor, section 4):
   different kinds, so that the picture would read the quantifiers in the
   wrong order ([NOTATION.md](NOTATION.md));
 * **a state outside the canvas**;
-* **a route pin that no longer fits** its layout;
+* **a route pin that no longer fits** its layout (names shown, the figure's
+  own offset, spacing 1);
 * in view B with links, routed with names shown and with names hidden: an
   **empty bigon** (a link and another curve crossing twice around a region
   holding nothing) or a **monogon** (a link crossing itself), which mean the
@@ -172,7 +177,11 @@ number. These edits change hints only, never the formula.
   direction). The ends at the notch and the states stay; where one would have
   to move, a short jog is added. On release the links are pinned (`route x
   …`) and every notch is fixed as drawn, since the pin depends on the layout.
-  *Route automatically again*, or Delete, removes the pin.
+  *Route automatically again*, or Delete, removes the pin. Pins are made and
+  used with names shown and the toolbar's notch-name offset at 0 (a figure's
+  own `namedy` counts as 0 here); with other toolbar options the pinned links
+  are drawn routed automatically, with a note in Problems, and moving links
+  asks you to change the options first.
 
 **The text.** The source can be edited directly. It is parsed after a pause;
 an error shows its line and column with a caret (and, for a Lean file, the

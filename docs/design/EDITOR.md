@@ -286,7 +286,10 @@ units). Considered and not taken: (B) relative moves ("one track further
 out"), which tie the text to the router's grid; (C) router preferences,
 which are robust but not direct manipulation.
 
-* A pin holds for one layout. It is checked against the binder's terminals
+* A pin holds for one layout: names shown, the figure's own notch-name
+  offset, spacing 1. (Added 2026-11-12: with other view options the pin is set
+  aside and the links are routed automatically, reported as a note, not an
+  error; the editor makes pins only with those options.) It is checked against the binder's terminals
   (the notch point, and `NODE_R + 1` from each bound state on one of its four
   sides), ends within 1.5 units are snapped onto them with a short jog, and a
   pin that misses a terminal or has a slanted segment is not used: reported

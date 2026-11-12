@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Route pins and view options: a pin is made for, and used in, the layout with names shown, the figure's own notch-name offset and spacing 1. With `--hide-bound`, another `--notch-name-offset` or `--spacing` (or the editor's toolbar options) it is set aside and the links are routed automatically, with a note instead of an error; framedit asks for those options before it pins links. A pin that no longer fits its own layout is still an error.
+
 * docs/LANGUAGE.md: the figure language, with its grammar in EBNF and syntax diagrams generated from one source (docs/tools/grammar.py); CI checks the EBNF and that the examples parse.
 * docs/MANUAL.md: the tools (installing, `framediag`, `framedit`, LaTeX, figures with a meaning in Lean); replaces docs/GUIDE.md, whose language part is in docs/LANGUAGE.md.
 * `framediag --fig FILE.lean [--def NAME]` reads the figures from a raw string in a Lean file, so one string serves theorems (`fig_of%`), drawings and the editor; parse errors give the line of the file.
