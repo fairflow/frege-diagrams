@@ -347,6 +347,11 @@ const SVGNS="http://www.w3.org/2000/svg";
 function decorate(){
   const svg=$("viewA").querySelector("svg"); if(!svg) return;
   svg.id="paperA"; scaleSvg(svg,2);
+  { // the canvas handle: drag to give the figure more (or less) room; with Shift, stretch the figure with it
+    const vb=svg.viewBox.baseVal, h=document.createElementNS(SVGNS,"rect");
+    h.setAttribute("x",vb.width-7); h.setAttribute("y",vb.height-7); h.setAttribute("width",7); h.setAttribute("height",7);
+    h.setAttribute("fill","#2457a6"); h.setAttribute("opacity","0.55"); h.dataset.handle="canvas"; h.style.cursor="nwse-resize";
+    h.setAttribute("aria-label","Canvas size: drag to resize, with Shift to stretch the figure"); svg.appendChild(h); }
   for(const g of svg.querySelectorAll("g[data-k]")){
     const isEdge=g.dataset.k==="edge", part=g.dataset.part;
     if(isEdge){ for(const pl of [...g.querySelectorAll("polyline")]){ const c=pl.cloneNode(); c.setAttribute("stroke","transparent"); c.setAttribute("stroke-width","10"); c.removeAttribute("stroke-dasharray"); c.style.pointerEvents="stroke"; pl.parentNode.insertBefore(c,pl.nextSibling);}
@@ -453,8 +458,15 @@ function edgeGeo(g,A,B){
 
 /* ---------- edits ---------- */
 async function edit(e, label, base=cur){
+  // a state is never moved off the canvas to the left or top
+  if(e.kind==="node"){ e=Object.assign({},e,{x:Math.max(6,e.x), y:Math.max(6,e.y)}); }
   const r=await lean({op:"edit",text:base,fig,edit:e});
   if(!r.ok){ explain("Not applied", null, null, r.error); return null; }
+  // ... and on the right or bottom the canvas grows instead (keeping a margin)
+  if(e.kind==="node"){ const f=figs.find(x=>x.name===fig);
+    if(f&&f.hasSize){ const lab=e.label||[0,-10];
+      const W=Math.max(f.w, e.x+20, e.x+lab[0]+14), H=Math.max(f.h, e.y+20, e.y+lab[1]+8);
+      if(W>f.w||H>f.h){ const r2=await lean({op:"edit",text:r.text,fig,edit:{kind:"size",w:W,h:H}}); if(r2.ok) return r2.text; } } }
   return r.text;
 }
 function stateEdit(g, x, y, lab){
@@ -478,6 +490,11 @@ function svgPt(ev, m){ const svg=$("paperA"); const p=svg.createSVGPoint(); p.x=
 let drag=null, dragBusy=false, dragNext=null;
 $("viewA").addEventListener("pointerdown", ev=>{
   const svg=$("paperA"); if(!svg) return;
+  if(ev.target.dataset && ev.target.dataset.handle==="canvas"){
+    const vb=svg.viewBox.baseVal; drag={kind:"canvas", w0:Math.round(vb.width), h0:Math.round(vb.height), p0:svgPt(ev), m:svg.getScreenCTM().inverse(), moved:false, el:ev.target};
+    const r=document.createElementNS(SVGNS,"rect"); r.setAttribute("x",0); r.setAttribute("y",0); r.setAttribute("width",vb.width); r.setAttribute("height",vb.height);
+    r.setAttribute("fill","none"); r.setAttribute("stroke","#2457a6"); r.setAttribute("stroke-dasharray","4,3"); r.setAttribute("class","canvasghost"); svg.appendChild(r); drag.ghost=r;
+    svg.style.overflow="visible"; $("viewA").setPointerCapture(ev.pointerId); ev.preventDefault(); return; }
   if(ev.target.dataset && ev.target.dataset.handle==="bend"){ const g=findSel(); drag={kind:"bend",g:snapshot(g),p0:svgPt(ev), m:$("paperA").getScreenCTM().inverse(),base:cur,text:cur}; $("viewA").setPointerCapture(ev.pointerId); ev.preventDefault(); return; }
   const g=ev.target.closest("g[data-k]");
   if(!g){ sel=null; drawSelection(); renderInspector(); return; }
@@ -493,6 +510,8 @@ $("viewA").addEventListener("pointerdown", ev=>{
 });
 function snapshot(g){ return {dataset:{...g.dataset}}; }
 $("viewA").addEventListener("pointermove", ev=>{
+  if(drag&&drag.kind==="canvas"){ const p=svgPt(ev,drag.m); drag.w=Math.max(40,Math.round(drag.w0+p.x-drag.p0.x)); drag.h=Math.max(40,Math.round(drag.h0+p.y-drag.p0.y)); drag.moved=true; drag.shift=ev.shiftKey;
+    drag.ghost.setAttribute("width",drag.w); drag.ghost.setAttribute("height",drag.h); $("aState").textContent=`canvas ${drag.w}×${drag.h}${ev.shiftKey?", stretching the figure":""}`; return; }
   if(!drag) return; const p=svgPt(ev, drag.m), dx=Math.round(p.x-drag.p0.x), dy=Math.round(p.y-drag.p0.y);
   const d=drag.g.dataset; let e;
   if(drag.kind==="state") e=stateEdit(drag.g,+d.x+dx,+d.y+dy);
@@ -521,6 +540,10 @@ async function pumpDrag(){
   dragBusy=false; if(dragNext) pumpDrag();
 }
 $("viewA").addEventListener("pointerup", async ev=>{
+  if(drag&&drag.kind==="canvas"){ const d=drag; drag=null; d.ghost.remove(); $("aState").textContent="";
+    if(!d.moved||(d.w===d.w0&&d.h===d.h0)) return;
+    const stretch=d.shift||ev.shiftKey;
+    await commitEdit({kind:"resize",w:d.w,h:d.h,from:stretch?[d.w0,d.h0]:null}, stretch?`Stretch the figure to ${d.w}×${d.h}`:`Canvas ${d.w}×${d.h}`); return; }
   if(!drag) return; const d=drag; drag=null;
   while(dragBusy) await new Promise(r=>setTimeout(r,15));
   if(!d.moved || d.text===d.base) return;

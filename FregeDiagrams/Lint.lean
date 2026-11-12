@@ -21,7 +21,8 @@ Run by `framediag --check` (errors fail it) and shown live by the editor.
 * **A definition that is not `"D" {f}`** (error): `judgement definition` needs
   the name it defines and its definiens.
 * **Overlapping states** (warning) and **states or names outside the canvas**
-  (error for a state, warning for a name), from the positions as drawn.
+  (error for a state, warning for a name), from the positions as drawn; a
+  state past the right or bottom edge has the fix *Enlarge the canvas*.
 
 Each item carries the editor's key of the object (`state:NAME/P`,
 `label:NAME/P`, `edge:A>B#OCC/P`) and, where there is one, an `Edit` that fixes
@@ -145,7 +146,10 @@ def Fig.lintPictures (d : Fig) : Array Lint := Id.run do
   for s in ns do
     if s.x < 0 || s.y < 0 || s.x > g.w || s.y > g.h then
       out := out.push { sev := .error, sel := s!"state:{s.id}",
-                        msg := s!"The state {idShow s.id} at ({s.x},{s.y}) is outside the canvas ({g.w}×{g.h}), so it is cut off." }
+                        msg := s!"The state {idShow s.id} at ({s.x},{s.y}) is outside the canvas ({g.w}×{g.h}), so it is cut off.",
+                        fix := if s.x < 0 || s.y < 0 then none
+                               else some (.size (max (g.w : Int) (s.x + 20)).toNat (max (g.h : Int) (s.y + 20)).toNat),
+                        fixLabel := "Enlarge the canvas" }
     else if s.label != "" then
       let lx := s.x + s.lx; let ly := s.y + s.ly
       if lx < 0 || lx > g.w || ly - 11 < 0 || ly + 3 > g.h then
