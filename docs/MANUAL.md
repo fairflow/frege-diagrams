@@ -41,6 +41,26 @@ figures from it with `fig_of%` (section 6), `framediag --fig FILE.lean`
 draws them, and the editor edits them in place. Prefer it whenever a figure
 has a meaning you prove something about.
 
+**A figure module.** Keep the figures of one document in a Lean file of
+their own that holds nothing but the string (and a comment saying what it
+is), and import it where theorems use them:
+
+```lean
+-- Figures/Report.lean: the figures of the report (edit with framedit)
+def reportFigs : String := r#"
+fig serial = all t. if s <= t then ex u. t R u°
+"#
+```
+
+```lean
+import Figures.Report
+def serial : Fig := fig_of% reportFigs "serial"
+```
+
+Lake tracks the import, so editing a figure rebuilds the theorems about it;
+the Lean files with proofs stay free of figure text. A file may hold several
+strings (one per section, say); the editor lets you choose among them.
+
 **Claims, definitions, contents.** Every figure is a claim (one judgement
 stroke in view B) unless its hints say otherwise:
 
@@ -170,9 +190,12 @@ python3 tools/framedit/framedit.py FILE [--def NAME] [--port 8765] [--no-browser
 This builds `framediag`, starts two drawing servers (one for edits and the
 sketch, one for the slower routing of links, so that routing never holds up
 a drag), and opens `http://127.0.0.1:8765/` in a browser. It serves this
-machine only. FILE is a `.fgd` file or a Lean file with a raw string
-(`--def NAME` if it has several); in a Lean file only the string's contents
-are edited and written back.
+machine only. FILE is a `.fgd` file or a Lean file with raw strings; in a
+Lean file only the contents of one string are edited and written back. When
+the file has several, the toolbar's *String* menu switches between them (save
+or undo first); `--def NAME` picks the one to start with, otherwise the first.
+In the figure inspector (nothing selected), *New figure* appends a figure
+with the name you give and a formula to start from.
 
 **Lean draws everything you see, and every change is a change to the text.**
 The text is shown under the pictures, and each change appears as a diff in

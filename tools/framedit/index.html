@@ -70,6 +70,7 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;paddi
 </div>
 
 <div class="bar" role="toolbar" aria-label="Editor">
+  <div class="grp" id="strGrp" hidden><label for="strSel">String</label><select id="strSel" data-help="This Lean file holds several figure strings; choose the one to edit. Save or undo your changes first."></select></div>
   <div class="grp"><label for="figSel">Figure</label><select id="figSel" data-help="Choose the figure to edit. The text holds all figures of the file."></select></div>
   <div class="sep"></div>
   <div class="grp">
@@ -688,6 +689,7 @@ function renderInspector(){
     <p class="muted">${f.hasSize?"":"No size hint: the size is computed. "}Printed at scale 1: ${cm(w)} × ${cm(h)} cm.</p>
     <div class="r"><label data-help="namedy N: this figure's bound-name offset, both views; overrides the toolbar option. Empty removes the hint.">namedy <input type="number" id="fnd" value="${f.namedy??""}" placeholder="none"></label></div>
     <div class="r"><label data-help="The judgement stroke of view B. Claim (one stroke, the default): a result. Definition (two strokes): the figure must be &quot;D&quot; {formula}; both views draw the formula, view B writes D :≡ on the left. Content (no stroke): a formula displayed, nothing claimed.">Judgement <select id="fj">${["claim","definition","content"].map(k=>`<option value="${k}" ${(f.judgement||"claim")===k?"selected":""}>${k}</option>`).join("")}</select></label></div>
+    <div class="r"><label data-help="Append a new figure with this name to the text (a formula to start from; edit it in the text).">New figure <input id="nfName" placeholder="name" size="10"></label><button id="nfAdd">Add</button></div>
     <h2 style="margin-top:10px">Used in</h2><p id="usesP" class="muted">…</p>
     <p class="muted">Select a state, a name or an arrow in the sketch to edit it. <kbd>Esc</kbd> comes back here.</p>`;
     const name=fig; usesOf([name]).then(u=>{ const e=$("usesP"); if(e&&fig===name) e.innerHTML=usesHtml(u[name]); });
@@ -851,13 +853,39 @@ async function doSave(){
 }
 
 /* ---------- start ---------- */
-(async ()=>{
+async function loadFile(label){
   const r=await fetch("/api/file"); const f=await r.json();
   if(f.tool) $("toolVer").textContent=f.tool.line;
   disk={text:f.text,hash:f.hash}; lineOffset=f.lineOffset||0;
   $("filePath").textContent=`${f.path} · ${f.kind}${lineOffset?` (its line 1 is line ${lineOffset+1} of the file)`:""}`;
-  hist=[{text:f.text,label:"Opened the file"}]; hi=0; setCur(f.text); $("src").value=f.text;
-})();
+  const ss=f.strings||[];
+  $("strGrp").hidden = ss.length<2;
+  $("strSel").innerHTML=ss.map(x=>`<option value="${esc(x.name)}" ${x.name===f.def?"selected":""}>${esc(x.name)} (line ${x.line})</option>`).join("");
+  sel=null; block=null; blockTrail=[]; fig=null;
+  hist=[{text:f.text,label:label||"Opened the file"}]; hi=0; setCur(f.text); $("src").value=f.text;
+}
+loadFile();
+document.addEventListener("click", ev=>{ if(ev.target.id==="nfAdd") addFigure($("nfName").value); });
+document.addEventListener("keydown", ev=>{ if(ev.target.id==="nfName"&&ev.key==="Enter") addFigure(ev.target.value); });
+$("strSel").addEventListener("change", async ev=>{
+  const want=ev.target.value;
+  if(cur!==disk.text){ ev.target.value=$("strSel").dataset.cur||ev.target.value;
+    const r=await fetch("/api/file"); const f=await r.json(); ev.target.value=f.def;
+    explain("Not switched",null,null,"This string has unsaved changes: save them, or undo them, before editing another string."); return; }
+  const r=await fetch("/api/select",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:want})}); const j=await r.json();
+  if(!j.ok){ explain("Not switched",null,null,j.error); return; }
+  await loadFile(`Opened the string ${want}`); explain(`Editing the string ${want}`,null,null,"Undo history starts again for this string.");
+});
+/* a new figure, appended to the text: its name, and a formula to start from */
+async function addFigure(name){
+  name=(name||"").trim();
+  if(figs.some(f=>f.name===name)){ explain("Not added",null,null,`There is already a figure ${name}.`); return; }
+  const t=cur.replace(/\s*$/,"")+`\n\nfig ${name} = all t. if s <= t then t R t\n`;
+  const p=await lean({op:"parse",text:t});
+  if(!p.ok){ explain("Not added",null,null,`${name} cannot be a figure name: names start with a letter or _ and are not reserved words.`); return; }
+  const before=cur; push(t,`New figure ${name}`); fig=name;
+  explain(`New figure ${name}`,before,t,"Appended to the text; change its formula in the text, then lay it out.");
+}
 window.addEventListener("beforeunload", e=>{ if(cur!==disk.text){ e.preventDefault(); e.returnValue=""; } });
 </script>
 </body>
