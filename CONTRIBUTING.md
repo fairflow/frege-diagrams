@@ -30,6 +30,7 @@ lake build
 lake build FregeDiagrams.Test
 lake exe framediag _build/check --check
 python3 docs/tools/grammar.py --check docs/LANGUAGE.md
+python3 -I tools/framedit/test_framedit.py
 ```
 
 Default drawings of existing figures should stay byte-identical unless the

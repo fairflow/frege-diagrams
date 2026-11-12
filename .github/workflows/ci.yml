@@ -24,6 +24,8 @@ jobs:
           lake exe framediag _build/a --no-pdf
           lake exe framediag _build/b --fig examples/basic.fgd --no-pdf
           diff -r -x '*.tex' _build/a _build/b
+      - name: The editor's file handling (raw strings in Lean files)
+        run: python3 -I tools/framedit/test_framedit.py
       - name: docs/LANGUAGE.md matches the grammar, and its examples parse
         run: |
           python3 docs/tools/grammar.py --check docs/LANGUAGE.md

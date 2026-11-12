@@ -7,8 +7,9 @@ FILE is a file of figures in the syntax of FregeDiagrams/Syntax.lean (as for
 `framediag --fig FILE`), or a Lean file holding the figures in a raw string
 `def NAME : String := r#"…"#` (such as `exampleSource` in
 FregeDiagrams/Examples.lean).  For a Lean file only the string's contents are
-edited and written back; `--def NAME` picks the string when the file has more
-than one.  Opens http://127.0.0.1:PORT/ (this machine only).
+edited and written back.  A Lean file may hold several such strings: the page
+lists them and switches between them; `--def NAME` picks the one to start
+with (default: the first).  Opens http://127.0.0.1:PORT/ (this machine only).
 
 This bridge holds no figure logic.  It runs two copies of the Lean drawing
 server (`framediag --serve`, FregeDiagrams/Serve.lean): one for parsing, edits and
@@ -38,29 +39,56 @@ DEF = None
 RAW = re.compile(r'def\s+([^\s:]+)\s*:\s*String\s*:=\s*r(#+)"')
 
 
+def raw_strings(full):
+    """The raw string definitions of a Lean file, in order: (name, match,
+    closing delimiter, end of the contents or -1 if not closed).  A string's
+    contents end at the first `"` followed by its own number of `#`, so a
+    `"#` inside an `r##"…"##` string does not end it; a definition inside an
+    earlier string's contents is not one."""
+    out, pos = [], 0
+    while True:
+        m = RAW.search(full, pos)
+        if not m:
+            return out
+        close = '"' + m.group(2)
+        end = full.find(close, m.end())
+        out.append((m.group(1), m, close, end))
+        if end < 0:
+            return out
+        pos = end + len(close)
+
+
 class Source:
     """Where the figure text lives: a whole file, or the contents of one raw
     string in a Lean file.  `split` returns (before, text, after, kind, line
     offset of the text in the file); the file is always re-read, so a change
-    on disk is seen."""
+    on disk is seen.  A Lean file may hold several strings: `name` is the one
+    being edited (the first, unless `--def NAME` or the page chooses another),
+    and `strings` lists them all."""
 
     def __init__(self, path, name):
         self.path, self.name = path, name
         self.lean = path.endswith('.lean')
 
+    def strings(self, full):
+        return [{'name': n, 'line': full[:m.start()].count('\n') + 1}
+                for n, m, _, _ in raw_strings(full)] if self.lean else []
+
     def split(self, full):
         if not self.lean:
             return '', full, '', 'figure file', 0
-        ms = [m for m in RAW.finditer(full) if self.name in (None, m.group(1))]
-        if not ms:
-            raise ValueError(f'no raw string definition {self.name or ""} in {self.path} '
+        all_ = raw_strings(full)
+        if not all_:
+            raise ValueError(f'no raw string definition in {self.path} '
                              '(expected def NAME : String := r#"…"#)')
-        if len(ms) > 1:
-            raise ValueError(f'{self.path} has several raw string definitions '
-                             f'({", ".join(m.group(1) for m in ms)}); choose one with --def NAME')
-        m = ms[0]
-        close = '"' + m.group(2)
-        end = full.find(close, m.end())
+        ms = [x for x in all_ if self.name in (None, x[0])]
+        if not ms:
+            raise ValueError(f'no raw string definition {self.name} in {self.path} '
+                             f'(it has {", ".join(x[0] for x in all_)})')
+        names = [x[0] for x in all_]
+        if self.name is not None and names.count(self.name) > 1:
+            raise ValueError(f'{self.path} defines the string {self.name} more than once')
+        _, m, close, end = ms[0]
         if end < 0:
             raise ValueError(f'the string {m.group(1)} is not closed by {close}')
         self.name = m.group(1)
@@ -207,7 +235,9 @@ def main():
             elif self.path == '/api/file':
                 full, _, t, _, kind, off = src.read()
                 self.send(200, json.dumps({'path': path, 'kind': kind, 'lineOffset': off, 'root': root,
-                                           'text': t, 'hash': digest(full), 'tool': tool}, ensure_ascii=False))
+                                           'text': t, 'hash': digest(full), 'tool': tool,
+                                           'strings': src.strings(full), 'def': src.name},
+                                          ensure_ascii=False))
             else:
                 self.send(404, json.dumps({'error': 'not found'}))
 
@@ -217,6 +247,16 @@ def main():
             if self.path == '/api/lean':
                 slow_op = req.get('op') == 'check' or (req.get('op') == 'render' and req.get('only') == 'b')
                 self.send(200, json.dumps((slow if slow_op else fast).ask(req), ensure_ascii=False))
+            elif self.path == '/api/select':
+                # edit another raw string of the same Lean file
+                old = src.name
+                src.name = req.get('name')
+                try:
+                    src.read()
+                    self.send(200, json.dumps({'ok': True}))
+                except ValueError as e:
+                    src.name = old
+                    self.send(400, json.dumps({'ok': False, 'error': str(e)}, ensure_ascii=False))
             elif self.path == '/api/uses':
                 self.send(200, json.dumps(uses(root, path, req.get('names', [])), ensure_ascii=False))
             elif self.path == '/api/save':
