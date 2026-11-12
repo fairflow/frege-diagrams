@@ -95,7 +95,10 @@ def genHints : G Hints := do
              size := ← rand 30, middle := (← rand 2) == 0, italic := (← rand 2) == 0 : TextHint }
   let nameDy ← (do if (← rand 2) == 0 then pure none else some <$> genInt : G (Option Int))
   let judgement ← pick [Judgement.claim, .definition, .content]
-  return { size, views, nodes, edges, loops, texts, nameDy, notches, routes, judgement }
+  let path : G String := do return "b" ++ String.join ((← genList 0 3 (rand 3)).map (s!"/{·}"))
+  let strokes ← genList 0 2 do return (← path, ← genInt)
+  let gaps ← genList 0 2 do return (← path, ← genInt)
+  return { size, views, nodes, edges, loops, texts, nameDy, notches, routes, judgement, strokes, gaps }
 
 def genFig : G Fig := do
   return { name := ← pick ["f", "ex_trans", "x1"], hints := ← genHints, body := ← genForm (← rand 5) }
@@ -442,3 +445,32 @@ def count (s pat : String) : Nat := (s.splitOn pat).length - 1
 #guard count (f.toTreeDiagram.svg {}) "data-k" == 0
 
 end FregeDiagrams.Test.Blocks
+
+/-! ## View B layout: `stroke PATH DX` and `gap PATH DY` -/
+
+namespace FregeDiagrams.Test.Handles
+open FregeDiagrams
+
+def src := "all t. if s <= u, u <= t then (s <= t & t R t)"
+def fig (h : String) : Fig := (Fig.parse s!"fig f [{h}] = {src}").toOption.get!
+def plain : Fig := (Fig.parse s!"fig f = {src}").toOption.get!
+def svg (f : Fig) : String := f.toTreeDiagram.svg (f.drawOpts {})
+
+#guard (fig "stroke b/0/1 20, gap b/0/2 -3").roundTrips
+#guard (fig "stroke b/0/1 20, gap b/0/2 -3").print.startsWith "fig f [stroke b/0/1 20,\n    gap b/0/2 -3]"
+#guard (Fig.parse "fig f [stroke c/1 2] = s <= t").toOption.isNone
+#guard (Fig.parse "fig f [gap b/x 2] = s <= t").toOption.isNone
+-- each hint changes the drawing; 0 is the default
+#guard svg (fig "stroke b 6") != svg plain && svg (fig "gap b/0/2 8") != svg plain
+#guard svg (fig "gap b/0/0/1 8") != svg plain
+#guard svg (fig "stroke b/0 0") == svg plain
+-- gaps: hypotheses and fork parts after the first only
+#guard plain.shown.gapable "b/0/1" && plain.shown.gapable "b/0/0/1"
+#guard !plain.shown.gapable "b/0/0" && !plain.shown.gapable "b/0/0/0" && !plain.shown.gapable "b"
+#guard (fig "stroke b/9 3, gap b/0/0 2, gap b/0/2 2").lint.size == 2
+-- edits: add, change, remove (0)
+#guard (applyEdit s!"fig f = {src}" "f" (.stroke "b/0" (some 5))).toOption == some s!"fig f [stroke b/0 5] = {src}"
+#guard (applyEdit s!"fig f [stroke b/0 5] = {src}" "f" (.stroke "b/0" (some 0))).toOption == some s!"fig f = {src}"
+#guard (applyEdit s!"fig f [gap b/0/1 5] = {src}" "f" (.gap "b/0/1" (some 7))).toOption == some s!"fig f [gap b/0/1 7] = {src}"
+
+end FregeDiagrams.Test.Handles

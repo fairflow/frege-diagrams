@@ -34,6 +34,10 @@ inductive Edit where
   | route (x : String) (ps : Option (List (List (Int × Int))))
   /-- set the figure's judgement stroke (`claim`, the default, removes the hint) -/
   | judgement (j : Judgement)
+  /-- set or remove (`none` or 0) the extra stroke length into a block, view B -/
+  | stroke (path : String) (v : Option Int)
+  /-- set or remove (`none` or 0) the extra room above a block, view B -/
+  | gap (path : String) (v : Option Int)
 deriving Repr, Inhabited
 
 /-- What an edit does to the text of the hints. -/
@@ -65,6 +69,20 @@ def Edit.apply (h : Hints) : Edit → Hints × Act
   | .size w ht =>
     let t := s!"size {printPair w ht}"
     ({ h with size := some (w, ht) }, if h.size.isSome then .replace .size t else .add t)
+  | .stroke p v =>
+    let v := v.filter (· != 0)
+    match h.strokes.findIdx? (·.1 == p), v with
+    | some i, some v => ({ h with strokes := h.strokes.set i (p, v) }, .replace (.stroke i) s!"stroke {p} {v}")
+    | some i, none => ({ h with strokes := h.strokes.eraseIdx i }, .delete (.stroke i))
+    | none, some v => ({ h with strokes := h.strokes ++ [(p, v)] }, .add s!"stroke {p} {v}")
+    | none, none => (h, .nothing)
+  | .gap p v =>
+    let v := v.filter (· != 0)
+    match h.gaps.findIdx? (·.1 == p), v with
+    | some i, some v => ({ h with gaps := h.gaps.set i (p, v) }, .replace (.gap i) s!"gap {p} {v}")
+    | some i, none => ({ h with gaps := h.gaps.eraseIdx i }, .delete (.gap i))
+    | none, some v => ({ h with gaps := h.gaps ++ [(p, v)] }, .add s!"gap {p} {v}")
+    | none, none => (h, .nothing)
   | .judgement j =>
     let txt := match j with
       | .claim => "judgement claim" | .definition => "judgement definition"

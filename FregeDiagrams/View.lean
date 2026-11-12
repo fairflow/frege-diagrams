@@ -161,6 +161,18 @@ where
         | .chain .. | .text .. => none
       child.bind (go · rest)
 
+/-- Whether the block at `path` can take a `gap` hint: a hypothesis of an
+`if`, or a part of `&` or `|` other than the first. -/
+def Form.gapable (f : Form) (path : String) : Bool :=
+  match path.splitOn "/" |>.reverse with
+  | last :: parentRev@(_ :: _) =>
+    let parent := "/".intercalate parentRev.reverse
+    match f.blockAt parent, last.toNat? with
+    | some (.imp ..), some i => i ≥ 1
+    | some (.and ..), some i | some (.or ..), some i => i ≥ 1
+    | _, _ => false
+  | _ => false
+
 /-! ## View A: placing -/
 
 def Color.svg : Color → String
@@ -250,6 +262,8 @@ def Fig.drawOpts (d : Fig) (o : DrawOpts) : DrawOpts :=
   let layoutOk := (d.hints.nameDy.isSome || o.nameDy == 0.0) && o.spacing == 1.0
   let o := match d.hints.nameDy with | some v => { o with nameDy := Float.ofInt v } | none => o
   { o with fixedNotches := d.hints.notches, pinsLayoutOk := layoutOk,
+           strokes := d.hints.strokes.map fun (p, v) => (p, Float.ofInt v),
+           gaps := d.hints.gaps.map fun (p, v) => (p, Float.ofInt v),
            pinned := d.hints.routes.map fun (x, ps) =>
              (x, ps.toArray.map fun p => p.toArray.map fun (a, b) => (⟨Float.ofInt a, Float.ofInt b⟩ : P)) }
 
