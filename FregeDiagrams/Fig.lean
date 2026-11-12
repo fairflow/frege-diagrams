@@ -121,6 +121,9 @@ structure Hints where
   strokes : List (String × Int) := []
   /-- view B: extra room above a hypothesis or a part of a fork (`gap PATH DY`) -/
   gaps : List (String × Int) := []
+  /-- the notch-name offset of one binder's name, both views (`namedy x N`);
+  overrides the figure's `namedy` and `--notch-name-offset` -/
+  nameDys : List (String × Int) := []
 deriving BEq, DecidableEq, Repr, Inhabited
 
 /-- A figure: `fig NAME [hints] = form`. -/
@@ -203,7 +206,8 @@ def Hints.WellFormed (h : Hints) : Bool :=
   h.texts.all (isTextOK ·.s) &&
   h.notches.all (isIdent ·.1) &&
   h.routes.all (fun (x, ps) => isIdent x && !ps.isEmpty && ps.all (·.length ≥ 2)) &&
-  h.strokes.all (isBlockPath ·.1) && h.gaps.all (isBlockPath ·.1)
+  h.strokes.all (isBlockPath ·.1) && h.gaps.all (isBlockPath ·.1) &&
+  h.nameDys.all (isIdent ·.1)
 
 def Fig.WellFormed (d : Fig) : Bool := isIdent d.name && d.hints.WellFormed && d.body.WellFormed
 

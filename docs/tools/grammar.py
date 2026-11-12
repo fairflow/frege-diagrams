@@ -75,7 +75,7 @@ GRAMMAR = [
         ("edge-option", Alt(Seq(T("bend"), N("int")), Seq(T("side"), Alt(T("+"), T("-"))),
                             Seq(T("at"), N("decimal")))),
         ("loop-hint", Seq(T("loop"), N("key"), N("int"))),
-        ("namedy-hint", Seq(T("namedy"), N("int"))),
+        ("namedy-hint", Seq(T("namedy"), Opt(N("name")), N("int"))),
         ("notch-hint", Seq(T("notch"), N("name"), Alt(T("up"), T("down")))),
         ("route-hint", Seq(T("route"), N("name"), N("polyline"), Star(Seq(T(";"), N("polyline"))))),
         ("polyline", Seq(N("pair"), Plus(N("pair")))),

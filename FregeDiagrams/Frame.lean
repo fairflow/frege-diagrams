@@ -135,6 +135,8 @@ structure Diagram where
   items : Array Item := #[]
   /-- the offset of the bound names in their notches (`--notch-name-offset`) -/
   nameDy : Float := 0.0
+  /-- per binder (by state name), overriding `nameDy` -/
+  nameDys : List (String × Float) := []
   /-- for the editor: wrap each state, label and arrow in a `<g>` carrying its
   `attrs` attributes.  Off by default, so the output is unchanged. -/
   annotate : Bool := false
@@ -359,7 +361,14 @@ def notched (d : Diagram) (pts : Polyline) (rels : Composite) (color : String) (
     (q : Quant) : Array Shape := Id.run do
   let L := arclen pts
   let var := e.qvar.getD (d.find e.b).label
-  let (out, lo, hi) := notch pts (L * e.qpos) q var color rels e.qside d.nameDy
+  -- the binder is the target state, `NAME/PANEL`
+  let x := (e.b.splitOn "/").headD e.b
+  let dy := (d.nameDys.lookup x).getD d.nameDy
+  let (out, lo, hi) := notch pts (L * e.qpos) q var color rels e.qside dy
+  -- for the editor: the notch, and the name in it, as elements of their own
+  let out := if !d.annotate then out else
+    #[Shape.raw s!"<g data-part=\"notch\" data-var=\"{xmlEsc x}\" data-dy=\"{((d.nameDys.lookup x).map (toString ·.toInt64)).getD ""}\">"] ++
+      out.pop ++ #[Shape.raw "<g data-part=\"nname\">", out.back!, Shape.raw "</g></g>"]
   let bounds := sortDedup (stretchCuts rels.length ++ [lo / L, hi / L])
   let pieces := split pts bounds
   let edges := (0.0 :: bounds ++ [1.0]).toArray

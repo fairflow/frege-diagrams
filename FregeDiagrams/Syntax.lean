@@ -25,7 +25,7 @@ hint   ::= "size" "(" NAT "," NAT ")" | "views" ("A" | "B")
          | key "@" "(" INT "," INT ")" ("label" "(" INT "," INT ")")?
          | "edge" NAME ">" NAME ("#" NAT)? ("/" NAT)?
              ("bend" INT | "side" ("+" | "-") | "at" DEC)*        any order
-         | "loop" key INT | "namedy" INT | "notch" NAME ("up" | "down")
+         | "loop" key INT | "namedy" NAME? INT | "notch" NAME ("up" | "down")
          | "route" NAME pair pair+ (";" pair pair+)*
          | "text" "(" INT "," INT ")"
              ("black" | "red" | "grey" | NAT | "middle" | "italic")* STRING
@@ -221,6 +221,7 @@ def Hints.print (h : Hints) : List String :=
   h.edges.map EdgeHint.print ++
   h.loops.map LoopHint.print ++
   (match h.nameDy with | some v => [s!"namedy {v}"] | none => []) ++
+  h.nameDys.map (fun (x, v) => s!"namedy {x} {v}") ++
   h.notches.map notchPrint ++
   h.routes.map routePrint ++
   h.strokes.map (fun (p, v) => s!"stroke {p} {v}") ++
@@ -438,7 +439,11 @@ def hint (h : Hints) : Parser Hints := do
     return { h with edges := h.edges ++ [e] }
   | some (.ident "namedy") =>
     discard next
-    return { h with nameDy := some (← int) }
+    match ← peek with
+    | some (.ident _) =>
+      let x ← name
+      return { h with nameDys := h.nameDys ++ [(x, ← int)] }
+    | _ => return { h with nameDy := some (← int) }
   | some (.ident "notch") =>
     discard next
     let x ← name
@@ -495,7 +500,7 @@ breaks, the order of hints) as it was. -/
 
 /-- Which hint a span holds: an index into the list of its kind. -/
 inductive HintRef where
-  | size | views | namedy | judgement
+  | size | views | namedy | judgement | namedyOf (i : Nat)
   | stroke (i : Nat) | gap (i : Nat)
   | node (i : Nat) | edge (i : Nat) | loop (i : Nat) | text (i : Nat) | notch (i : Nat) | route (i : Nat)
 deriving BEq, Repr, Inhabited
@@ -533,6 +538,8 @@ def hintS (h : Hints) : Parser (Hints × HintRef × Span) := do
     | some (.ident "route") => .route h.routes.length
     | _ => .node h.nodes.length
   let h' ← hint h
+  -- `namedy x N` (one binder) and `namedy N` (the figure) start alike
+  let r := if h'.nameDys.length > h.nameDys.length then .namedyOf h.nameDys.length else r
   return (h', r, ⟨a, (← get).prevEnd⟩)
 
 partial def hintsRestS (h : Hints) (acc : Array (HintRef × Span)) :

@@ -75,6 +75,8 @@ structure DrawOpts where
   notch's open end (positive: away from the stroke, the notch deepened by the
   same amount; negative: towards the stroke); `--notch-name-offset` -/
   nameDy : Float := 0.0
+  /-- per binder, overriding `nameDy` (`namedy x N`) -/
+  nameDys : List (String × Float) := []
   /-- for the editor: ids and current hint values on the SVG elements of
   view A (`Diagram.annotate`).  Off by default; the output is then unchanged. -/
   annotate : Bool := false
@@ -241,6 +243,10 @@ def relLen (r : Composite) : Float :=
 /-- A state name without its trailing `°` marks. -/
 def bare (s : String) : String := String.ofList (s.toList.reverse.dropWhile (· == '°')).reverse
 
+/-- The notch-name offset of binder `var`: its own (`namedy x N`), else the
+figure's or the option's. -/
+def DrawOpts.dyFor (o : DrawOpts) (var : String) : Float := (o.nameDys.lookup var).getD o.nameDy
+
 /-- Does this notch open upwards (`⊓`, or a flipped `∨`)? -/
 def notchUp (o : DrawOpts) (kind : Quant) (var : String) : Bool :=
   match o.fixedNotches.lookup var with
@@ -282,7 +288,7 @@ partial def measureBody (o : DrawOpts := {}) : Tree → Float × Float × Float
   | .text s => (STUB + 6.6 * s.length.toF + 8.0, 12.0, 6.0)
   | .q kind var body =>
     let (w, up, dn) := measure (o.child 0) body
-    let (g, h) := notchDims kind (if o.hideBound then "" else var) o.nameDy
+    let (g, h) := notchDims kind (if o.hideBound then "" else var) (o.dyFor var)
     let (up, dn) := if notchUp o kind var then (max up (h + 3.0), dn) else (up, max dn (h + 3.0))
     (STUB + g + w, up, dn)
   | .neg body =>
@@ -410,15 +416,15 @@ partial def drawBody (t : Tree) (x y : Float) (col : String)
       |>.push (.box x (y - up) (x + w) (y + dn))
   | .q kind var body =>
     let shown := if o.hideBound then "" else var
-    let (g, h) := notchDims kind shown o.nameDy
+    let (g, h) := notchDims kind shown (o.dyFor var)
     let upw := notchUp o kind var
     let x1 := x + STUB + g + 4.0
     let (svg, lo, hi) := notch #[⟨x, y⟩, ⟨x1, y⟩] (STUB + g / 2.0) kind shown col [.R]
-      (some (if upw then -1.0 else 1.0)) o.nameDy
+      (some (if upw then -1.0 else 1.0)) (o.dyFor var)
     -- for the editor: the notch as one element carrying its binder
     let svg := if !o.annotate then svg else
-      #[Shape.raw s!"<g data-k=\"notch\" data-path=\"{o.block}\" data-name=\"{xmlEsc var}\" data-kind=\"{if kind == .all then "all" else "ex"}\" data-up=\"{if upw then 1 else 0}\" data-fixed=\"{match o.fixedNotches.lookup var with | some true => "up" | some false => "down" | none => ""}\">"] ++
-        svg ++ #[Shape.raw "</g>"]
+      #[Shape.raw s!"<g data-k=\"notch\" data-path=\"{o.block}\" data-name=\"{xmlEsc var}\" data-kind=\"{if kind == .all then "all" else "ex"}\" data-up=\"{if upw then 1 else 0}\" data-fixed=\"{match o.fixedNotches.lookup var with | some true => "up" | some false => "down" | none => ""}\" data-dy=\"{((o.nameDys.lookup var).map (toString ·.toInt64)).getD ""}\">"] ++
+        svg.pop ++ #[Shape.raw "<g data-part=\"nname\">", svg.back!, Shape.raw "</g></g>"]
     -- the new binder's rail starts under the notch
     let nb : Bind := { name := var, path := #[⟨x + STUB + g / 2.0, y⟩], lane := env.length, free := false,
                        notchDy := if upw then -h else h, notchHw := g / 2.0,
