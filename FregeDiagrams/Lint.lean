@@ -81,6 +81,11 @@ def Fig.lintPictures (d : Fig) : Array Lint := Id.run do
       out := out.push { sev := .error,
                         msg := s!"The hint {nh.print} names no state of the picture, so it has no effect.",
                         fix := some (.unnode nh.key), fixLabel := "Remove the hint" }
+  -- a state placed twice: the last hint counts
+  for (nh, i) in h.nodes.zipIdx do
+    if (h.nodes.drop (i + 1)).any (·.key == nh.key) then
+      out := out.push { sev := .warning,
+                        msg := s!"The state {nh.key.print} has more than one position hint; the last one counts, so {nh.print} has no effect." }
   for eh in h.edges do
     unless edges.any (fun e => e.src == eh.src && e.tgt == eh.tgt && e.occ == eh.occ && e.panel == eh.panel) do
       out := out.push { sev := .error,

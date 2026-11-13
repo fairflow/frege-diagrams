@@ -67,7 +67,7 @@ structure FlatEdge where
 
 inductive FlatItem where
   | edge (e : FlatEdge)
-  | loop (panel : Nat) (name : String) (rel : Rel) (concl : Bool)
+  | loop (panel : Nat) (name : String) (rel : Composite) (concl : Bool)
 
 structure Flat where
   nodes : Array NodeInfo := #[]
@@ -114,7 +114,7 @@ partial def flatten (fm : Form) (panel : Nat) (concl neg : Bool) (path : String 
     for (r, t) in steps do
       if r.contains .ne then pure ()
       else if prev.name == t.name then
-        modify fun f => { f with items := f.items.push (.loop panel t.name (r.headD .R) concl) }
+        modify fun f => { f with items := f.items.push (.loop panel t.name r concl) }
       else modify (·.addEdge panel prev.name t.name r concl path)
       modify (·.note panel t path)
       prev := t
@@ -139,10 +139,15 @@ partial def flatten (fm : Form) (panel : Nat) (concl neg : Bool) (path : String 
 where
   binder (x : String) (q prenex : Quant) (isEx : Bool) (b : Form) : StateM Flat Unit := do
     let id := (← get).fresh
-    modify fun f => { f with fresh := id + 1, pending := (id, x, q, prenex) :: f.pending,
-                             marks := if isEx then f.marks.push (panel, x, neg) else f.marks }
+    let k0 := (← get).nextPanel
+    modify fun f => { f with fresh := id + 1, pending := (id, x, q, prenex) :: f.pending }
     flatten b panel concl neg (blockPath path 0)
-    modify fun f => { f with pending := f.pending.filter (·.1 != id) }
+    -- an `ex` binder marks its state in its own panel and in every panel opened
+    -- inside its scope (the further parts of a disjunction in its body)
+    let k1 := (← get).nextPanel
+    modify fun f => { f with pending := f.pending.filter (·.1 != id),
+                             marks := if isEx then f.marks ++ ((panel :: (List.range (k1 - k0)).map (k0 + ·)).map (·, x, neg)).toArray
+                                      else f.marks }
 
 /-- The block of a formula at a path (`blockPath`): `b` is the formula itself. -/
 def Form.blockAt (f : Form) (path : String) : Option Form :=
@@ -200,7 +205,10 @@ def Fig.toDiagram (d : Fig) (o : DrawOpts := {}) : Diagram := Id.run do
         if crossed then { n with cross := true } else { n with new := true }
       else n
   -- order: hinted states in hint order, then the rest in order of occurrence
-  let hinted := h.nodes.filterMap fun nh =>
+  -- a state hinted twice: the last hint counts (as for size and namedy)
+  let lastHints := h.nodes.reverse.foldl (fun acc nh =>
+    if acc.any (·.key == nh.key) then acc else nh :: acc) []
+  let hinted := lastHints.filterMap fun nh =>
     nodes.find? (fun n => n.panel == nh.key.panel && n.name == nh.key.name) |>.map (·, some nh)
   let rest := nodes.toList.filter fun n =>
     !h.nodes.any fun nh => n.panel == nh.key.panel && n.name == nh.key.name

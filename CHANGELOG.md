@@ -5,7 +5,13 @@ was merged as, the date and time (UTC) of that commit, and the tag if one
 is applied. `framediag --version` prints the version; the editor shows it
 with the commit it runs from.
 
-## 0.12.0 (unreleased)
+## 0.13.0 (unreleased)
+
+* The reference for view A (`FregeDiagrams/Spec.lean`, docs/design/NEXT-STAGE.md §3.3): what view A must show (arrows and loops with their composites, states per panel, one notch per quantifier, colours) stated by a plain recursion over the formula, independently of the drawing code, and `Fig.checkA` / `Fig.checkCanvasA`, which compare a drawing with it. Tested on the examples and on 2000 generated figures.
+* Fixed, found by the checker: a self-loop with a composite relation (`s R;<= s`) drew only its first stretch; it now draws every stretch, with beads and labels, as an arrow does. A state bound by `ex` is red (or crossed) in every panel of the binder's scope, not only its own. A state with two position hints was drawn twice; the last hint counts, and the lint warns.
+* Known, not yet changed: a quantifier whose state no arrow enters (`all t. t R s`) has no notch in view A (property A3, a decision pending).
+
+## 0.12.0 · 04f199b · 2026-11-13 08:59 UTC
 
 * The drawing server's protocol has a JSON schema, `docs/protocol/serve.schema.json`: every op's request and reply, every edit kind, and errors. CI starts `framediag --serve`, sends a corpus covering all of them, and checks each request and reply against the schema (`tools/protocol/test_protocol.py`). The server's summary in `Serve.lean` gains the `undash` edit and the unit of an edge's `at` (hundredths).
 * VS Code: an integration test in a real VS Code, run in CI (`npm run test:vscode`): a Lean file and a figure file of another Lake project than the open folder are opened in the figure editor, and the test waits until each page has received a drawing from `framediag` with no error shown. For it, the extension records every error it shows and, per panel, its file, its `framediag` and the drawings that reached the page (`activate` returns them).

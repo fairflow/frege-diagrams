@@ -375,8 +375,9 @@ fig lang_text [views B] = all u. if s <= u°, "u is a dead end" {not ex x. u R x
 
 Hints shape the pictures; they never change the formula. (`judgement` says
 what is done with the formula: claimed, defined, or only shown.) Each may be
-given at most once per object; for `size`, `views`, `namedy` and `judgement`
-the last one counts.
+given at most once per object; for `size`, `views`, `namedy`, `judgement`
+and the position of a state the last one counts (a state placed twice is
+reported).
 
 | hint | effect |
 |---|---|
