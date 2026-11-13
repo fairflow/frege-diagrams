@@ -5,6 +5,12 @@ was merged as, the date and time (UTC) of that commit, and the tag if one
 is applied. `framediag --version` prints the version; the editor shows it
 with the commit it runs from.
 
+## 0.15.0 (unreleased)
+
+* The reference for view B (`FregeDiagrams/SpecB.lean`, docs/design/NEXT-STAGE.md §3.3.1): a reader that rebuilds the formula from the picture's geometry alone, and `Fig.checkB`, which checks that it gets the figure's formula (B5) and, with links, the figure's binding with names shown and hidden (B3, B3′). `lake exe speccheck` runs both views' references on the examples and on 2000 generated figures, in CI. The renderer of view B returns its scene, the shapes the SVG is written from; the SVG is unchanged.
+* Fixed, found by the reader: in view B a loop with a composite relation (`s R;<= s`) was drawn solid, as `R`; it now draws every stretch. A state with a loop took its fill from its first occurrence only (`s R s°` lost the `°`); it is hollow if any occurrence is `°`. In both views an arrow ending in `⊑` or `R°` now ends in a hollow state, so that `s ⊑ t` no longer draws like `s ≤ t`. No picture of the documentation changes.
+* Known, not yet changed: two loops on one state are drawn on top of each other; a large negative `namedy` moves a bound name out of its notch; a directed labelled stretch inside a composite draws like an undirected one.
+
 ## 0.14.0 (unreleased)
 
 * View A shows every quantifier: one whose state no arrow enters (`all t. t R s`) is drawn on the state itself, a notch on a short stroke under it, instead of not at all. A shadowed or vacuous quantifier binds nothing and gets no mark. The reference's property A3 says so, and holds on the 2000 generated figures.

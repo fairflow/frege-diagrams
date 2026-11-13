@@ -15,6 +15,8 @@ jobs:
           use-mathlib-cache: false
       - name: Tests (the #guard checks of the library)
         run: lake build FregeDiagrams.Test
+      - name: The references of both views on the examples and 2000 generated figures
+        run: lake exe speccheck
       - name: Layout checks and the example figures
         run: |
           lake exe framediag _build/check --check
