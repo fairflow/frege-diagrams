@@ -83,8 +83,11 @@ function run(cmd, args, cwd) {
  * @param {vscode.Uri} uri
  */
 function locate(uri) {
+  // the Lake project the file belongs to: the nearest folder above it with a
+  // lakefile, whatever folder the window has open (a file may be opened from
+  // another project); else the workspace folder; else the file's own folder
   const folder = vscode.workspace.getWorkspaceFolder(uri);
-  const root = folder ? folder.uri.fsPath : path.dirname(uri.fsPath);
+  const root = lakeRoot(path.dirname(uri.fsPath)) || (folder ? folder.uri.fsPath : path.dirname(uri.fsPath));
   const cfg = vscode.workspace.getConfiguration('fregeDiagrams');
   let pkg = path.join(root, '.lake', 'packages', 'frege-diagrams');
   if (!fs.existsSync(pkg)) {
@@ -95,6 +98,14 @@ function locate(uri) {
   const elanLake = path.join(os.homedir(), '.elan', 'bin', 'lake');
   const lake = cfg.get('lakePath') || (fs.existsSync(elanLake) ? elanLake : 'lake');
   return { root, pkg, exe: String(exe), lake: String(lake) };
+}
+
+/** The nearest folder at or above `dir` holding a lakefile, or null. */
+function lakeRoot(/** @type {string} */ dir) {
+  for (let d = dir; ; d = path.dirname(d)) {
+    if (fs.existsSync(path.join(d, 'lakefile.toml')) || fs.existsSync(path.join(d, 'lakefile.lean'))) return d;
+    if (path.dirname(d) === d) return null;
+  }
 }
 
 /** Build framediag with Lake in the workspace when it is missing. */
@@ -456,4 +467,4 @@ function activate(ctx) {
 
 function deactivate() {}
 
-module.exports = { activate, deactivate, Server, handle, uses, locate, digest, rawStrings, makeSource, diagnoseText };
+module.exports = { activate, deactivate, Server, handle, uses, locate, lakeRoot, digest, rawStrings, makeSource, diagnoseText };

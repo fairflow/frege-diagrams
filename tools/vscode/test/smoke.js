@@ -34,6 +34,15 @@ Module._load = function (req, ...rest) { return req === 'vscode' ? vscodeStub : 
 const ext = require('../extension.js');
 
 (async () => {
+  // a Lean file of another Lake project than the open folder: that project's
+  // framediag (the nearest lakefile above the file), not the open folder's
+  const other = fs.mkdtempSync(path.join(os.tmpdir(), 'fgd-proj-'));
+  fs.writeFileSync(path.join(other, 'lakefile.toml'), 'name = "other"\n');
+  fs.mkdirSync(path.join(other, 'Diagrams'));
+  const ol = ext.locate({ fsPath: path.join(other, 'Diagrams', 'Figs.lean') });
+  assert.strictEqual(ol.root, other, 'the root is the Lake project of the file');
+  assert.strictEqual(ol.pkg, path.join(other, '.lake', 'packages', 'frege-diagrams'));
+
   const loc = ext.locate(doc.uri);
   assert.strictEqual(loc.pkg, repo, 'frege-diagrams itself is its own package');
   assert.ok(fs.existsSync(loc.exe), 'framediag is built (lake build framediag at the repository root)');
