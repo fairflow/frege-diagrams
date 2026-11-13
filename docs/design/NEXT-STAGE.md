@@ -201,18 +201,25 @@ The hosts have contracts too. The failure in section 0 was a host failure.
                  the fix; nothing fails silently
 ```
 
-H1 was violated until 0.11.1 and is now TESTED by the smoke test. H2 and H4
-are TESTED by the smoke test. H3 is OPEN: there are no schemas yet. H5 is a
-review rule.
+H1 was violated until 0.11.1. H2 and H4 are TESTED by the smoke test. H3 is
+TESTED since 0.12.0: `docs/protocol/serve.schema.json` describes every request
+and reply, and CI checks the server's replies to a corpus covering every op,
+every edit kind and the error cases against it (writing the schema found the
+`undash` edit and the unit of `at`, hundredths, missing from the server's own
+summary). H5 is a review rule, and since 0.12.0 every
+error the extension shows is also recorded where tests can see it.
 
-The missing test level is **VS Code itself**. The smoke test replaces the
-`vscode` module with a stand-in, so it cannot see what the user sees. A test
-running a real VS Code (`@vscode/test-electron`, headless in CI) would:
-- open a Lean file from a project other than the open folder;
-- press the lens;
-- check that a panel shows a drawing.
+The missing test level was **VS Code itself**: the smoke test replaces the
+`vscode` module with a stand-in, so it cannot see what the user sees. Since
+0.12.0 a test runs a real VS Code (`@vscode/test-electron`, headless in CI,
+`tools/vscode/test/integration/`). It:
+- opens a plain folder, and a Lean file and a figure file from another Lake
+  project;
+- presses the lens, and opens the figure file in the figure editor;
+- waits until each page has received a drawing from `framediag`, and checks
+  that no error was shown.
 
-That would have caught the bug.
+So H1 is TESTED end to end; this test would have caught the bug of 0.11.0.
 
 ### 3.5 Meaning (L5)
 
