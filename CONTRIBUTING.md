@@ -13,6 +13,7 @@ Where each thing is documented:
 |---|---|
 | the figure language (lexer, parser, printer) | `docs/tools/grammar.py`, then regenerate the EBNF block of `docs/LANGUAGE.md` (`--ebnf`) and the diagrams (`--svg docs/diagrams`) and the VS Code grammars (`--textmate tools/vscode/syntaxes`); the prose and examples of `docs/LANGUAGE.md` |
 | what the pictures show, or how they are drawn | `docs/NOTATION.md` (and `docs/MANUAL.md` for options); regenerate the pictures with `sh docs/tools/images.sh` (CI checks they are current) |
+| what a view must show (its reference) | `FregeDiagrams/Spec.lean` (view A) or `FregeDiagrams/SpecB.lean` (view B), its tests, and `docs/design/NEXT-STAGE.md` §3.3; run `lake exe speccheck` |
 | a `framediag` option, an output file, a check | `docs/MANUAL.md` |
 | the editor (`tools/framedit/`) | `docs/MANUAL.md`, section 4; the help texts in the page itself |
 | a request or reply of `framediag --serve` | `docs/protocol/serve.schema.json` (CI checks the server against it with `tools/protocol/test_protocol.py`; add the new case to its corpus) and the header of `FregeDiagrams/Serve.lean` |
@@ -30,6 +31,7 @@ pictures in `docs/images/` must be regenerated. The rest is checked in review.
 ```bash
 lake build
 lake build FregeDiagrams.Test
+lake exe speccheck
 lake exe framediag _build/check --check
 python3 docs/tools/grammar.py --check docs/LANGUAGE.md
 python3 -I tools/framedit/test_framedit.py

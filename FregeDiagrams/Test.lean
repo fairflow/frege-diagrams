@@ -17,6 +17,7 @@ import FregeDiagrams.Edit
 import FregeDiagrams.Lint
 import FregeDiagrams.Claims
 import FregeDiagrams.Spec
+import FregeDiagrams.SpecB
 
 namespace FregeDiagrams.Test
 
@@ -600,3 +601,36 @@ def figA (s : String) : Fig := ((parseFile s).toOption.bind (·.head?)).getD def
   ({ f with hints := { f.hints with views := .both } } : Fig).checkA.isEmpty
 
 end FregeDiagrams.Test.SpecA
+
+/-! ## The reader of view B (`FregeDiagrams/SpecB.lean`)
+
+The examples and 2000 generated figures are read by `lake exe speccheck`
+(compiled: each figure is drawn three times, twice with links).  Here, the
+defects the reader found, each on one small figure. -/
+
+namespace FregeDiagrams.Test.SpecB
+open FregeDiagrams.SpecB
+
+def figB (s : String) : Fig := ((parseFile s).toOption.bind (·.head?)).getD default
+
+-- the three identifications: currying, free states, meanings of texts
+#guard nf [] [] (figB "fig c = if A then if B then C").shown == nf [] [] (figB "fig c = if A, B then C").shown
+#guard nf [] [] (figB "fig c = s R t").shown == nf [] [] (figB "fig c = s° R t°").shown
+#guard nf [] [] (figB "fig c = \"D\" {s R t}").shown == nf [] [] (figB "fig c = \"D\"").shown
+-- and nothing more: a bound state keeps its fill, `&` is not `|`
+#guard nf [] [] (figB "fig c = all t. s R t").shown != nf [] [] (figB "fig c = all t. s R t°").shown
+
+-- found on generated figures, fixed in 0.15.0:
+-- a composite loop keeps every stretch in view B (was: drawn solid, as `R`)
+#guard (figB "fig l = s R;<= s").checkB == []
+-- a state with a loop is one circle, hollow if any of its occurrences is `°`
+-- (was: the first occurrence only)
+#guard (figB "fig l = all s. s R s°").checkB == []
+-- an arrow ending in `⊑` or `R°` ends in a hollow state, in both views (was:
+-- drawn as `≤` or `R` into a filled state)
+#guard (figB "fig l = all t. s <=° t").checkB == []
+#guard ((figB "fig l = all t. s <=° t").toDiagram.find "t/1").inf
+-- open: two loops on one state are drawn on top of each other
+#guard ((figB "fig l = s R s <= s").checkB.head?.map (·.startsWith "B5 unreadable")) == some true
+
+end FregeDiagrams.Test.SpecB

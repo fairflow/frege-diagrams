@@ -8,3 +8,7 @@ globs = ["FregeDiagrams.+"]
 [[lean_exe]]
 name = "framediag"
 root = "FregeDiagrams.Main"
+
+[[lean_exe]]
+name = "speccheck"
+root = "FregeDiagrams.SpecCheck"

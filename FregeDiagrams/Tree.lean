@@ -345,9 +345,9 @@ def drawLeaf (s : String) (steps : List (Composite × String)) (x y : Float) (co
         let p := pos.back!
         let pts := bezier ⟨p - 4.0, y - NODE_R - 2.0⟩ ⟨p - 18.0, y - 32.0⟩ ⟨p, y - 30.0⟩ 15 ++
           (bezier ⟨p, y - 30.0⟩ ⟨p + 18.0, y - 32.0⟩ ⟨p + 4.0, y - NODE_R - 2.0⟩ 15).extract 1
-        -- Python passes a composite name here, which draws solid
-        let r1 := if r.length == 1 then r.head! else .R
-        out := out ++ sh (stroke pts r1 col (dash := relDashFor o.relDash r1))
+        -- stretch by stretch, as an arrow: a composite loop keeps every
+        -- stretch (it was drawn solid, as `R`, before 0.15.0)
+        out := out ++ sh (stretches pts r col o.relDash) ++ sh (beads pts r col) ++ sh (relLabels pts r col)
         out := out ++ sh (arrowHead pts col)
         continue
       let nx := cx + relLen r
@@ -359,8 +359,15 @@ def drawLeaf (s : String) (steps : List (Composite × String)) (x y : Float) (co
       if r.getLast!.headed then out := out ++ sh (arrowHead pts col)
       cx := nx
     pos := pos.push cx
-    -- a free state is the implicit outer one, an arbitrary infallible state
-    let hollow := st.endsWith "°" || !(env.any (·.name == bare st))
+    -- a free state is the implicit outer one, an arbitrary infallible state;
+    -- a state with loops is one circle for all its occurrences, hollow if
+    -- any of them is written `°`
+    let occs := st :: ((List.range states.size).drop (i + 1) |>.map (states[·]!) |>.takeWhile (bare · == bare st))
+    -- the arrows into this circle (the step to it, and its loops): one ending
+    -- in `⊑` or `R°` says the state is infallible, as a bead does mid-arrow
+    let into := (List.range steps.length).filter fun j => j + 1 ≥ i && j + 1 < i + occs.length
+    let infArrow := into.any fun j => endsInf steps[j]!.1
+    let hollow := occs.any (·.endsWith "°") || infArrow || !(env.any (·.name == bare st))
     out := out.push (.shape (.circle ⟨cx, y⟩ NODE_R (if hollow then "white" else col) col "1.4"))
     let lab0 := bare st
     let binder := env.find? (fun b => b.name == lab0 && !b.free)

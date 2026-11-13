@@ -179,8 +179,9 @@ Both views:
 | A1, A2, A4 | TESTED since 0.13.0: `Fig.checkA` (`FregeDiagrams/Spec.lean`) compares view A with a statement of what the formula says, written independently of the drawing code, on the examples and on 2000 generated figures. Its first run found three defects, fixed in 0.13.0: a loop drew only the first stretch of its composite (529 of the 2000), a state bound by `ex` was red only in the binder's own panel (7), and a state with two position hints was drawn twice (4) |
 | A3 | TESTED since 0.14.0, as restated above. As first stated it was REFUTED: a quantifier whose state no arrow enters (`all t. t R s`) had no notch, so view A did not show it (142 of the 2000; one example of LANGUAGE.md). Decision (Matthew, 2026-11-13): show it by a mark on the state |
 | A5 | checker written (`Fig.checkCanvasA`), TESTED on the examples; generated figures place states anywhere, so it is not run on them |
-| B1–B4 | OPEN. Parts are TESTED by `framediag --check` (notch placement, misplaced names, nesting) and by the router's own checks. The reader of §3.3.1 subsumes B1 and makes B3 and B4 precise |
-| B5 | OPEN; restated in §3.3.1 as adequacy up to three identifications found by drawing (currying, free states, meanings of texts). View A is not adequate, by design: two formulas can share a view A (NOTATION.md), and that is a documented fact, not a bug |
+| B1, B2, B4 | B1 and B2 are subsumed by B5 (the reader rebuilds the tree and the judgement from the picture) and TESTED with it; B4 logically follows from B3; geometrically it remains an aim, counted by `--check` |
+| B3, B3′ | TESTED since 0.15.0 (§3.3.1): with links, the binding read from the link trees equals the formula's, with names shown and with names hidden, on the examples and on the generated figures |
+| B5 | TESTED since 0.15.0 (§3.3.1), up to the identifications listed there, on the examples and on 2000 generated figures, with two OPEN exceptions (two loops on one state; a large `namedy`) and one untested case (a directed labelled stretch inside a composite). View A is not adequate, by design: two formulas can share a view A (NOTATION.md), and that is a documented fact, not a bug |
 | S1 | holds by construction: the code is pure Lean |
 | S2 | TESTED for the soft and classic styles in the narrow sense that layout code does not read the style |
 | S3 | TESTED for SVG output byte by byte (annotations off reproduces the earlier output) |
@@ -197,7 +198,12 @@ checkers are small, and their correctness is a statement about the
 specification, which a reader can audit. The layout algorithms are large and
 need not be proved.
 
-### 3.3.1 View B: the reader (PROPOSED 2026-11-13, for review)
+### 3.3.1 View B: the reader (agreed 2026-11-13; built in 0.15.0)
+
+Decision (Matthew, 2026-11-13): the three identifications below as the
+intended meaning of the notation, a reader that uses the geometry only, and
+B3′ as a goal, all three approved. What was built, and what it found, is at
+the end of this section ("Results").
 
 View B is the canonical picture (principle 0), so its reference is stronger
 than a list of properties: a **reader**, a function that reconstructs the
@@ -281,10 +287,64 @@ violations by `--check`, an aim and not a requirement, as now.
   certificate: `readB` itself is the checker, and each figure's picture is
   checked when drawn.
 
-**For review:**
+**For review (agreed 2026-11-13):**
 1. the three identifications, as the intended meaning of the notation;
 2. a reader that uses the geometry only;
 3. B3′ (hidden names, links shown) as a goal.
+
+**Results (0.15.0, 2026-11-13).**
+
+The reader is `readB` in `FregeDiagrams/SpecB.lean`. Its input is the scene,
+`Rendered.scene`: every shape view B draws, in the tree's coordinates, of
+which the SVG is a transcript (byte-identical to before on every figure of
+the corpus). It reads geometry and the visible style of the ink (stroke
+width, colour, dash, fill) and nothing else: no ids, block paths or drawing
+order. A stretch's relation is recognised through the figure's legend: the
+style `stroke` gives each relation under the figure's `dash` hints.
+`Fig.checkB` compares the reading with `nf f.shown` (B5, names shown, no
+links) and, after renaming every bound name to its binder (`canon`), with
+links and names shown (B3) and with links and names hidden (B3′).
+`lake exe speccheck` runs it, with `Fig.checkA`, on the examples and on 2000
+generated figures; CI runs it. Three mutations of the renderer (a filled dot
+for `|`, filled free states, hypotheses stacked in reverse) each make it
+fail on tens to hundreds of the 2000.
+
+Defects of the drawing it found, fixed in 0.15.0:
+1. a loop with a composite relation (`s R;<= s`) was drawn solid, as `R`
+   (view A had the same defect, fixed in 0.13.0); now stretch by stretch;
+2. a state with a loop is one circle for all its occurrences, and it took
+   its fill from the first only: `s R s°` lost the `°`. Now hollow if any
+   occurrence is written `°`;
+3. an arrow ending in `⊑` or `R°` was drawn as `≤` or `R` into a filled
+   state, in both views, so `s ⊑ t` and `s ≤ t` drew alike: the
+   infallibility was lost. Now the state at its end is hollow, as a bead
+   marks an intermediate state (the LaTeX already wrote `t R u°` as `R°`).
+
+What `nf` identifies besides the three agreed ones, all consequences of
+these drawings and of the definitions `⊑ = ≤°`, `R° = R` into an infallible
+state, **for review**:
+4. `s ⊑ t`, `s ⊑ t°` and `s ≤ t°` (and `R°` likewise): an arrow ending in
+   `⊑` ends in an infallible state, and at the end of an arrow, where no bead
+   is drawn, the dashed line into a hollow state is read as `≤` into `t°`;
+5. the occurrences of a state on one circle share its `°`: `s R s°` is
+   `s° R s°`;
+6. names as displayed: `s'` is `s′`.
+
+And one that belongs to a figure, not to the notation: relations the
+figure's own `dash` hints draw alike (`dash <= ""` draws `≤` like `R`) are
+read as one; `checkB` notes it and does not count it as a violation.
+
+OPEN, set aside by `speccheck` and listed by `speccheck --all`:
+- two loops on one state (`s R s <= s`) are drawn on top of each other and
+  cannot be read (28 of the 2000). A remedy would fan the loops of a state
+  out at different angles;
+- a `namedy` offset below about −7 (⊓) or −5 (∨) moves the bound name
+  across the stroke, out of its notch (199 of the 2000, whose `namedy` hints
+  run from −200 to 200). A remedy would keep the name inside, or lint it.
+
+Not generated, so not tested on the 2000; checked by hand: a directed
+labelled stretch inside a composite (`s -[L]->;R t`) draws like an
+undirected one, since only the last stretch carries the arrowhead (OPEN).
 
 ### 3.4 Hosts (L4)
 

@@ -52,7 +52,7 @@ state:
 
 | drawn | meaning | here |
 |---|---|---|
-| hollow | infallible: written `x°` somewhere, or the free state | `s`, `u` |
+| hollow | infallible: written `x°` somewhere, at the end of an arrow ending in `⊑` or `R°`, or the free state | `s`, `u` |
 | filled | not said to be infallible | `t` |
 | red | asserted to exist (an `ex` in a positive place) | `u` |
 | crossed, no name | "there is no such state" (an `ex` under an odd number of `not`s) | `v` |
@@ -68,7 +68,9 @@ These are the defaults: a file or a figure may dash a relation otherwise
 A **composite** relation such as `s (⊑;R;≤) y` is one arrow whose stretches
 change style; a hollow **bead** after a `⊑` or `R°` stretch marks the
 intermediate state as infallible. In the first picture above, the dashed,
-solid and dashed stretches from `s` to `y` are `⊑`, `R` and `≤`.
+solid and dashed stretches from `s` to `y` are `⊑`, `R` and `≤`. An arrow
+whose last stretch is `⊑` or `R°` ends in a hollow state, for the same
+reason: `s ⊑ t` is drawn as `s ≤ t°`, which it means.
 
 ### Notches: the quantifiers
 
@@ -215,6 +217,22 @@ routes the links around it. Links can also be laid out by hand in the
 editor; they are then pinned in the figure (`route x …`), and the router
 routes the other binders around them. The free state has no links. With `--hide-bound` the names
 are left out and the links alone carry the binding.
+
+### Reading view B back
+
+View B determines the formula. `FregeDiagrams/SpecB.lean` reads a formula
+back from the picture alone, the way Frege's strokes are read, and the tests
+check that it gets the figure's formula on the examples and on 2000
+generated figures (docs/design/NEXT-STAGE.md §3.3.1). The picture does not
+distinguish, by design:
+- `if A then if B then C` from `if A, B then C` (the comma is currying);
+- a free state `s` from `s°` (a free state is infallible);
+- a text with a meaning from the text alone (only the text is shown);
+- `s ⊑ t` from `s ≤ t°`, and `s R s°` from `s° R s°`.
+
+Two cases are not yet readable: two loops on one state are drawn on top of
+each other, and a large negative `namedy` moves a bound name out of its
+notch.
 
 ## Where this notation departs from Frege's
 
