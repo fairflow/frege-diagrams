@@ -588,13 +588,15 @@ def figA (s : String) : Fig := ((parseFile s).toOption.bind (·.head?)).getD def
 #guard (((figA "fig a [s@(10,10), s@(50,50)] = s R t").toDiagram).nodes.toList.filter (·.id == "s/1")).map (·.x) == [50]
 #guard ((figA "fig a [s@(10,10), s@(50,50)] = s R t").lint.map (·.sev == .warning)) == #[true]
 
--- OPEN (a decision is pending): a quantifier whose state no arrow enters has
--- no notch, so view A does not show it
-#guard (figA "fig q = all t. t R s").checkA == ["A3 all t (panel 1) has no notch: no arrow enters a state it binds"]
+-- a quantifier whose state no arrow enters is shown by a mark on the state
+-- (0.14.0; was: not shown at all)
+#guard (figA "fig q = all t. t R s").checkA == []
+#guard (((figA "fig q = all t. t R s").toDiagram).items.toList.filterMap fun | .qmark a q _ _ => some (a, q == .all) | _ => none) == [("t/1", true)]
+-- not for a free state of the same name outside the quantifier's scope
+#guard (((figA "fig q = (s R x & all x. y R y)").toDiagram).items.toList.filter fun | .qmark .. => true | _ => false).isEmpty
 
--- on 2000 generated figures (both views forced), A1, A2 and A4 hold; the only
--- violations are those of A3 above
+-- on 2000 generated figures (both views forced), A1–A4 hold
 #guard (Test.randomFigs 2000 2026).all fun (f : Fig) =>
-  ({ f with hints := { f.hints with views := .both } } : Fig).checkA.all (·.startsWith "A3 ")
+  ({ f with hints := { f.hints with views := .both } } : Fig).checkA.isEmpty
 
 end FregeDiagrams.Test.SpecA

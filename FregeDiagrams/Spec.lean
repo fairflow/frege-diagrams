@@ -13,8 +13,9 @@ property, and returns the violations as messages:
                 to itself, each with its composite relation (steps with `!=`
                 are not drawn)
 * A2 states   — the states are the names of the chains, per panel, each once
-* A3 notches  — each quantifier has exactly one notch, on an arrow in its
-                scope into the state it binds
+* A3 quantifiers — each quantifier binding something is shown exactly once:
+                by a notch on an arrow into a state it binds if there is one,
+                else by a mark on the state
 * A4 polarity — an arrow is red exactly when its step is claimed; a state
                 bound by `ex` is red (new) in a claimed place, crossed under
                 an odd number of `not`
@@ -148,16 +149,20 @@ def Fig.checkA (d : Fig) (o : DrawOpts := {}) : List String := Id.run do
   out := out ++ multisetDiff "A4 arrow"
     (arrows.map fun s => s!"{id s.panel s.src} → {id s.panel s.tgt} {if s.claim then "red" else "black"}")
     (drawnEdges.map fun e => s!"{e.a} → {e.b} {if e.concl then "red" else "black"}")
-  -- A3 notches: each quantifier one notch, on an arrow into a state it binds
+  -- A3 quantifiers: each quantifier with a bound occurrence is shown exactly
+  -- once: by a notch on an arrow into a state it binds if there is one, else by
+  -- a mark on the state
   let entering (i : Nat) := arrows.filter (·.tgtBinder == some i)
-  let qs := c.quantifiers.toList.zip (List.range c.quantifiers.size)
-  for (q, i) in qs do
-    if (entering i).isEmpty && c.occs.any (·.2.2 == some i) then
-      out := out ++ [s!"A3 {if q.ex then "ex" else "all"} {q.name} (panel {q.panel}) has no notch: no arrow enters a state it binds"]
+  let qs := (c.quantifiers.toList.zip (List.range c.quantifiers.size)).filter fun (_, i) =>
+    c.occs.any (·.2.2 == some i)
   let notched := drawnEdges.filter (·.q.isSome)
+  let marks := g.items.toList.filterMap fun | .qmark a _ _ _ => some ((a.splitOn "/").headD a) | _ => none
   out := out ++ multisetDiff "A3 notch into"
-    ((qs.filter fun (_, i) => !(entering i).isEmpty).map fun (q, _) => q.name)
+    ((qs.filter fun (_, i) => !(entering i).isEmpty).map (·.1.name))
     (notched.map fun e => ((e.b.splitOn "/").headD e.b))
+  out := out ++ multisetDiff "A3 mark on"
+    ((qs.filter fun (_, i) => (entering i).isEmpty).map (·.1.name))
+    marks
   -- A4 marks: every state bound by `ex` is red in a claimed place, crossed under `not`
   for (p, x, b) in c.occs do
     if let some i := b then

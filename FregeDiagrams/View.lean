@@ -68,6 +68,8 @@ structure FlatEdge where
 inductive FlatItem where
   | edge (e : FlatEdge)
   | loop (panel : Nat) (name : String) (rel : Composite) (concl : Bool)
+  /-- a quantifier no arrow could carry: shown on its state (`Item.qmark`) -/
+  | mark (panel : Nat) (name : String) (q : Quant) (concl : Bool)
 
 structure Flat where
   nodes : Array NodeInfo := #[]
@@ -77,11 +79,19 @@ structure Flat where
   pending : List (Nat × String × Quant × Quant) := []
   marks : Array (Nat × String × Bool) := #[]  -- (panel, name, crossed?) of `ex` binders
   fresh : Nat := 0
+  /-- the quantifiers in scope, innermost first: (id, name) -/
+  scopes : List (Nat × String) := []
+  /-- for each quantifier with a bound occurrence, the first panel it occurs in -/
+  seen : List (Nat × Nat) := []
   nextPanel : Nat := 2
 
 namespace Flat
 
 def note (f : Flat) (panel : Nat) (st : St) (path : String := "") : Flat :=
+  -- the occurrence is bound by the innermost quantifier of its name in scope
+  let f := match f.scopes.find? (·.2 == st.name) with
+    | some (id, _) => if f.seen.any (·.1 == id) then f else { f with seen := f.seen ++ [(id, panel)] }
+    | none => f
   match f.nodes.findIdx? (fun n => n.panel == panel && n.name == st.name) with
   | some i => { f with nodes := f.nodes.modify i fun n =>
       { n with inf := n.inf || st.inf, paths := if n.paths.contains path then n.paths else n.paths.push path } }
@@ -140,13 +150,22 @@ where
   binder (x : String) (q prenex : Quant) (isEx : Bool) (b : Form) : StateM Flat Unit := do
     let id := (← get).fresh
     let k0 := (← get).nextPanel
-    modify fun f => { f with fresh := id + 1, pending := (id, x, q, prenex) :: f.pending }
+    modify fun f => { f with fresh := id + 1, pending := (id, x, q, prenex) :: f.pending,
+                             scopes := (id, x) :: f.scopes }
     flatten b panel concl neg (blockPath path 0)
+    modify fun f => { f with scopes := f.scopes.drop 1 }
     -- an `ex` binder marks its state in its own panel and in every panel opened
     -- inside its scope (the further parts of a disjunction in its body)
     let k1 := (← get).nextPanel
+    let panels := panel :: (List.range (k1 - k0)).map (k0 + ·)
+    -- no arrow into x took the notch: show the quantifier on the state itself,
+    -- in the first panel of its scope where x occurs
+    let st ← get
+    if st.pending.any (·.1 == id) then
+      if let some (_, p) := st.seen.find? (·.1 == id) then
+        modify fun f => { f with items := f.items.push (.mark p x q concl) }
     modify fun f => { f with pending := f.pending.filter (·.1 != id),
-                             marks := if isEx then f.marks ++ ((panel :: (List.range (k1 - k0)).map (k0 + ·)).map (·, x, neg)).toArray
+                             marks := if isEx then f.marks ++ (panels.map (·, x, neg)).toArray
                                       else f.marks }
 
 /-- The block of a formula at a path (`blockPath`): `b` is the formula itself. -/
@@ -252,6 +271,8 @@ def Fig.toDiagram (d : Fig) (o : DrawOpts := {}) : Diagram := Id.run do
       g := g.edge { a := nodeId e.panel e.src, b := nodeId e.panel e.tgt, rel := e.rel,
                     concl := e.concl, q := e.q, qside, qpos, bend,
                     qvar := if o.hideBound then some "" else none, attrs }
+    | .mark p x q concl =>
+      g := g.qmark (nodeId p x) q (if o.hideBound then "" else dispName x) concl
     | .loop p a rel concl =>
       let angle := ((h.loops.find? fun l => l.key.panel == p && l.key.name == a).map
         (Float.ofInt ·.angle)).getD (-90.0)

@@ -42,6 +42,13 @@ and section 12 lists the decisions for Matthew.
 
 ## 1. Principles
 
+0. **View B is canonical** (Matthew, 2026-11-13). The Frege view determines
+   the formula and is the one picture verified by the round trip; every
+   aspect of it is to be editable, each edit an edit of the FGD text. View A
+   is compact and somewhat expressive, and deliberately not complete: it is
+   not to be made adequate (B5 has no counterpart for it). The language is
+   named **FGD**, and its files use the extension `.fgd` in lower case.
+
 1. **One source of truth.** A figure exists as text in the figure language,
    in a `.fgd` file. Pictures, LaTeX, Lean terms and editor state are
    computed from it. Direct manipulation in an editor is an edit of that
@@ -138,9 +145,10 @@ View A (the frame picture):
 (A1) arrows    the arrows of the scene are in bijection with steps f (per panel);
                each arrow carries the step's composite relation, stretch by stretch
 (A2) states    the states of the scene are the names of f (per panel), each once
-(A3) notches   each binder x of f has exactly one notch, on an arrow of its scope into
-               a state it binds, of its quantifier's shape, opening to the side
-               its hint says
+(A3) quantifiers  each quantifier binding something is shown exactly once: by a notch
+               on an arrow of its scope into a state it binds, of its quantifier's
+               shape, opening to the side its hint says; if no such arrow exists,
+               by a mark (a notch on a short stroke) under the state
 (A4) polarity  colour of an arrow or state = polarity of its step or binder
 (A5) canvas    every state, arrow and name lies inside the canvas
 ```
@@ -169,7 +177,7 @@ Both views:
 | property | status |
 |---|---|
 | A1, A2, A4 | TESTED since 0.13.0: `Fig.checkA` (`FregeDiagrams/Spec.lean`) compares view A with a statement of what the formula says, written independently of the drawing code, on the examples and on 2000 generated figures. Its first run found three defects, fixed in 0.13.0: a loop drew only the first stretch of its composite (529 of the 2000), a state bound by `ex` was red only in the binder's own panel (7), and a state with two position hints was drawn twice (4) |
-| A3 | REFUTED as stated: a quantifier whose state no arrow enters (`all t. t R s`) has no notch, so view A does not show it (142 of the 2000; one example of LANGUAGE.md). A decision is pending; the checker reports it |
+| A3 | TESTED since 0.14.0, as restated above. As first stated it was REFUTED: a quantifier whose state no arrow enters (`all t. t R s`) had no notch, so view A did not show it (142 of the 2000; one example of LANGUAGE.md). Decision (Matthew, 2026-11-13): show it by a mark on the state |
 | A5 | checker written (`Fig.checkCanvasA`), TESTED on the examples; generated figures place states anywhere, so it is not run on them |
 | B1–B4 | OPEN. Parts are TESTED by `framediag --check` (notch placement, misplaced names, nesting) and by the router's own checks |
 | B5 | OPEN. View A is not adequate: two formulas can share a view A (NOTATION.md), and that is a documented fact, not a bug |
