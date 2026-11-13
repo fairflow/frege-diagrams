@@ -5,6 +5,10 @@ One JSON object per line on standard input, one reply per line on standard
 output.  The server keeps no state: every request carries the whole source
 text, so the editor's undo history is a list of texts and is exact.
 
+The authoritative description of every request and reply is the JSON schema
+`docs/protocol/serve.schema.json`; `tools/protocol/test_protocol.py` checks
+the server's replies against it in CI.  The summary below follows it.
+
 Requests (`op`):
 
 * `parse` `{text}` → `{ok, figs: [{name, views, hasSize, w, h, namedy, judgement}]}` or `{ok: false, error}`
@@ -25,7 +29,8 @@ Requests (`op`):
   the layout checks of `--check` for view B (links, names shown and hidden).
 
 `edit` objects (`kind`): `node {name, panel, x, y, label: [dx,dy] | null}`,
-`unnode {name, panel}`, `edge {src, tgt, occ, panel, bend, side: "+"|"-"|null, at}`,
+`unnode {name, panel}`, `edge {src, tgt, occ, panel, bend, side: "+"|"-"|null, at}`
+(`at` in hundredths of the arrow: 35 for 0.35), `undash {i}` (remove the i-th `dash` hint),
 `size {w, h}`, `resize {w, h, from: [w₀, h₀] | null}` (with `from`, the hinted
 states and captions are stretched from `w₀ × h₀`), `namedy {v}` (the figure's) or `namedy {name, v}` (one binder's), `judgement {v: "claim"|"definition"|"content"}`, `stroke {path, v}`, `gap {path, v}`
 (`v` null or 0 removes), `loop {name, panel, angle}`, `notch {name, dir: "up"|"down"}`,

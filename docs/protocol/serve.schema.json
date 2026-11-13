@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/fairflow/frege-diagrams/docs/protocol/serve.schema.json",
+  "title": "framediag --serve: requests and replies",
+  "description": "One JSON object per line each way. Contract H3 of docs/design/NEXT-STAGE.md: every reply matches the reply schema of its op, or is an error. tools/protocol/test_protocol.py checks real replies against this file. An `id` in a request is echoed in its reply.",
+  "$defs": {
+    "id": { "description": "any JSON value, echoed" },
+    "text": { "type": "string", "description": "the whole figure source" },
+    "fig": { "type": "string", "description": "a figure's name" },
+    "opts": {
+      "type": "object",
+      "properties": {
+        "links": { "type": "boolean" },
+        "hideBound": { "type": "boolean" },
+        "nameDy": { "type": "number" },
+        "spacing": { "type": "number" },
+        "style": { "enum": ["soft", "classic"] }
+      },
+      "additionalProperties": false
+    },
+    "int": { "type": "integer" },
+    "optInt": { "type": ["integer", "null"] },
+    "pair": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 },
+    "edit": {
+      "type": "object",
+      "required": ["kind"],
+      "oneOf": [
+        { "properties": { "kind": { "const": "node" }, "name": { "type": "string" }, "panel": { "type": "integer" },
+                          "x": { "type": "integer" }, "y": { "type": "integer" },
+                          "label": { "oneOf": [{ "$ref": "#/$defs/pair" }, { "type": "null" }] } },
+          "required": ["kind", "name", "x", "y"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "unnode" }, "name": { "type": "string" }, "panel": { "type": "integer" } },
+          "required": ["kind", "name"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "edge" }, "src": { "type": "string" }, "tgt": { "type": "string" },
+                          "occ": { "type": "integer" }, "panel": { "type": "integer" },
+                          "bend": { "$ref": "#/$defs/optInt" }, "side": { "enum": ["+", "-", null] },
+                          "at": { "type": ["integer", "null"], "minimum": 0, "maximum": 100, "description": "where the notch sits, in hundredths of the arrow (the figure language writes 0.35, the protocol 35)" } },
+          "required": ["kind", "src", "tgt"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "size" }, "w": { "type": "integer", "minimum": 0 }, "h": { "type": "integer", "minimum": 0 } },
+          "required": ["kind", "w", "h"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "resize" }, "w": { "type": "integer", "minimum": 0 }, "h": { "type": "integer", "minimum": 0 },
+                          "from": { "oneOf": [{ "$ref": "#/$defs/pair" }, { "type": "null" }] } },
+          "required": ["kind", "w", "h"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "namedy" }, "name": { "type": "string" }, "v": { "$ref": "#/$defs/optInt" } },
+          "required": ["kind"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "judgement" }, "v": { "enum": ["claim", "definition", "content"] } },
+          "required": ["kind", "v"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "stroke" }, "path": { "type": "string" }, "v": { "$ref": "#/$defs/optInt" } },
+          "required": ["kind", "path"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "gap" }, "path": { "type": "string" }, "v": { "$ref": "#/$defs/optInt" } },
+          "required": ["kind", "path"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "undash" }, "i": { "type": "integer", "minimum": 0 } },
+          "required": ["kind", "i"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "loop" }, "name": { "type": "string" }, "panel": { "type": "integer" },
+                          "angle": { "$ref": "#/$defs/optInt" } },
+          "required": ["kind", "name"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "route" }, "name": { "type": "string" },
+                          "polys": { "oneOf": [{ "type": "null" },
+                                               { "type": "array", "items": { "type": "array", "items": { "$ref": "#/$defs/pair" }, "minItems": 2 } }] } },
+          "required": ["kind", "name"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "notch" }, "name": { "type": "string" }, "dir": { "enum": ["up", "down", null] } },
+          "required": ["kind", "name"], "additionalProperties": false }
+      ]
+    },
+    "error": {
+      "type": "object",
+      "properties": { "ok": { "const": false }, "error": { "type": "string" }, "id": { "$ref": "#/$defs/id" } },
+      "required": ["ok", "error"], "additionalProperties": false
+    },
+    "names": { "type": "array", "items": { "type": "string" } }
+  },
+
+  "request": {
+    "type": "object",
+    "required": ["op", "text"],
+    "oneOf": [
+      { "properties": { "op": { "const": "parse" }, "text": { "$ref": "#/$defs/text" }, "id": { "$ref": "#/$defs/id" } },
+        "additionalProperties": false },
+      { "properties": { "op": { "const": "render" }, "text": { "$ref": "#/$defs/text" }, "fig": { "$ref": "#/$defs/fig" },
+                        "opts": { "$ref": "#/$defs/opts" }, "only": { "enum": ["a", "b"] }, "id": { "$ref": "#/$defs/id" } },
+        "required": ["fig"], "additionalProperties": false },
+      { "properties": { "op": { "const": "edit" }, "text": { "$ref": "#/$defs/text" }, "fig": { "$ref": "#/$defs/fig" },
+                        "edit": { "$ref": "#/$defs/edit" }, "id": { "$ref": "#/$defs/id" } },
+        "required": ["fig", "edit"], "additionalProperties": false },
+      { "properties": { "op": { "const": "body" }, "text": { "$ref": "#/$defs/text" }, "fig": { "$ref": "#/$defs/fig" }, "id": { "$ref": "#/$defs/id" } },
+        "required": ["fig"], "additionalProperties": false },
+      { "properties": { "op": { "const": "block" }, "text": { "$ref": "#/$defs/text" }, "fig": { "$ref": "#/$defs/fig" },
+                        "path": { "type": "string" }, "id": { "$ref": "#/$defs/id" } },
+        "required": ["fig", "path"], "additionalProperties": false },
+      { "properties": { "op": { "const": "lint" }, "text": { "$ref": "#/$defs/text" }, "fig": { "$ref": "#/$defs/fig" }, "id": { "$ref": "#/$defs/id" } },
+        "required": ["fig"], "additionalProperties": false },
+      { "properties": { "op": { "const": "check" }, "text": { "$ref": "#/$defs/text" }, "fig": { "$ref": "#/$defs/fig" },
+                        "opts": { "$ref": "#/$defs/opts" }, "id": { "$ref": "#/$defs/id" } },
+        "required": ["fig"], "additionalProperties": false }
+    ]
+  },
+
+  "replies": {
+    "parse": {
+      "type": "object",
+      "properties": { "ok": { "const": true }, "id": { "$ref": "#/$defs/id" },
+        "figs": { "type": "array", "items": {
+          "type": "object",
+          "properties": { "name": { "type": "string" }, "views": { "enum": ["both", "A", "B"] },
+                          "hasSize": { "type": "boolean" }, "w": { "type": "integer" }, "h": { "type": "integer" },
+                          "namedy": { "$ref": "#/$defs/optInt" }, "judgement": { "enum": ["claim", "definition", "content"] } },
+          "required": ["name", "views", "hasSize", "w", "h", "namedy", "judgement"], "additionalProperties": false } } },
+      "required": ["ok", "figs"], "additionalProperties": false
+    },
+    "render": {
+      "type": "object",
+      "properties": { "ok": { "const": true }, "id": { "$ref": "#/$defs/id" },
+        "a": { "type": ["string", "null"], "pattern": "^<svg" }, "b": { "type": ["string", "null"], "pattern": "^<svg" },
+        "stale": { "$ref": "#/$defs/names" }, "setAside": { "$ref": "#/$defs/names" }, "pinsApply": { "type": "boolean" } },
+      "required": ["ok", "a", "b", "stale", "setAside", "pinsApply"], "additionalProperties": false
+    },
+    "edit": {
+      "type": "object",
+      "properties": { "ok": { "const": true }, "id": { "$ref": "#/$defs/id" }, "text": { "type": "string" } },
+      "required": ["ok", "text"], "additionalProperties": false
+    },
+    "body": {
+      "type": "object",
+      "properties": { "ok": { "const": true }, "id": { "$ref": "#/$defs/id" }, "body": { "type": "string" }, "tex": { "type": "string" } },
+      "required": ["ok", "body", "tex"], "additionalProperties": false
+    },
+    "block": {
+      "type": "object",
+      "properties": { "ok": { "const": true }, "id": { "$ref": "#/$defs/id" }, "formula": { "type": "string" }, "tex": { "type": "string" } },
+      "required": ["ok", "formula", "tex"], "additionalProperties": false
+    },
+    "lint": {
+      "type": "object",
+      "properties": { "ok": { "const": true }, "id": { "$ref": "#/$defs/id" },
+        "items": { "type": "array", "items": {
+          "type": "object",
+          "properties": { "sev": { "enum": ["error", "warning"] }, "msg": { "type": "string" }, "sel": { "type": "string" },
+                          "fix": { "oneOf": [{ "$ref": "#/$defs/edit" }, { "type": "null" }] }, "fixLabel": { "type": "string" } },
+          "required": ["sev", "msg", "sel", "fix", "fixLabel"], "additionalProperties": false } } },
+      "required": ["ok", "items"], "additionalProperties": false
+    },
+    "check": {
+      "type": "object",
+      "properties": { "ok": { "const": true }, "id": { "$ref": "#/$defs/id" },
+        "problems": { "$ref": "#/$defs/names" }, "notes": { "$ref": "#/$defs/names" } },
+      "required": ["ok", "problems", "notes"], "additionalProperties": false
+    }
+  }
+}

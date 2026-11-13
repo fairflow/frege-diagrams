@@ -202,7 +202,11 @@ The hosts have contracts too. The failure in section 0 was a host failure.
 ```
 
 H1 was violated until 0.11.1. H2 and H4 are TESTED by the smoke test. H3 is
-OPEN: there are no schemas yet. H5 is a review rule, and since 0.12.0 every
+TESTED since 0.12.0: `docs/protocol/serve.schema.json` describes every request
+and reply, and CI checks the server's replies to a corpus covering every op,
+every edit kind and the error cases against it (writing the schema found the
+`undash` edit and the unit of `at`, hundredths, missing from the server's own
+summary). H5 is a review rule, and since 0.12.0 every
 error the extension shows is also recorded where tests can see it.
 
 The missing test level was **VS Code itself**: the smoke test replaces the

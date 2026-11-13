@@ -15,6 +15,7 @@ Where each thing is documented:
 | what the pictures show, or how they are drawn | `docs/NOTATION.md` (and `docs/MANUAL.md` for options); regenerate the pictures with `sh docs/tools/images.sh` (CI checks they are current) |
 | a `framediag` option, an output file, a check | `docs/MANUAL.md` |
 | the editor (`tools/framedit/`) | `docs/MANUAL.md`, section 4; the help texts in the page itself |
+| a request or reply of `framediag --serve` | `docs/protocol/serve.schema.json` (CI checks the server against it with `tools/protocol/test_protocol.py`; add the new case to its corpus) and the header of `FregeDiagrams/Serve.lean` |
 | the VS Code extension (`tools/vscode/`) | `docs/MANUAL.md`, section 4.1; `tools/vscode/README.md`; `docs/design/VSCODE.md` |
 | a design decision, or a plan that changed | `docs/design/` (say what changed and when, rather than deleting the old reasoning) |
 | anything a user would notice | `CHANGELOG.md`, in the section of the next version |

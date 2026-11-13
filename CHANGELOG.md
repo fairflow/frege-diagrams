@@ -7,6 +7,7 @@ with the commit it runs from.
 
 ## 0.12.0 (unreleased)
 
+* The drawing server's protocol has a JSON schema, `docs/protocol/serve.schema.json`: every op's request and reply, every edit kind, and errors. CI starts `framediag --serve`, sends a corpus covering all of them, and checks each request and reply against the schema (`tools/protocol/test_protocol.py`). The server's summary in `Serve.lean` gains the `undash` edit and the unit of an edge's `at` (hundredths).
 * VS Code: an integration test in a real VS Code, run in CI (`npm run test:vscode`): a Lean file and a figure file of another Lake project than the open folder are opened in the figure editor, and the test waits until each page has received a drawing from `framediag` with no error shown. For it, the extension records every error it shows and, per panel, its file, its `framediag` and the drawings that reached the page (`activate` returns them).
 
 ## 0.11.1 · 15a5007 · 2026-11-13 08:34 UTC

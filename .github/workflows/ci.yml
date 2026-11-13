@@ -31,6 +31,10 @@ jobs:
           cd tools/vscode
           npm install --no-save --no-package-lock
           xvfb-run -a npm run -s test:vscode
+      - name: The server's requests and replies match docs/protocol/serve.schema.json
+        run: |
+          pip install jsonschema==4.23.0
+          python3 tools/protocol/test_protocol.py
       - name: The VS Code grammars are up to date
         run: |
           python3 docs/tools/grammar.py --textmate tools/vscode/syntaxes
