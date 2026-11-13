@@ -179,8 +179,8 @@ Both views:
 | A1, A2, A4 | TESTED since 0.13.0: `Fig.checkA` (`FregeDiagrams/Spec.lean`) compares view A with a statement of what the formula says, written independently of the drawing code, on the examples and on 2000 generated figures. Its first run found three defects, fixed in 0.13.0: a loop drew only the first stretch of its composite (529 of the 2000), a state bound by `ex` was red only in the binder's own panel (7), and a state with two position hints was drawn twice (4) |
 | A3 | TESTED since 0.14.0, as restated above. As first stated it was REFUTED: a quantifier whose state no arrow enters (`all t. t R s`) had no notch, so view A did not show it (142 of the 2000; one example of LANGUAGE.md). Decision (Matthew, 2026-11-13): show it by a mark on the state |
 | A5 | checker written (`Fig.checkCanvasA`), TESTED on the examples; generated figures place states anywhere, so it is not run on them |
-| B1–B4 | OPEN. Parts are TESTED by `framediag --check` (notch placement, misplaced names, nesting) and by the router's own checks |
-| B5 | OPEN. View A is not adequate: two formulas can share a view A (NOTATION.md), and that is a documented fact, not a bug |
+| B1–B4 | OPEN. Parts are TESTED by `framediag --check` (notch placement, misplaced names, nesting) and by the router's own checks. The reader of §3.3.1 subsumes B1 and makes B3 and B4 precise |
+| B5 | OPEN; restated in §3.3.1 as adequacy up to three identifications found by drawing (currying, free states, meanings of texts). View A is not adequate, by design: two formulas can share a view A (NOTATION.md), and that is a documented fact, not a bug |
 | S1 | holds by construction: the code is pure Lean |
 | S2 | TESTED for the soft and classic styles in the narrow sense that layout code does not read the style |
 | S3 | TESTED for SVG output byte by byte (annotations off reproduces the earlier output) |
@@ -196,6 +196,95 @@ This is the certificate pattern: an untrusted layout, a trusted checker. The
 checkers are small, and their correctness is a statement about the
 specification, which a reader can audit. The layout algorithms are large and
 need not be proved.
+
+### 3.3.1 View B: the reader (PROPOSED 2026-11-13, for review)
+
+View B is the canonical picture (principle 0), so its reference is stronger
+than a list of properties: a **reader**, a function that reconstructs the
+formula from the picture's geometry alone, and a theorem that it does.
+
+**The scene of view B** (L2). The renderer gives, beside the SVG, the
+elements of section 4 with their geometry and nothing else:
+- the judgement bars;
+- horizontal strokes (content strokes) and vertical strokes (condition strokes,
+  negation ticks), as segments;
+- notches: position, shape (⊓ or ∨), side, and the name in them;
+- fork junctions: filled or hollow, with the closing arc of a disjunction;
+- leaves: a chain's states (filled or hollow), the relation stretches by their
+  style, the names; or a text;
+- with links: each binder's link tree, its junction dots, and its ports (the
+  points where it touches a notch or a state).
+
+The block paths and other ids the renderer knows are **not** part of the
+scene: the reader must not use them, or it would be reading the code's
+intentions rather than the picture.
+
+**The reader** `readB : SceneB → Form` follows Frege's reading. It starts at
+the left end of the content stroke, next to the judgement bars, and walks
+right:
+- a notch on the stroke is a quantifier over the rest of the stroke;
+- a tick hanging down is a negation of the rest;
+- a vertical stroke hanging down to the start of another horizontal stroke is a
+  condition, whose hypothesis is read from that stroke;
+- a junction dot is a fork, filled for `&` and hollow with an arc for `|`, with
+  the parts read from its rays in order from top to bottom;
+- the end of the stroke is a leaf (a chain read from its states and stretches)
+  or a text.
+
+Stroke lengths and positions along the stroke beyond this order carry no
+meaning, so the `stroke` and `gap` hints cannot change what is read.
+
+**The theorem.**
+
+```
+(B5) adequacy   ∀ f, f.WellFormed → readB (sceneB f) = nf f.shown
+```
+
+where `nf` identifies exactly what the notation identifies. Checked on
+2026-11-13 by drawing both members of each pair, which gave the same ink:
+1. **currying**: `if A then if B then C` and `if A, B then C` (Frege's
+   convention, the comma is currying; the SVGs differ only in one stroke drawn
+   as two touching segments);
+2. **free states**: a free `s` and a free `s°`, both drawn hollow, since a
+   free state is an arbitrary infallible state;
+3. **meanings of texts**: `"D" {f}` and `"D"`; a text leaf shows only its text.
+
+`nf` curries nested conditions, marks free states infallible, and drops the
+meanings of text leaves. B5 says that view B determines the formula up to
+these three, and that nothing else is lost.
+
+**Binding.** With names shown, the reader resolves names as the parser does.
+With links it also reads binding from the link graph: each link tree joins one
+notch to the states it binds. Then:
+
+```
+(B3) links      the binding read from the link trees equals the binding of the formula
+                (each occurrence to its innermost binder of that name)
+(B3′) hidden    with links and names hidden, readB recovers the formula up to
+                renaming of bound names
+```
+
+B3′ is what makes the links a notation and not a decoration: with them, the
+names in the notches are redundant.
+
+**Scope (B4)**, restated. Logically, every port of a binder's link tree lies in
+the subtree of its notch's block; this is implied by B3. Geometrically, links
+leaving their block's region are permitted. They are counted as nesting
+violations by `--check`, an aim and not a requirement, as now.
+
+**Status and plan.**
+- B5, B3 and B3′ are OPEN.
+- The plan is to TEST them on the examples and the 2000 generated figures,
+  with the reader in Lean and the renderer giving the scene (the L2/L3 split
+  for view B; the SVG drawn from the scene, byte-identical).
+- Proving B5 would need the renderer's geometry in exact arithmetic. Instead, a
+  certificate: `readB` itself is the checker, and each figure's picture is
+  checked when drawn.
+
+**For review:**
+1. the three identifications, as the intended meaning of the notation;
+2. a reader that uses the geometry only;
+3. B3′ (hidden names, links shown) as a goal.
 
 ### 3.4 Hosts (L4)
 
