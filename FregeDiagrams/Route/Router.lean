@@ -617,6 +617,11 @@ def nameViolations (sc : Scene) (names : Array Shape) (links : Array Polyline) :
 /-- What rendering a view-B tree gives: the SVG and the checks. -/
 structure Rendered where
   svg : String
+  /-- the scene of view B (L2): every shape drawn, in drawing order, in the
+  tree's coordinates (before the canvas translation); the SVG is these shapes
+  written out (`Shape.svg`), with the style applied.  `FregeDiagrams.SpecB`
+  reads the formula back from it. -/
+  scene : Array Shape := #[]
   /-- empty bigons and monogons -/
   problems : Array Polyline := #[]
   /-- crossings between different binders' links, and of links with strokes -/
@@ -682,22 +687,22 @@ def TreeDiagram.render (d : TreeDiagram) (o : DrawOpts := {}) : Rendered := Id.r
   let binders : Array Binder := binders
   let rs : Array Routed := rs
   -- links: each binder its own pastel colour, its name in Morse as the dashes
-  let mut linkSvg : Array String := #[]
+  let mut linkSh : Array Shape := #[]
   let mut links : Array Polyline := #[]
   let pins := pinsFor binders
   for i in [0:binders.size] do
     let colr := linkPalette[i % linkPalette.size]!
     -- for the editor: one group per binder's links
     if o.annotate then
-      linkSvg := linkSvg.push s!"<g data-k=\"link\" data-name=\"{xmlEsc binders[i]!.name}\" data-pinned=\"{if (pins[i]?.bind id).isSome then 1 else 0}\">"
+      linkSh := linkSh.push <| .raw s!"<g data-k=\"link\" data-name=\"{xmlEsc binders[i]!.name}\" data-pinned=\"{if (pins[i]?.bind id).isSome then 1 else 0}\">"
     for pl in rs[i]!.polys do
       links := links.push pl
       let da := (o.linkDash.lookup binders[i]!.name).getD (morseDash binders[i]!.name)
       let da := if da == "" then "" else s!" stroke-dasharray=\"{da}\""
-      linkSvg := linkSvg.push (Shape.poly pl colr "1.9" s!" stroke-linejoin=\"round\"{da}").svg
+      linkSh := linkSh.push (Shape.poly pl colr "1.9" s!" stroke-linejoin=\"round\"{da}")
     for j in rs[i]!.junctions do
-      linkSvg := linkSvg.push (Shape.circle j 2.4 colr).svg
-    if o.annotate then linkSvg := linkSvg.push "</g>"
+      linkSh := linkSh.push (Shape.circle j 2.4 colr)
+    if o.annotate then linkSh := linkSh.push (.raw "</g>")
   let names := placeNames sc links
   -- the canvas: everything drawn, with a margin
   let sc' := { sc with curves := sc.curves ++ links, cboxes := sc.cboxes ++ links.map bbox,
@@ -705,8 +710,9 @@ def TreeDiagram.render (d : TreeDiagram) (o : DrawOpts := {}) : Rendered := Id.r
                          | .text p s _ sz a _ => some (textBox p s a sz) | _ => none }
   let (x0, y0, x1, y1) := sc'.extent
   let m := 12.0
+  let scene := sc.shapes ++ linkSh ++ names
   let body := #[s!"<g transform=\"translate({fmt1 (m - x0)},{fmt1 (m - y0)})\">"] ++
-    sc.shapes.map Shape.svg ++ linkSvg ++ names.map Shape.svg ++ #["</g>"]
+    scene.map Shape.svg ++ #["</g>"]
   let punct := sc.circles.map (·.1) ++
     sc.texts.map (fun (a, b, c, e) => (⟨(a + c) / 2.0, (b + e) / 2.0⟩ : P)) ++
     binders.map (·.notch) ++ binders.foldl (fun acc b => acc ++ b.tgts) #[]
@@ -721,7 +727,7 @@ def TreeDiagram.render (d : TreeDiagram) (o : DrawOpts := {}) : Rendered := Id.r
   for a in links do
     for c in sc.curves do nTree := nTree + (crossings a c).size
   let doc := svgDoc (x1 - x0 + 2.0 * m).toUInt64.toNat (y1 - y0 + 2.0 * m).toUInt64.toNat body
-  return { svg := if o.style == .soft then softSvg doc o.annotate else doc,
+  return { svg := if o.style == .soft then softSvg doc o.annotate else doc, scene,
            problems := probs, nLink, nTree,
            nesting := if o.links then nestingViolations sc binders rs else #[],
            names := if o.links then nameViolations sc names links else #[],
