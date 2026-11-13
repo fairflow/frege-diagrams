@@ -363,6 +363,13 @@ def beads (pts : Polyline) (rels : Composite) (color : String) : Array Shape := 
       out := out.push (.circle p 3.2 "white" color)
   return out
 
+/-- Does an arrow of this relation end in an infallible state (its last
+stretch `⊑` or `R°`)?  Both views draw that state hollow, as a bead marks an
+intermediate one. -/
+def endsInf (r : Composite) : Bool := match r.getLast? with
+  | some .sqle | some .Rinf => true
+  | _ => false
+
 /-- An arrowhead at the end of a polyline, aimed along its last few points. -/
 def arrowHead (pts : Polyline) (color : String) : Array Shape :=
   let tip := pts.back!

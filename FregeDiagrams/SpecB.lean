@@ -164,23 +164,31 @@ def waves (pts : Polyline) : Bool := Id.run do
     prev := t
   return changes ≥ 4
 
+def beaded (r : Rel) : Bool := r == .sqle || r == .Rinf
+
+/-- Of the relations drawn in one style, the one a stretch is read as:
+inside an arrow the bead decides between `≤` and `⊑` (`R` and `R°`); at
+its end, where no bead is drawn, the plain one (the state shows the `°`). -/
+def pickRel (cands : List Rel) (bead : Option Bool) : Option Rel :=
+  let pref := match bead with
+    | some b => cands.filter (beaded · == b)
+    | none => cands.filter (!beaded ·)
+  (if pref.isEmpty then cands else pref).head?
+
 /-- The basic relation drawn by the lines of one stretch, `bead` whether a
 hollow bead ends it, `label` the label drawn at its middle. -/
 def readStretch (o : ReadOpts) (lines : Array (Polyline × String × String)) (bead : Bool)
-    (label : Option String) (directed : Bool) : R Rel := do
+    (label : Option String) (directed final : Bool) : R Rel := do
   let sig := signature lines
   let wavy := lines.any fun (pts, _, _) => waves pts
   let named : List Rel := match label with | some l => [.named l directed] | none => []
   let cands := ([Rel.le, .sqle, .R, .Rinf, .reach, .eq, .ne] ++ named).filter fun r =>
     styleOf o.relDash r == sig && (r == .reach) == wavy
-  let byBead := cands.filter fun r => (r == .sqle || r == .Rinf) == bead
-  let cands := if byBead.isEmpty then cands else byBead
-  match cands with
-  | [] => throw s!"a stretch in no relation's style: {sig}"
-  | [r] => return r
-  | r :: _ =>
+  let some r := pickRel cands (if final then none else some bead)
+    | throw s!"a stretch in no relation's style: {sig}"
+  if (cands.filter fun q => beaded q == beaded r).length > 1 then
     ambiguous s!"the legend draws {cands.map Rel.syntax} alike"
-    return r
+  return r
 
 /-- The name of a state drawn at `c`, where the leaf puts it: above, or
 beside a looped state. -/
@@ -241,7 +249,7 @@ def readComposite (sc : SceneB) (o : ReadOpts) (lines : Array (Polyline × Strin
       close r 3.2 && f == "white" && endPts.any fun p => (p - q).len < 2.0
     let mid := (g[0]!.1)[g[0]!.1.size / 2]!
     let label := (sc.texts.find? fun (p, _, sz, _) => sz == 11 && (p - mid).len < 10.0).map (·.2.1)
-    comp := comp ++ [← readStretch o g bead label (last && headed)]
+    comp := comp ++ [← readStretch o g bead label (last && headed) last]
   return comp
 
 /-- Read a leaf chain starting with the state at `c0`. -/
@@ -419,15 +427,17 @@ def readB (shapes : Array Shape) (o : ReadOpts := {}) : Except String Reading ×
 
 /-! ## What the picture must say -/
 
-/-- The relation a legend draws `r` as: the first relation drawn in the same
-style (and, for `⊑` and `R°`, with the same bead).  With the default legend
-every relation is its own; a figure's `dash` hints may draw two alike. -/
-def legendRel (tbl : List (Rel × String)) (r : Rel) : Rel :=
-  let beaded (q : Rel) := q == .sqle || q == .Rinf
-  let same (q : Rel) := styleOf tbl q == styleOf tbl r && (q == .reach) == (r == .reach) && beaded q == beaded r
+/-- The relation `r` is read as, by the figure's legend (`pickRel` among
+the relations drawn in its style); `final` at the end of an arrow.  With the
+default legend this is `r`, except that a final `⊑` or `R°` is `≤` or `R`
+(into a hollow state). -/
+def legendRel (tbl : List (Rel × String)) (final : Bool) (r : Rel) : Rel :=
   match r with
   | .named .. => r
-  | _ => ([Rel.le, .sqle, .R, .Rinf, .reach, .eq, .ne].find? same).getD r
+  | _ =>
+    let cands := [Rel.le, .sqle, .R, .Rinf, .reach, .eq, .ne].filter fun q =>
+      styleOf tbl q == styleOf tbl r && (q == .reach) == (r == .reach)
+    (pickRel cands (if final then none else some (beaded r))).getD r
 
 /-- The formula up to the identifications of view B: nested conditions
 curried into one, free states infallible (`°`), meanings of texts dropped;
@@ -437,7 +447,10 @@ and relations the figure's legend draws alike are one (`legendRel`). -/
 partial def nf (bound : List String := []) (tbl : List (Rel × String) := []) : Form → Form
   | .chain st steps =>
     let fix (s : St) : St := let n := dispName s.name; { name := n, inf := s.inf || !bound.contains n }
-    let sts := (st :: steps.map (·.2)).toArray.map fix
+    -- an arrow ending in `⊑` (`R°`) ends in an infallible state
+    let sts := (st :: steps.map fun (r, t) => if beaded r.getLast! then { t with inf := true } else t).toArray.map fix
+    let rels (r : Composite) : Composite :=
+      (r.zip (List.range r.length)).map fun (q, i) => legendRel tbl (i + 1 == r.length) q
     -- runs of the same state (loops) share their `°`
     let sts := sts.mapIdx fun i s => Id.run do
       let mut j := i
@@ -446,7 +459,7 @@ partial def nf (bound : List String := []) (tbl : List (Rel × String) := []) : 
       while k + 1 < sts.size && sts[k+1]!.name == s.name do k := k + 1
       return { s with inf := (List.range (k + 1 - j)).any fun d => sts[j + d]!.inf }
     .chain sts[0]! ((steps.zip (List.range steps.length)).map fun ((r, _), i) =>
-      (r.map (legendRel tbl), sts[i + 1]!))
+      (rels r, sts[i + 1]!))
   | .text s _ => .text s none
   | .all x b => .all (dispName x) (nf (dispName x :: bound) tbl b)
   | .ex x b => .ex (dispName x) (nf (dispName x :: bound) tbl b)

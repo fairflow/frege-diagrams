@@ -126,7 +126,8 @@ partial def flatten (fm : Form) (panel : Nat) (concl neg : Bool) (path : String 
       else if prev.name == t.name then
         modify fun f => { f with items := f.items.push (.loop panel t.name r concl) }
       else modify (·.addEdge panel prev.name t.name r concl path)
-      modify (·.note panel t path)
+      -- an arrow ending in `⊑` or `R°` ends in an infallible (hollow) state
+      modify (·.note panel (if endsInf r then { t with inf := true } else t) path)
       prev := t
   | .text _ _ => pure ()
   | .all x b => binder x .all (if concl then .all else .ex) false b

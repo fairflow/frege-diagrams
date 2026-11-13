@@ -363,7 +363,11 @@ def drawLeaf (s : String) (steps : List (Composite × String)) (x y : Float) (co
     -- a state with loops is one circle for all its occurrences, hollow if
     -- any of them is written `°`
     let occs := st :: ((List.range states.size).drop (i + 1) |>.map (states[·]!) |>.takeWhile (bare · == bare st))
-    let hollow := occs.any (·.endsWith "°") || !(env.any (·.name == bare st))
+    -- the arrows into this circle (the step to it, and its loops): one ending
+    -- in `⊑` or `R°` says the state is infallible, as a bead does mid-arrow
+    let into := (List.range steps.length).filter fun j => j + 1 ≥ i && j + 1 < i + occs.length
+    let infArrow := into.any fun j => endsInf steps[j]!.1
+    let hollow := occs.any (·.endsWith "°") || infArrow || !(env.any (·.name == bare st))
     out := out.push (.shape (.circle ⟨cx, y⟩ NODE_R (if hollow then "white" else col) col "1.4"))
     let lab0 := bare st
     let binder := env.find? (fun b => b.name == lab0 && !b.free)
