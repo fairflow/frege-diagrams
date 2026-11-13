@@ -11,7 +11,11 @@ Editor* shows the plain text.
 
 The drawing is done by `framediag`, built by Lake in your workspace: the
 workspace's `lakefile` requires frege-diagrams, and the extension runs
-`lake build framediag` the first time if needed. The settings
+`lake build framediag` once per Lake project and VS Code session, before it
+first draws or checks a figure there, so that a raised frege-diagrams pin
+takes effect (an up-to-date program makes this a quick no-op; a note shows
+only for a real rebuild; if the build fails, the program built before is
+used, with a warning). The page header shows the version in use. The settings
 `fregeDiagrams.framediagPath` and `fregeDiagrams.lakePath` override where the
 programs are.
 

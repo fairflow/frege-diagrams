@@ -7,6 +7,6 @@ the editor shows it with the commit it runs from.
 -/
 namespace FregeDiagrams
 
-def version : String := "0.17.0"
+def version : String := "0.17.1"
 
 end FregeDiagrams
