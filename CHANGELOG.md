@@ -7,6 +7,7 @@ with the commit it runs from.
 
 ## 0.17.1 (unreleased)
 
+* `examples/tour.fgd`: one figure per feature, each with a comment saying what to look at and what to try in the editor (CI draws and checks it). MANUAL.md gains a section on `lake exe speccheck` and lists, under Status, what the design proposes and is not built yet.
 * VS Code: the extension brings `framediag` up to date (`lake build framediag`) once per Lake project and session, before it first draws or checks a figure there. Before, a program once built was used as long as it existed, so after the project's frege-diagrams pin was raised the editor kept drawing with the old version (the page header showed it). An up-to-date program makes the build a quick no-op; the progress note shows only for a real rebuild; if the build fails, the program built before is used, with a warning. (0.17.0 was packaged but not merged.)
 * A bound name stays inside its notch, in both views: a negative `namedy` (or `--notch-name-offset`) moves it towards the stroke only until its centre is 2 units from it, about −5 for ⊓ and −3 for ∨ (before, a large one moved the name across the stroke and out of the notch). Offsets within that range draw exactly as before. `lake exe speccheck` now sets nothing aside: all 2000 generated figures pass.
 

@@ -42,6 +42,7 @@ fig ex_composite [size (300,140),
 lake build
 lake exe framediag _build/out --fig examples/basic.fgd --no-pdf   # PDF copies need rsvg-convert
 python3 tools/framedit/framedit.py examples/basic.fgd             # the editor, in a browser
+python3 tools/framedit/framedit.py examples/tour.fgd              # a tour of the features, one per figure
 ```
 
 Add `--links` to route the binding links of view B. Without `--fig`, `framediag`

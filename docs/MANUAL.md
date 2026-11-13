@@ -183,6 +183,16 @@ Drawing without links takes milliseconds per figure; most of the time of a
 with the number of binders: a figure with four binders takes a few seconds,
 and `--check` routes each figure twice.
 
+### 3.5 The references of the views
+
+`lake exe speccheck [N] [SEED]` checks both views against their references
+(docs/design/NEXT-STAGE.md §3.3): view A against a statement of what the
+formula says (`FregeDiagrams/Spec.lean`), view B by reading the formula back
+from the picture alone (`FregeDiagrams/SpecB.lean`: with names, with links,
+and with links and names hidden). It runs on the built-in examples and on N
+generated figures (default 2000), prints the violations by kind with an
+example of each, and exits with status 1 if there are any. CI runs it.
+
 ## 4. framedit: the editor
 
 ```bash
@@ -292,8 +302,12 @@ text. Saving, and the file itself, are VS Code's; a change made in a text
 editor, or on disk, reaches the figure editor (unless it has unsaved changes
 of its own, which it then reports). The workspace must require
 frege-diagrams in its lakefile: the extension uses the `framediag` that
-Lake builds there (and builds it the first time if needed), and the page of
-that same package. Settings: `fregeDiagrams.framediagPath`,
+Lake builds there, and the page of that same package. It runs `lake build
+framediag` once per project and VS Code session, before it first draws or
+checks a figure there, so a raised frege-diagrams pin takes effect without a
+manual rebuild (since 0.17.1; before, a program once built was used for
+ever). The page header shows the version in use: it is the version the
+project pins, not the version of the extension. Settings: `fregeDiagrams.framediagPath`,
 `fregeDiagrams.lakePath`. Build and install:
 
 ```bash
@@ -426,10 +440,20 @@ name.
   in the routed links of the examples (`--check`).
 * **Tested:** every hint edit of the editor re-parses to exactly the edited
   figure (the editor refuses any edit for which it does not).
-* **Not built** (proposals in [design/DESIGN.md](design/DESIGN.md) and
-  [design/EDITOR.md](design/EDITOR.md)): automatic layout of view A, reflow
-  of view B, a relation signature declared in Lean, figures made from Lean
-  definitions, a proof of the round trip.
+* **Tested, not proved:** view A shows what the formula says, and view B can
+  be read back to the formula (up to the identifications of NOTATION.md), on
+  the examples and 2000 generated figures (`lake exe speccheck`, §3.5).
+* **Not built** (proposals in [design/DESIGN.md](design/DESIGN.md),
+  [design/EDITOR.md](design/EDITOR.md) and
+  [design/NEXT-STAGE.md](design/NEXT-STAGE.md), whose §11 gives the order):
+  automatic layout of view A; reflow of view B; placing view B's states or
+  sizing its picture by hand (view B is laid out from the formula; only the
+  `stroke`, `gap`, `notch`, `namedy` and `route` hints adjust it); skins,
+  a styling panel and `default` statements other than `default dash` (the
+  style is chosen by `--style`, not in a file); moving a Lean file's figures
+  into a `.fgd` file, and a Lean file reading figures from one; the display
+  of proof states; a relation signature declared in Lean; figures made from
+  Lean definitions; a proof of the round trip.
 
 ## 8. The library
 
