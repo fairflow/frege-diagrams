@@ -1,0 +1,66 @@
+-- A tour of the figure language FGD and the editor, one feature per figure.
+-- Open this file in VS Code (the figure editor opens it; *Reopen Editor
+-- With… → Text Editor* shows this text) or in the browser:
+--   python3 tools/framedit/framedit.py examples/tour.fgd
+-- Each comment says what to look at and what to try.  Every change you make
+-- in the editor is a change to this text; Save writes it.
+
+-- 1. Defaults for the whole file.  A `default dash REL "PATTERN"` statement
+-- sets the line of a relation in every figure below (both views).  A pattern
+-- is typed text, one 4-unit cell per character: `-` ink, `.` a dot, space
+-- blank.  Try: change ". " to "-- " or to "" (solid) and watch figure 2.
+default dash <= ". "
+default dash R° "-.-.-.-"
+
+-- 2. The defaults at work: `≤` dotted, `R°` dash-dot; a figure's own `dash`
+-- hint wins over the default (here `⇝` stays wavy, `R` is long-dashed).
+-- Try: delete the hint `dash R "-- "`.
+fig t02_dashes [dash R "-- "] =
+  all t. if s <= t then ex u. (t R° u & u R s & s ~> u)
+
+-- 3. Several loops on one state (0.16.0): in view B two loops sit above the
+-- state, turned apart, its name below; from three on, the rest go below.
+-- In view A they are spaced evenly round the state.
+fig t03_two_loops = all s. t R s R s <= s
+fig t03_four_loops [views B] = all s. t R s R s <= s ~> s = s R u
+
+-- 4. An arrow ending in `⊑` or `R°` ends in a hollow (infallible) state
+-- (0.15.0): `s ⊑ t` is drawn, and read, as `s ≤ t°`.  Mid-arrow a hollow
+-- bead marks the infallible intermediate state.
+fig t04_sqle = all t. (s <=° t & s <=°;R t)
+
+-- 5. View A shows every quantifier (0.14.0): when no arrow enters the state
+-- it binds, the notch sits on a short stroke under the state.
+fig t05_mark = all t. t R s
+
+-- 6. Editing view B.  Click a notch: the inspector sets it up, down or
+-- automatic (`notch x …`); drag it sideways to move it along its stroke.
+-- Click the start of a stroke or a fork's dot to select a block: the handle
+-- at the end of the stroke into it (or ← →) lengthens that stroke (`stroke
+-- PATH DX`); the diamond at the start of a hypothesis (or ↑ ↓) gives it room
+-- above (`gap PATH DY`).  Drag a bound name up or down (`namedy x N`).
+fig t06_blocks [views B] =
+  all t. if s <= u, (u <= t & ex v. t R v) then s <= t
+
+-- 7. Links (toolbar: Links; Hide names).  Each binder's links in its own
+-- colour, dashed in the Morse code of its name; `dash x "…"` gives one
+-- binder another pattern.  With names hidden the links alone say what binds
+-- what.  Drag a link segment to pin it (`route x …`).
+fig t07_links [dash u "-- "] =
+  all t. if s <= t then ex u. (t R u° & not ex v. u R v)
+
+-- 8. Claims, definitions, contents: one judgement stroke, two, none.
+fig t08_claim [views B] = all t. if s <= u, u <= t then s <= t
+fig t08_definition [views B, judgement definition] = "dead(u)" {not ex x. u R x}
+fig t08_content [views B, judgement content] = ex u. (s <= u° & u R u)
+
+-- 9. A labelled relation, a composite with its stretches, inequality.
+fig t09_relations [views B] = if s -[ag]-> t, s <=;R;<= y then s != y
+
+-- 10. Sketch (view A) placement: drag states, names, arrows and notches;
+-- the square at the bottom right corner resizes the canvas (Shift: stretch).
+-- Every drag writes a hint into the text above the formula.
+fig t10_sketch [size (300,150),
+    s@(30,115), u@(150,40), t@(270,115) label (12,4),
+    edge s>u side -, edge u>t side -, edge s>t bend 10] =
+  all u. all t. if s <= u, u <= t then s <= t

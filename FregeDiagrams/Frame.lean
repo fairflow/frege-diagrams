@@ -389,6 +389,11 @@ def NOTCH_SLACK : Float := 1.0
 below the point where the name's visual centre should be. -/
 def NAME_HALF_X : Float := 2.7
 
+/-- How far inside its notch a bound name's visual centre stays, at least,
+from the line: a negative `namedy` cannot move it further out (before 0.17.0
+a large one moved the name across the line, out of its notch). -/
+def NAME_MIN_IN : Float := 2.0
+
 /-- A quantifier notch: the width of the gap it takes in its line, and its
 height.  An unnamed notch (bound names hidden) is smaller.  A name moved
 further in than `NOTCH_SLACK` deepens the notch by the excess. -/
@@ -407,8 +412,9 @@ def notchDims (kind : Quant) (var : String) (dy : Float := 0.0) : Float × Float
 The name's visual centre (the middle of its x-height) sits at half the depth
 of a square notch and at 0.30 of the depth of a pointed one (where it is
 wide enough), whichever way the notch opens.  `dy` moves the name `dy` units
-further in (positive) or towards the line (negative); beyond `NOTCH_SLACK`
-the notch deepens by the excess, widening a pointed one in proportion.
+further in (positive) or towards the line (negative, but never closer than
+`NAME_MIN_IN`); beyond `NOTCH_SLACK` the notch deepens by the excess,
+widening a pointed one in proportion.
 Returns the SVG and the gap `(lo, hi)` (arc lengths) it bridges. -/
 def notch (pts : Polyline) (s : Float) (kind : Quant) (var color : String) (rels : Composite)
     (side : Option Float) (dy : Float := 0.0) (dashes : List (Rel × String) := []) :
@@ -418,6 +424,8 @@ def notch (pts : Polyline) (s : Float) (kind : Quant) (var color : String) (rels
   let n := d.perp * side
   let (g, h) := notchDims kind var dy
   let h0 := (notchDims kind var).2
+  -- the name stays inside the notch, however negative its offset
+  let dy := max dy (NAME_MIN_IN - (if kind == .all then 0.5 else 0.30) * h0)
   let a := p - d * (g / 2.0)
   let b := p + d * (g / 2.0)
   let L := arclen pts

@@ -126,20 +126,46 @@ function reportError(/** @type {string} */ msg) {
   vscode.window.showErrorMessage(msg);
 }
 
-/** Build framediag with Lake in the workspace when it is missing. */
+/** The Lake projects whose framediag was brought up to date in this session,
+and the builds under way (one per project). */
+const built = new Set();
+const building = new Map();
+
+/** Bring framediag up to date with Lake, once per project and session: after
+the project's frege-diagrams pin is raised, the program built before is out of
+date (before 0.17.1 it was used as long as it existed).  With an up-to-date
+program `lake build` is a quick no-op; the progress note appears only if it
+takes longer than a moment.  If the build fails, an existing program is used,
+with a warning.  A program set by `fregeDiagrams.framediagPath` is used as it
+is. */
 async function ensureBuilt(/** @type {ReturnType<typeof locate>} */ loc) {
-  if (fs.existsSync(loc.exe)) return true;
+  const cfgPath = vscode.workspace.getConfiguration('fregeDiagrams').get('framediagPath');
+  if (cfgPath || built.has(loc.root)) return fs.existsSync(loc.exe);
+  const build = building.get(loc.root) || new Promise((resolve) => {
+    cp.execFile(loc.lake, ['build', 'framediag'], { cwd: loc.root, maxBuffer: 64 * 1024 * 1024 }, (err) => {
+      if (!err && fs.existsSync(loc.exe)) { built.add(loc.root); resolve(true); return; }
+      const why = err ? err.message : 'no program at ' + loc.exe;
+      if (fs.existsSync(loc.exe)) {
+        built.add(loc.root);
+        vscode.window.showWarningMessage(`Frege Diagrams: could not rebuild framediag in ${loc.root} (${why}); using the program built before, which may be out of date.`);
+        resolve(true);
+        return;
+      }
+      reportError(`Frege Diagrams: could not build framediag in ${loc.root} (${why}). ` +
+        'The workspace must require frege-diagrams in its lakefile, or set fregeDiagrams.framediagPath.');
+      resolve(false);
+    });
+  });
+  if (!building.has(loc.root)) {
+    building.set(loc.root, build);
+    build.then(() => building.delete(loc.root));
+  }
+  // a note only when the build takes a while (a real rebuild, not the no-op)
+  const quick = await Promise.race([build, new Promise((r) => setTimeout(() => r('slow'), 1500))]);
+  if (quick !== 'slow') return quick;
   return vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: 'Frege Diagrams: building framediag (lake build framediag)…' },
-    () => new Promise((resolve) => {
-      cp.execFile(loc.lake, ['build', 'framediag'], { cwd: loc.root, maxBuffer: 64 * 1024 * 1024 }, (err) => {
-        if (err || !fs.existsSync(loc.exe)) {
-          reportError(`Frege Diagrams: could not build framediag in ${loc.root} (${err ? err.message : 'no program at ' + loc.exe}). ` +
-            'The workspace must require frege-diagrams in its lakefile, or set fregeDiagrams.framediagPath.');
-          resolve(false);
-        } else resolve(true);
-      });
-    }));
+    () => build);
 }
 
 /** The version line of the page header: version, commit, tag, date. */
@@ -410,7 +436,10 @@ const fixKey = (/** @type {vscode.Uri} */ u, /** @type {vscode.Diagnostic} */ d)
 async function refreshDiagnostics(coll, doc) {
   const texts = figureTexts(doc);
   if (!texts.length) { coll.delete(doc.uri); return; }
-  const srv = diagServer(locate(doc.uri));
+  // framediag up to date first (once per project and session)
+  const loc = locate(doc.uri);
+  if (!(await ensureBuilt(loc))) return;
+  const srv = diagServer(loc);
   if (!srv) return;
   const version = doc.version, diags = [];
   for (const { text, start } of texts) {
@@ -447,7 +476,9 @@ class FigureFixes {
 /** Apply a check's fix: the server edits the figure text, which replaces it in the document. */
 async function applyFix(/** @type {string} */ uriStr, /** @type {any} */ f) {
   const doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(uriStr));
-  const srv = diagServer(locate(doc.uri));
+  const loc = locate(doc.uri);
+  if (!(await ensureBuilt(loc))) return;
+  const srv = diagServer(loc);
   if (!srv) return;
   const text = doc.getText().slice(f.start, f.start + f.len);
   const r = await srv.ask({ op: 'edit', text, fig: f.fig, edit: f.edit });

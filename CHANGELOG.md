@@ -5,7 +5,13 @@ was merged as, the date and time (UTC) of that commit, and the tag if one
 is applied. `framediag --version` prints the version; the editor shows it
 with the commit it runs from.
 
-## 0.16.0 (unreleased)
+## 0.17.1 (unreleased)
+
+* `examples/tour.fgd`: one figure per feature, each with a comment saying what to look at and what to try in the editor (CI draws and checks it). MANUAL.md gains a section on `lake exe speccheck` and lists, under Status, what the design proposes and is not built yet.
+* VS Code: the extension brings `framediag` up to date (`lake build framediag`) once per Lake project and session, before it first draws or checks a figure there. Before, a program once built was used as long as it existed, so after the project's frege-diagrams pin was raised the editor kept drawing with the old version (the page header showed it). An up-to-date program makes the build a quick no-op; the progress note shows only for a real rebuild; if the build fails, the program built before is used, with a warning. (0.17.0 was packaged but not merged.)
+* A bound name stays inside its notch, in both views: a negative `namedy` (or `--notch-name-offset`) moves it towards the stroke only until its centre is 2 units from it, about −5 for ⊓ and −3 for ∨ (before, a large one moved the name across the stroke and out of the notch). Offsets within that range draw exactly as before. `lake exe speccheck` now sets nothing aside: all 2000 generated figures pass.
+
+## 0.16.0 · fcd8794 · 2026-11-13 20:41 UTC
 
 * Several loops on one state are fanned out instead of drawn on top of each other. In view B, one loop is above its state as before; two are both above, narrow and turned apart, with the state's name below; from three on, two are above and the rest below. In view A they are spaced evenly round the state, the first at its `loop` angle. The reader of view B reads them above first, then below, left to right; the link to a state whose four sides are all taken meets it diagonally. Pictures with at most one loop per state are unchanged.
 * The identifications 4–6 of the reader (`s ⊑ t` is `s ≤ t°`; a looped state's occurrences share their `°`; `s'` is `s′`) are agreed.

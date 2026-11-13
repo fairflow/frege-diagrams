@@ -235,8 +235,7 @@ state, turned apart, and its name goes below; from three on, the rest go
 below. They are read above first, then below, each left to right. In view A
 they are spaced evenly round the state, the first at its `loop` angle.
 
-One case is not yet readable: a large negative `namedy` moves a bound name
-out of its notch.
+A bound name always stays inside its notch, whatever its `namedy` offset.
 
 ## Where this notation departs from Frege's
 

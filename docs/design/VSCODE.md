@@ -70,6 +70,9 @@ figure) can come later if wanted.
    is a later, separate decision.
 3. **Which `framediag`**: the one the workspace's Lake build makes (a client
    repository requires frege-diagrams, as now), else a path in the settings.
+   The extension runs `lake build framediag` once per project and session
+   (since 0.17.1; before, a program once built was used for ever, so a raised
+   pin had no effect until someone rebuilt by hand).
 
 ## Order of work
 

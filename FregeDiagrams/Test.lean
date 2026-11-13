@@ -638,6 +638,10 @@ def figB (s : String) : Fig := ((parseFile s).toOption.bind (·.head?)).getD def
 #guard (figB "fig l = all s. t R s R s <= s ~> s R u").checkB == []
 #guard (figB "fig l = all s. (t <= s R s <= s ~>;R° s = s & s R s)").checkB == []
 #guard (figB "fig l = s != s R;<=° s != s").checkB == []
+-- a bound name stays inside its notch, however negative its offset (0.17.0;
+-- was moved across the stroke)
+#guard (figB "fig n [namedy t -200] = all t. s R t").checkB == []
+#guard (figB "fig n [namedy t -200] = ex t. s R t").checkB == []
 -- in view A round the state, evenly from its angle
 #guard (((figB "fig l [loop s 45] = (s R s & s <= s & s ~> s)").toDiagram).items.toList.filterMap
   fun | .loop _ _ _ a => some a | _ => none) == [45.0, 165.0, 285.0]
