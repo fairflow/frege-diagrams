@@ -1,7 +1,7 @@
 # Frege Diagrams, the next stage: a formal reference and an architecture
 
-**Status 2026-11-13: a design for discussion. Nothing in it is built unless
-it says so.** Every statement about the present code is labelled:
+**Status 2026-11-13: agreed by Matthew, with one change (section 12). Nothing
+in it is built unless it says so.** Every statement about the present code is labelled:
 
 - **PROVED**: a Lean theorem, kernel-checked, axioms pinned;
 - **TESTED**: checked by `#guard` or a test program on examples and on
@@ -337,12 +337,38 @@ figure has exactly one home.
   cursor in both views and follows the cursor from figure to figure;
 - dragging in the preview edits the text, which the text editor shows at
   once;
-- the page's own text panel is hidden in VS Code;
-- the browser editor keeps its text panel, and gains colouring from the same
+- the **figure editor** stays (decision 3): the page that is the browser
+  editor, and in VS Code the custom editor that *Reopen With…* offers, for
+  quick changes and for use outside VS Code;
+- its text panel sits in an **opener**, a section closed by default, so the
+  drawing has the room; open, it shows the text coloured with the same
   grammar.
 
-The present custom editor becomes the preview. One code path serves both
-hosts, as now.
+The preview and the figure editor are one page in two modes, so one code
+path serves every host, as now.
+
+### 6.1 Screen space and phones (PROPOSED; important, not urgent)
+
+The page should work on a phone and keep clutter down everywhere. The
+rules:
+
+- **The drawing first.** Everything else is in openers, closed by default:
+  the text, the inspector of the selection, styling (section 7), the
+  figure list.
+- **One column on a narrow screen.** The two views stack. An open panel
+  becomes a sheet from the bottom of the screen, not a side column.
+- **The selection's panel under the drawing**, showing only what concerns
+  the selected element.
+- **A full-screen button** for either view, with the export buttons (SVG,
+  PNG, PDF) beside it.
+- **Touch.** Every drag is a pointer event and works with a finger. Where a
+  hit area is smaller than a finger, a long press opens a chooser of the
+  candidates under it.
+
+These follow the Astrodynamics app ([fairflow/astro](https://github.com/fairflow/astro),
+GUIDE.md): a panel under the wheel for the selection, a chooser where lines
+overlap, full screen with export beside it, and one *Display* menu for theme,
+contrast and text size.
 
 ## 7. Styles, skins and export
 
@@ -376,6 +402,16 @@ defaults, as `dash` does now.
 | radius | point, junction |
 | corner | edge, hyperedge, bar, notch (rounded bends) |
 | font | name, text |
+
+**The styling panel** (PROPOSED). Styles are edited in a panel of their
+own, an opener of the page (6.1), not in the figure inspector.
+- Every colour, width, radius and font of the drawing is a CSS custom
+  property set from the style. The panel changes the properties, and the
+  drawing changes at once without being drawn again.
+- *Save* writes the changes as `default` statements to the skin file.
+- Dark and light, and low and high contrast, are skins.
+- A test forbids colours written directly in the page or the SVG output,
+  as Astrodynamics does after three cases of dark text on a dark ground.
 
 **Export.**
 - `framediag --export latex-style OUT.sty` (PROPOSED) writes the style as
@@ -503,8 +539,10 @@ Each step is a pull request with a version, as now.
 3. **`.fgd` as the source.** `include_str` with `input_file`, `fig_file%`,
    *Move figures to a `.fgd` file*, the VS Code preview, and the language
    server.
-4. **Styles.** The general `default` statements, `include`, skins, and LaTeX
-   style and TikZ export.
+4. **Styles.** The general `default` statements, `include`, skins, the
+   styling panel, and LaTeX style and TikZ export.
+4a. **Screen space.** Openers closed by default, one column on narrow
+   screens, touch (6.1).
 5. **Meaning.** `Form.interp` and the rules with their proofs (M1, M2).
 6. **Infoview.** Display of goals (8.1), then moves (8.2).
 7. **Regions and sheets.** Places in view A, sheets and derivations
@@ -512,18 +550,21 @@ Each step is a pull request with a version, as now.
 
 Steps 2 and 3 are independent and can run side by side; 5 must precede 6.
 
-## 12. Decisions for Matthew
+## 12. Decisions (Matthew, 2026-11-13)
 
-1. **The layer split (section 2).** Separating scenes from rendering is
-   the largest refactor here. It is proposed because the view properties and
-   the styles both need it. Agree?
-2. **`.fgd` by default (section 6).** Figures move out of raw strings in
-   client projects, with `include_str` and an `input_file` declaration. Raw
-   strings remain supported. Agree?
-3. **The preview model in VS Code.** A `.fgd` opens as text, with a preview
-   to the side, and the custom editor goes. Agree?
-4. **Style syntax.** `default PROPERTY CLASS [REL] VALUE` with the classes of
-   section 4. Or a block syntax (`style { … }`)?
-5. **Which properties to prove** rather than test. Proposed: the checkers'
-   soundness, and M2. The round trip R1 needs a structurally recursive
-   parser and stays TESTED until then.
+All the recommendations are agreed, with one change to the third.
+
+1. **The layer split (section 2):** agreed. Scenes are separated from
+   rendering.
+2. **`.fgd` by default (section 6):** agreed. Figures move out of raw strings
+   into `.fgd` files, read with `include_str` and an `input_file`
+   declaration. Raw strings remain supported.
+3. **VS Code:** a `.fgd` opens as text with a preview to the side, as
+   proposed. **Changed:** the figure editor is kept, as an option for quick
+   changes and for use outside VS Code, with its text panel in an opener
+   closed by default (section 6). A layout that works on phones and keeps
+   the screen clear, with a separate styling panel, is important but not
+   urgent (6.1, section 7).
+4. **Style syntax:** `default PROPERTY CLASS [REL] VALUE`, as proposed.
+5. **What to prove:** the checkers' soundness and M2, as proposed. The round
+   trip stays TESTED until the parser is structurally recursive.
