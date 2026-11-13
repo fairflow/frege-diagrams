@@ -41,3 +41,16 @@ figures* link and `.fgd` files open as plain text.
 
 `npm test` runs a smoke test of the message handling against a real
 `framediag` (built with `lake build framediag` at the repository root).
+
+`npm install` and then `npm run test:vscode` run the extension in a real VS
+Code (downloaded by `@vscode/test-electron`, version 1.85.2, the oldest that
+`engines` allows; `FD_VSCODE_VERSION` picks another). The window opens a plain
+folder; a Lean file and a figure file of *another* Lake project are opened,
+the *Edit figures* lens is pressed, and the test waits until the page in each
+panel has received a drawing from `framediag`, with no error shown. On Linux
+without a display, run it under `xvfb-run -a`; CI does. Locally it opens a VS
+Code window for a few seconds.
+
+For this test `activate` returns `{ status }`: every error shown to the user,
+and per figure panel its file, its `framediag`, and how many drawings reached
+the page.

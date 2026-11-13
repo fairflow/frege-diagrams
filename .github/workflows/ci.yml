@@ -26,6 +26,11 @@ jobs:
           diff -r -x '*.tex' _build/a _build/b
       - name: The VS Code extension's request handling (smoke test against framediag)
         run: node tools/vscode/test/smoke.js
+      - name: The VS Code extension in a real VS Code (a Lean file and a figure file of another Lake project)
+        run: |
+          cd tools/vscode
+          npm install --no-save --no-package-lock
+          xvfb-run -a npm run -s test:vscode
       - name: The VS Code grammars are up to date
         run: |
           python3 docs/tools/grammar.py --textmate tools/vscode/syntaxes

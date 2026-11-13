@@ -5,7 +5,11 @@ was merged as, the date and time (UTC) of that commit, and the tag if one
 is applied. `framediag --version` prints the version; the editor shows it
 with the commit it runs from.
 
-## 0.11.1 (unreleased)
+## 0.12.0 (unreleased)
+
+* VS Code: an integration test in a real VS Code, run in CI (`npm run test:vscode`): a Lean file and a figure file of another Lake project than the open folder are opened in the figure editor, and the test waits until each page has received a drawing from `framediag` with no error shown. For it, the extension records every error it shows and, per panel, its file, its `framediag` and the drawings that reached the page (`activate` returns them).
+
+## 0.11.1 · 15a5007 · 2026-11-13 08:34 UTC
 
 * VS Code: a Lean file opened in a window whose folder is another project now finds its own project's `framediag`, the nearest folder above the file with a lakefile, instead of failing to build in the file's own folder ("could not build framediag in …/Diagrams").
 * Docs: after installing the VS Code extension, reload every open window (VS Code does not start a new extension in windows already open).

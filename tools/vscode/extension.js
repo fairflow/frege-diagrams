@@ -108,6 +108,24 @@ function lakeRoot(/** @type {string} */ dir) {
   }
 }
 
+/**
+ * What the extension has done, kept so that nothing fails silently (contract
+ * H5 of docs/design/NEXT-STAGE.md) and so that tests in a real VS Code can see
+ * it: `activate` returns it. Every error shown to the user is also recorded,
+ * and each figure panel records its file, its framediag, and how many drawings
+ * the page has received from framediag.
+ */
+const status = {
+  /** @type {string[]} */ errors: [],
+  /** @type {{ title: string, file: string, exe: string, drawn: number, failed: string | null }[]} */ panels: [],
+};
+
+/** Show an error and record it. */
+function reportError(/** @type {string} */ msg) {
+  status.errors.push(msg);
+  vscode.window.showErrorMessage(msg);
+}
+
 /** Build framediag with Lake in the workspace when it is missing. */
 async function ensureBuilt(/** @type {ReturnType<typeof locate>} */ loc) {
   if (fs.existsSync(loc.exe)) return true;
@@ -116,7 +134,7 @@ async function ensureBuilt(/** @type {ReturnType<typeof locate>} */ loc) {
     () => new Promise((resolve) => {
       cp.execFile(loc.lake, ['build', 'framediag'], { cwd: loc.root, maxBuffer: 64 * 1024 * 1024 }, (err) => {
         if (err || !fs.existsSync(loc.exe)) {
-          vscode.window.showErrorMessage(`Frege Diagrams: could not build framediag in ${loc.root} (${err ? err.message : 'no program at ' + loc.exe}). ` +
+          reportError(`Frege Diagrams: could not build framediag in ${loc.root} (${err ? err.message : 'no program at ' + loc.exe}). ` +
             'The workspace must require frege-diagrams in its lakefile, or set fregeDiagrams.framediagPath.');
           resolve(false);
         } else resolve(true);
@@ -276,8 +294,11 @@ async function handle(ed, p, body) {
  */
 async function attach(panel, src, extDir) {
   const doc = src.doc, loc = locate(doc.uri);
+  const rec = { title: panel.title, file: doc.uri.fsPath, exe: loc.exe, drawn: 0, failed: /** @type {string | null} */ (null) };
+  status.panels.push(rec);
   panel.webview.options = { enableScripts: true };
   if (!(await ensureBuilt(loc))) {
+    rec.failed = 'framediag is not available';
     panel.webview.html = `<p>framediag is not available: see the error message.</p>`;
     return;
   }
@@ -288,6 +309,8 @@ async function attach(panel, src, extDir) {
       if (!m || m.type !== 'api') return;
       let reply;
       try { reply = await handle(ed, m.path, m.body); } catch (e) { reply = { status: 500, body: { ok: false, error: String(e) } }; }
+      // a drawing that reached the page: the whole chain works
+      if (m.path === '/api/lean' && m.body && m.body.op === 'render' && reply.body && reply.body.ok) rec.drawn++;
       panel.webview.postMessage({ type: 'reply', id: m.id, status: reply.status, body: reply.body });
     }),
     vscode.workspace.onDidChangeTextDocument((e) => {
@@ -326,7 +349,7 @@ async function editFigures(/** @type {vscode.ExtensionContext} */ ctx, /** @type
   const doc = uriStr ? await vscode.workspace.openTextDocument(vscode.Uri.parse(uriStr)) : vscode.window.activeTextEditor && vscode.window.activeTextEditor.document;
   if (!doc) { vscode.window.showInformationMessage('Frege Diagrams: open a Lean file with a figure string first.'); return; }
   const src = makeSource(doc, true, name || null);
-  try { src.read(); } catch (e) { vscode.window.showErrorMessage(`Frege Diagrams: ${e instanceof Error ? e.message : e}`); return; }
+  try { src.read(); } catch (e) { reportError(`Frege Diagrams: ${e instanceof Error ? e.message : e}`); return; }
   const panel = vscode.window.createWebviewPanel('fregeDiagrams.leanFigures', `Figures: ${src.name}`, vscode.ViewColumn.Beside,
     { enableScripts: true, retainContextWhenHidden: true });
   await attach(panel, src, ctx.extensionPath);
@@ -428,7 +451,7 @@ async function applyFix(/** @type {string} */ uriStr, /** @type {any} */ f) {
   if (!srv) return;
   const text = doc.getText().slice(f.start, f.start + f.len);
   const r = await srv.ask({ op: 'edit', text, fig: f.fig, edit: f.edit });
-  if (!r.ok) { vscode.window.showErrorMessage(`Frege Diagrams: ${r.error}`); return; }
+  if (!r.ok) { reportError(`Frege Diagrams: ${r.error}`); return; }
   const e = new vscode.WorkspaceEdit();
   e.replace(doc.uri, new vscode.Range(doc.positionAt(f.start), doc.positionAt(f.start + f.len)), r.text);
   await vscode.workspace.applyEdit(e);
@@ -463,6 +486,7 @@ function activate(ctx) {
     vscode.languages.registerCodeLensProvider([{ language: 'lean4' }, { pattern: '**/*.lean' }], new FigureLenses()),
     vscode.commands.registerCommand('fregeDiagrams.editFigures', (u, n) => editFigures(ctx, u, n)),
   );
+  return { status };
 }
 
 function deactivate() {}
