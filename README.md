@@ -1,6 +1,6 @@
 Frege-style formula trees and Kripke frame pictures from one text, drawn by Lean.
 
-frege-diagrams is a small figure language. One text describes a figure, which is
+frege-diagrams is built around FGD, a small figure language. One text describes a figure, which is
 a formula with layout hints, and from it the tool makes:
 
 * **view A**, a frame picture: states and arrows of a Kripke frame;

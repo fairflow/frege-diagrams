@@ -1,4 +1,4 @@
-# The figure language
+# FGD, the figure language
 
 A figure is a formula with layout hints. One text gives both pictures (view A,
 a frame picture; view B, a Frege-style formula tree), the formula in LaTeX,
@@ -18,7 +18,8 @@ fig lang_trans [size (300,150),
   all u. all t. if s <= u, u <= t then s <= t
 ```
 
-Files of figures use the extension `.fgd`. A Lean file may also hold figures
+The language is called **FGD**. Files of figures use
+the extension `.fgd`, in lower case. A Lean file may also hold figures
 in a raw string (`def NAME : String := r#"…"#`), read with `fig_of% NAME "FIG"`.
 
 ## Tokens

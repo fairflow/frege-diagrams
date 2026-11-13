@@ -83,6 +83,17 @@ into the state it binds; the bound name sits in the notch.
 The notch makes the arrow a **guard**: in `n_states`, the ⊓ on `s → t` reads
 "for every t with s ≤ t", the ∨ on `t → u` "there is a u with t R u".
 
+When no arrow in its scope enters the state it binds (`all t. t R s`), a
+quantifier has no arrow to sit on. It is then drawn on the state itself: a
+short stroke under the state with the notch in it, opening downwards, read as
+for an unguarded quantifier ("for every t"). Without it view A would not show
+the quantifier at all (until 0.14.0 it did not).
+
+View A is compact and deliberately not complete: two formulas can share a
+view A, and some structure (the nesting of conditions, for one) is not shown.
+View B is the canonical picture of a formula: it determines the formula, and
+it is the one the editor aims to make fully editable.
+
 **Where a notch sits along a composite arrow** matters when the arrow hides an
 intermediate state of the other kind. The intermediate state of a composite is
 universal in a negative place and existential in a positive one. Read the

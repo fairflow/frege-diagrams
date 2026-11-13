@@ -190,6 +190,10 @@ inductive Item where
   | edge (e : Edge)
   /-- a self-loop on a state, leaving in direction `angle` (degrees). -/
   | loop (a : String) (rel : Composite) (concl : Bool) (angle : Float)
+  /-- a quantifier shown on its state, for a quantifier whose state no arrow
+  enters (so no arrow can carry its notch): a notch on a short stroke under
+  the state.  `var` is the name shown in it (`""` with names hidden). -/
+  | qmark (a : String) (q : Quant) (var : String) (concl : Bool)
   /-- free text at integer coordinates. -/
   | text (x y : Int) (s color : String) (size : Nat) (anchor : String) (italic : Bool)
 
@@ -232,6 +236,10 @@ def node (d : Diagram) (id : String) (x y : Int) (label : Option String := none)
 
 /-- Add an arrow. -/
 def edge (d : Diagram) (e : Edge) : Diagram := { d with items := d.items.push (.edge e) }
+
+/-- Add a quantifier mark on a state (`Item.qmark`). -/
+def qmark (d : Diagram) (a : String) (q : Quant) (var : String) (concl : Bool) : Diagram :=
+  { d with items := d.items.push (.qmark a q var concl) }
 
 /-- Add a self-loop. -/
 def loop (d : Diagram) (a : String) (rel : Composite := [.R]) (concl : Bool := false)
@@ -518,6 +526,21 @@ def renderLoop (d : Diagram) (a : String) (rels : Composite) (concl : Bool) (ang
   stretches pts rels color d.relDash ++ beads pts rels color ++
     (if rels.length > 1 then relLabels pts rels color else #[]) ++ arrowHead pts color
 
+/-- A quantifier on its state (`Item.qmark`): a short stroke under the state
+with the quantifier's notch in it, opening downwards, the bound name inside;
+read as the notch would be read on an arrow into the state. -/
+def renderMark (d : Diagram) (a : String) (q : Quant) (var : String) (concl : Bool) :
+    Array Shape :=
+  let n := d.find a
+  let c := P.ofInt n.x n.y
+  let color := if concl then RED else BLACK
+  let (g, _) := notchDims q var
+  let hw := g / 2.0 + 6.0
+  let y := c.y + NODE_R + 5.0
+  let pts : Polyline := #[⟨c.x - hw, y⟩, ⟨c.x + hw, y⟩]
+  let (shapes, lo, hi) := notch pts hw q var color [.R] (some 1.0) ((d.nameDys.lookup ((a.splitOn "/").headD a)).getD d.nameDy) d.relDash
+  shapes ++ stroke #[pts[0]!, ⟨c.x - hw + lo, y⟩] .R color ++ stroke #[⟨c.x - hw + hi, y⟩, pts[1]!] .R color
+
 /-- The dot of a state (and its cross). -/
 def renderDot (n : State) : Array String := Id.run do
   let color := if n.new then RED else BLACK
@@ -626,6 +649,7 @@ def Diagram.svg (d : Diagram) : String := Id.run do
     match it with
     | .edge e => body := body ++ wrap e.attrs ((d.renderEdge e).map Shape.svg)
     | .loop a rel concl angle => body := body ++ (d.renderLoop a rel concl angle).map Shape.svg
+    | .qmark a q v concl => body := body ++ (d.renderMark a q v concl).map Shape.svg
     | .text x y s color size anchor italic =>
       let st := if italic then " font-style=\"italic\"" else ""
       body := body.push s!"<text x=\"{x}\" y=\"{y}\" font-family=\"{FONT}\" font-size=\"{size}\" fill=\"{color}\" text-anchor=\"{anchor}\"{st}>{xmlEsc s}</text>"

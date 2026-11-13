@@ -5,7 +5,12 @@ was merged as, the date and time (UTC) of that commit, and the tag if one
 is applied. `framediag --version` prints the version; the editor shows it
 with the commit it runs from.
 
-## 0.13.0 (unreleased)
+## 0.14.0 (unreleased)
+
+* View A shows every quantifier: one whose state no arrow enters (`all t. t R s`) is drawn on the state itself, a notch on a short stroke under it, instead of not at all. A shadowed or vacuous quantifier binds nothing and gets no mark. The reference's property A3 says so, and holds on the 2000 generated figures.
+* The language is named FGD (LANGUAGE.md, README); files use `.fgd` in lower case. NOTATION.md and the design say that view B is the canonical picture and view A deliberately incomplete.
+
+## 0.13.0 · 3ef98d5 · 2026-11-13 10:50 UTC
 
 * The reference for view A (`FregeDiagrams/Spec.lean`, docs/design/NEXT-STAGE.md §3.3): what view A must show (arrows and loops with their composites, states per panel, one notch per quantifier, colours) stated by a plain recursion over the formula, independently of the drawing code, and `Fig.checkA` / `Fig.checkCanvasA`, which compare a drawing with it. Tested on the examples and on 2000 generated figures.
 * Fixed, found by the checker: a self-loop with a composite relation (`s R;<= s`) drew only its first stretch; it now draws every stretch, with beads and labels, as an arrow does. A state bound by `ex` is red (or crossed) in every panel of the binder's scope, not only its own. A state with two position hints was drawn twice; the last hint counts, and the lint warns.
