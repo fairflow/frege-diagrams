@@ -181,7 +181,7 @@ Both views:
 | A5 | checker written (`Fig.checkCanvasA`), TESTED on the examples; generated figures place states anywhere, so it is not run on them |
 | B1, B2, B4 | B1 and B2 are subsumed by B5 (the reader rebuilds the tree and the judgement from the picture) and TESTED with it; B4 logically follows from B3; geometrically it remains an aim, counted by `--check` |
 | B3, B3′ | TESTED since 0.15.0 (§3.3.1): with links, the binding read from the link trees equals the formula's, with names shown and with names hidden, on the examples and on the generated figures |
-| B5 | TESTED since 0.15.0 (§3.3.1), up to the identifications listed there, on the examples and on 2000 generated figures, with one OPEN exception (a large `namedy`; two loops on one state, the other, fixed in 0.16.0) and one untested case (a directed labelled stretch inside a composite). View A is not adequate, by design: two formulas can share a view A (NOTATION.md), and that is a documented fact, not a bug |
+| B5 | TESTED since 0.15.0 (§3.3.1), up to the identifications listed there, on the examples and on 2000 generated figures, with no exception since 0.17.0 (two loops on one state fixed in 0.16.0, a large `namedy` in 0.17.0) and one untested case (a directed labelled stretch inside a composite). View A is not adequate, by design: two formulas can share a view A (NOTATION.md), and that is a documented fact, not a bug |
 | S1 | holds by construction: the code is pure Lean |
 | S2 | TESTED for the soft and classic styles in the narrow sense that layout code does not read the style |
 | S3 | TESTED for SVG output byte by byte (annotations off reproduces the earlier output) |
@@ -344,10 +344,12 @@ state whose four sides are all taken is met by its link diagonally. In view A
 a state's loops are spaced evenly round it from its `loop` angle. TESTED: no
 figure of the 2000 is unreadable.
 
-OPEN, set aside by `speccheck` and listed by `speccheck --all`:
-- a `namedy` offset below about −7 (⊓) or −5 (∨) moves the bound name
-  across the stroke, out of its notch (199 of the 2000, whose `namedy` hints
-  run from −200 to 200). A remedy would keep the name inside, or lint it.
+A `namedy` offset below about −7 (⊓) or −5 (∨) moved the bound name across
+the stroke, out of its notch (199 of the 2000, whose `namedy` hints run from
+−200 to 200). Decision (Matthew, 2026-11-13): keep the name inside. Since
+0.17.0 the name's centre stays at least 2 units inside its notch
+(`NAME_MIN_IN`), so an offset below about −5 (⊓) or −3 (∨) has no further
+effect. TESTED: `speccheck` sets nothing aside; all 2000 pass.
 
 Not generated, so not tested on the 2000; checked by hand: a directed
 labelled stretch inside a composite (`s -[L]->;R t`) draws like an

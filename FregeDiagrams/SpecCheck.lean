@@ -3,15 +3,11 @@ FregeDiagrams.SpecCheck: the references of both views on generated figures,
 compiled (the reader of view B routes links three times per figure, too slow
 for `#guard`).
 
-    lake exe speccheck [--all] [N] [SEED]
+    lake exe speccheck [N] [SEED]
 
 checks view A (`Fig.checkA`) and view B (`Fig.checkB`) on the examples and on
 N generated figures (default 2000, seed 2026), both views forced, prints the
 violations by kind with one example each, and fails if there are any.
-
-One OPEN finding of view B (docs/design/NEXT-STAGE.md §3.3.1) is set aside
-for view B unless `--all` is given: the `namedy` hints are dropped (an
-offset can move a bound name out of its notch).
 -/
 import FregeDiagrams.Spec
 import FregeDiagrams.SpecB
@@ -37,8 +33,6 @@ def tally (figs : List Fig) (check : Fig → List String) : IO Nat := do
   return bad
 
 def main (args : List String) : IO UInt32 := do
-  let all := args.contains "--all"
-  let args := args.filter (· != "--all")
   let n := (args[0]? >>= String.toNat?).getD 2000
   let seed := (args[1]? >>= String.toNat?).getD 2026
   let figs : List Fig := (randomFigs n seed).map fun (f : Fig) =>
@@ -50,8 +44,6 @@ def main (args : List String) : IO UInt32 := do
   bad := bad + (← tally figs Fig.checkA)
   IO.println "view B, the examples:"
   bad := bad + (← tally exampleFigs Fig.checkB)
-  let figsB := if all then figs else
-    figs.map fun f => { f with hints := { f.hints with nameDy := none, nameDys := [] } }
-  IO.println s!"view B, {n} generated figures (seed {seed}){if all then "" else ", namedy hints dropped"}:"
-  bad := bad + (← tally figsB Fig.checkB)
+  IO.println s!"view B, {n} generated figures (seed {seed}):"
+  bad := bad + (← tally figs Fig.checkB)
   return if bad == 0 then 0 else 1

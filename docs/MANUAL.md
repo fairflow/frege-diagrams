@@ -100,7 +100,7 @@ tree has changes), the tag if any, and the commit's date and time.
 | `--links` | binding links in view B (section 3.2) |
 | `--hide-bound` | bound names left out, in both views (the notches get smaller) |
 | `--spacing X` | every clearance of the links scaled by X (default 1): row gaps, tracks, channels, room around states and names |
-| `--notch-name-offset DY` | each bound name moved DY units into its notch (positive) or towards the stroke (negative), in both views. Up to 1 unit inwards the notch keeps its size; beyond that it deepens by the excess. A figure's `namedy` hint overrides it. Values between −2 and 3 are usually enough. |
+| `--notch-name-offset DY` | each bound name moved DY units into its notch (positive) or towards the stroke (negative), in both views. Up to 1 unit inwards the notch keeps its size; beyond that it deepens by the excess. A figure's `namedy` hint overrides it. Values between −2 and 3 are usually enough; a name never leaves its notch (its centre stays at least 2 units inside, about −5 for ⊓ and −3 for ∨). |
 | `--style classic` | the drawing style of versions before 0.10: square corners and heavier lines. The default, *soft*, draws thinner lines with round joins and rounds every bend of a stroke or link (radius 3.5 units, less on short segments); positions and sizes are the same in both. The editor keeps square bends so that its hit areas match the lines. |
 | `--check` | the checks of section 3.3, instead of drawing |
 | `--stats` | as `--check`, and also the numbers of crossings and nesting violations per figure |
