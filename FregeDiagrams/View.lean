@@ -252,6 +252,8 @@ def Fig.toDiagram (d : Fig) (o : DrawOpts := {}) : Diagram := Id.run do
       (attrs := attrs)
     maxX := max maxX x; maxY := max maxY y
     i := i + 1
+  let loopsOn : Array (Nat × String) := fl.items.filterMap fun | .loop p a _ _ => some (p, a) | _ => none
+  let mut loopsSeen : Array (Nat × String) := #[]
   for it in fl.items do
     match it with
     | .edge e =>
@@ -277,7 +279,12 @@ def Fig.toDiagram (d : Fig) (o : DrawOpts := {}) : Diagram := Id.run do
     | .loop p a rel concl =>
       let angle := ((h.loops.find? fun l => l.key.panel == p && l.key.name == a).map
         (Float.ofInt ·.angle)).getD (-90.0)
-      g := g.loop (nodeId p a) rel concl angle
+      -- several loops on one state are spaced evenly round it, the first at
+      -- its angle (before 0.16.0 they were drawn on top of each other)
+      let k := loopsOn.count (p, a)
+      let j := loopsSeen.count (p, a)
+      loopsSeen := loopsSeen.push (p, a)
+      g := g.loop (nodeId p a) rel concl (if k ≤ 1 then angle else angle + 360.0 * j.toFloat / k.toFloat)
   for t in h.texts do
     g := g.text t.x t.y t.s (color := t.color.svg) (size := t.size)
       (anchor := if t.middle then "middle" else "start") (italic := t.italic)

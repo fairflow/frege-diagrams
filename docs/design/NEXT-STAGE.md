@@ -181,7 +181,7 @@ Both views:
 | A5 | checker written (`Fig.checkCanvasA`), TESTED on the examples; generated figures place states anywhere, so it is not run on them |
 | B1, B2, B4 | B1 and B2 are subsumed by B5 (the reader rebuilds the tree and the judgement from the picture) and TESTED with it; B4 logically follows from B3; geometrically it remains an aim, counted by `--check` |
 | B3, B3′ | TESTED since 0.15.0 (§3.3.1): with links, the binding read from the link trees equals the formula's, with names shown and with names hidden, on the examples and on the generated figures |
-| B5 | TESTED since 0.15.0 (§3.3.1), up to the identifications listed there, on the examples and on 2000 generated figures, with two OPEN exceptions (two loops on one state; a large `namedy`) and one untested case (a directed labelled stretch inside a composite). View A is not adequate, by design: two formulas can share a view A (NOTATION.md), and that is a documented fact, not a bug |
+| B5 | TESTED since 0.15.0 (§3.3.1), up to the identifications listed there, on the examples and on 2000 generated figures, with one OPEN exception (a large `namedy`; two loops on one state, the other, fixed in 0.16.0) and one untested case (a directed labelled stretch inside a composite). View A is not adequate, by design: two formulas can share a view A (NOTATION.md), and that is a documented fact, not a bug |
 | S1 | holds by construction: the code is pure Lean |
 | S2 | TESTED for the soft and classic styles in the narrow sense that layout code does not read the style |
 | S3 | TESTED for SVG output byte by byte (annotations off reproduces the earlier output) |
@@ -322,7 +322,7 @@ Defects of the drawing it found, fixed in 0.15.0:
 
 What `nf` identifies besides the three agreed ones, all consequences of
 these drawings and of the definitions `⊑ = ≤°`, `R° = R` into an infallible
-state, **for review**:
+state (agreed, Matthew, 2026-11-13):
 4. `s ⊑ t`, `s ⊑ t°` and `s ≤ t°` (and `R°` likewise): an arrow ending in
    `⊑` ends in an infallible state, and at the end of an arrow, where no bead
    is drawn, the dashed line into a hollow state is read as `≤` into `t°`;
@@ -334,10 +334,17 @@ And one that belongs to a figure, not to the notation: relations the
 figure's own `dash` hints draw alike (`dash <= ""` draws `≤` like `R`) are
 read as one; `checkB` notes it and does not count it as a violation.
 
+Two loops on one state (`s R s <= s`) were drawn on top of each other and
+could not be read (28 of the 2000). Decision (Matthew, 2026-11-13): fan them
+out. Since 0.16.0, in view B one loop is above its state as before; two are
+both above, narrow and turned apart (±32°), so that a link can still reach the
+state from below and its name goes below it; from three on, two are above and
+the rest below. They are read above first, then below, each left to right. A
+state whose four sides are all taken is met by its link diagonally. In view A
+a state's loops are spaced evenly round it from its `loop` angle. TESTED: no
+figure of the 2000 is unreadable.
+
 OPEN, set aside by `speccheck` and listed by `speccheck --all`:
-- two loops on one state (`s R s <= s`) are drawn on top of each other and
-  cannot be read (28 of the 2000). A remedy would fan the loops of a state
-  out at different angles;
 - a `namedy` offset below about −7 (⊓) or −5 (∨) moves the bound name
   across the stroke, out of its notch (199 of the 2000, whose `namedy` hints
   run from −200 to 200). A remedy would keep the name inside, or lint it.

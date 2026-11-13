@@ -630,7 +630,16 @@ def figB (s : String) : Fig := ((parseFile s).toOption.bind (·.head?)).getD def
 -- drawn as `≤` or `R` into a filled state)
 #guard (figB "fig l = all t. s <=° t").checkB == []
 #guard ((figB "fig l = all t. s <=° t").toDiagram.find "t/1").inf
--- open: two loops on one state are drawn on top of each other
-#guard ((figB "fig l = s R s <= s").checkB.head?.map (·.startsWith "B5 unreadable")) == some true
+-- several loops on one state are fanned out (0.16.0; were drawn on top of
+-- each other): in view B two above, the rest below; read above first, then
+-- below, each left to right; a state with all four sides taken is linked
+-- diagonally
+#guard (figB "fig l = s R s <= s").checkB == []
+#guard (figB "fig l = all s. t R s R s <= s ~> s R u").checkB == []
+#guard (figB "fig l = all s. (t <= s R s <= s ~>;R° s = s & s R s)").checkB == []
+#guard (figB "fig l = s != s R;<=° s != s").checkB == []
+-- in view A round the state, evenly from its angle
+#guard (((figB "fig l [loop s 45] = (s R s & s <= s & s ~> s)").toDiagram).items.toList.filterMap
+  fun | .loop _ _ _ a => some a | _ => none) == [45.0, 165.0, 285.0]
 
 end FregeDiagrams.Test.SpecB

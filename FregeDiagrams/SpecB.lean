@@ -190,11 +190,12 @@ def readStretch (o : ReadOpts) (lines : Array (Polyline × String × String)) (b
     ambiguous s!"the legend draws {cands.map Rel.syntax} alike"
   return r
 
-/-- The name of a state drawn at `c`, where the leaf puts it: above, or
-beside a looped state. -/
+/-- The name of a state drawn at `c`, where the leaf puts it: above, beside a
+looped state, or below a state with two loops. -/
 def SceneB.nameAt (sc : SceneB) (c : P) : Option String :=
   (sc.texts.find? fun (p, _, sz, anc) => sz == 12 &&
-    ((anc == "middle" && near p ⟨c.x, c.y - 9.0⟩) || (anc == "start" && near p ⟨c.x + 9.0, c.y + 4.0⟩))).map (·.2.1)
+    ((anc == "middle" && (near p ⟨c.x, c.y - 9.0⟩ || near p ⟨c.x, c.y + 18.0⟩)) ||
+     (anc == "start" && near p ⟨c.x + 9.0, c.y + 4.0⟩))).map (·.2.1)
 
 /-- The state circles (radius `NODE_R`) at height `y`, left to right: centre
 and hollowness. -/
@@ -252,6 +253,58 @@ def readComposite (sc : SceneB) (o : ReadOpts) (lines : Array (Polyline × Strin
     comp := comp ++ [← readStretch o g bead label (last && headed) last]
   return comp
 
+/-- Read the relation of a loop on the state at `c`, ending in the head at
+`tip`, from its lines: its stretches follow each other end to end from its
+first foot (the end of its lines nearest the state, away from the head);
+the lines of one stretch (the two of `=`) start together, a strike crosses
+the stretch nearest it, and a hollow bead at the end of a stretch marks `⊑`
+or `R°`. -/
+def readLoop (sc : SceneB) (o : ReadOpts) (c tip : P) (ls : Array (Polyline × String × String)) :
+    R Composite := do
+  let lines := ls.filter (·.1.size > 2)
+  let strikes := ls.filter (·.1.size == 2)
+  let endsOf (pts : Polyline) : List P := [pts[0]!, pts.back!]
+  let feet := (lines.toList.flatMap fun l => endsOf l.1).filter fun e => (e - tip).len > 2.05
+  let some foot := feet.foldl (fun (m : Option P) e => match m with
+      | some q => if (e - c).len < (q - c).len then some e else m
+      | none => some e) none
+    | throw s!"a loop at ({fmt1 c.x}, {fmt1 c.y}) with no lines"
+  let dist (cur : List P) (e : P) : Float := cur.foldl (fun m q => min m (e - q).len) 1.0e9
+  let mut rest := List.range lines.size
+  -- the two lines of a `=` start apart: every end close to the first foot
+  let mut cur : List P := feet.filter fun e => (e - foot).len < 4.0
+  let mut groups : Array (List Nat × List P) := #[]
+  for _ in [0:lines.size] do
+    -- the lines ending at the head are the last stretch's
+    let atHead (i : Nat) := (endsOf lines[i]!.1).any fun e => (e - tip).len < 2.05
+    let g := rest.filter fun i => (endsOf lines[i]!.1).any (dist cur · < 3.6) &&
+      (!atHead i || rest.all atHead)
+    if g.isEmpty then break
+    rest := rest.filter (!g.contains ·)
+    let farEnds := g.map fun i =>
+      let a := lines[i]!.1[0]!; let b := lines[i]!.1.back!
+      if dist cur a ≤ dist cur b then b else a
+    groups := groups.push (g, farEnds)
+    cur := farEnds
+  if !rest.isEmpty then
+    let showL (i : Nat) := let l := lines[i]!.1; s!"({fmt1 l[0]!.x},{fmt1 l[0]!.y})–({fmt1 l.back!.x},{fmt1 l.back!.y})"
+    throw s!"a loop at ({fmt1 c.x}, {fmt1 c.y}) whose lines do not join end to end: from ({fmt1 foot.x},{fmt1 foot.y}), left {rest.map showL}"
+  let near (g : List Nat) (q : P) : Float :=
+    g.foldl (fun m i => min m (dist lines[i]!.1.toList q)) 1.0e9
+  let mut comp : Composite := []
+  for ((g, farEnds), k) in groups.zip (List.range groups.size).toArray do
+    let last := k + 1 == groups.size
+    let mine := strikes.filter fun l =>
+      let m := (l.1[0]! + l.1[1]!) * 0.5
+      groups.all fun (h, _) => near g m ≤ near h m
+    let bead := !last && sc.circles.any fun (q, r, f, _) =>
+      close r 3.2 && f == "white" && farEnds.any fun e => (e - q).len < 2.0
+    let first := lines[g.head!]!.1
+    let mid := first[first.size / 2]!
+    let label := (sc.texts.find? fun (p, _, sz, _) => sz == 11 && (p - mid).len < 10.0).map (·.2.1)
+    comp := comp ++ [← readStretch o (g.toArray.map (lines[·]!) ++ mine) bead label last last]
+  return comp
+
 /-- Read a leaf chain starting with the state at `c0`. -/
 def readLeaf (sc : SceneB) (o : ReadOpts) (ns : Array Notch) (ports : Array (P × Nat))
     (c0 : P × Bool) : R Form := do
@@ -264,33 +317,54 @@ def readLeaf (sc : SceneB) (o : ReadOpts) (ns : Array Notch) (ports : Array (P �
   let mut curSt := st0
   for _ in [0:row.size + 1] do
     let c := cur.1
-    -- loops on this state: the lines joined end to end from its left foot,
-    -- and the strikes across them
-    let foot : P := ⟨c.x - 4.0, c.y - NODE_R - 2.0⟩
-    let mut taken : Array Nat := #[]
-    let mut frontier : Array P := #[foot]
+    -- loops on this state: each ends in an arrowhead at the state; a line of
+    -- a loop is the one whose middle is nearest this state, off the line of
+    -- the arrows; it belongs to the loop whose head is next clockwise from
+    -- its farthest point
+    let ang (p : P) : Float := Float.atan2 (p.x - c.x) (c.y - p.y) * 180.0 / 3.141592653589793
+    let cw (a b : Float) : Float := let d := b - a; if d < 0.0 then d + 360.0 else d
+    let tips := (sc.heads.map (·[0]!)).filter fun t =>
+      (t - c).len > 5.5 && (t - c).len < 8.5 && (t.y - c.y).abs > 2.0
+    let mean (pts : Polyline) : P := (pts.foldl (· + ·) (⟨0.0, 0.0⟩ : P)) * (1.0 / pts.size.toFloat)
+    let nearestIsC (q : P) : Bool := row.all fun (d, _) => (q - c).len ≤ (q - d).len + EPS
+    -- the lines of its loops: from its feet, joined end to end away from it
+    let offLine := (List.range ink.size).filter fun i =>
+      let pts := ink[i]!.1
+      pts.size > 2 && (mean pts - c).len < 36.0 && nearestIsC (mean pts) && pts.any fun q => (q.y - c.y).abs > 7.5
+    let ends (i : Nat) : List P := [ink[i]!.1[0]!, ink[i]!.1.back!]
+    let mut taken := offLine.filter fun i => (ends i).any fun e => (e - c).len < 9.5
+    let mut frontier : List P := taken.flatMap ends |>.filter fun e => (e - c).len ≥ 10.0
     for _ in [0:ink.size] do
-      let more := (List.range ink.size).filter fun i =>
-        let pts := ink[i]!.1
-        pts.size > 2 && !taken.contains i &&
-        frontier.any fun f => (pts[0]! - f).len < 2.5 || (pts.back! - f).len < 2.5
+      let more := offLine.filter fun i => !taken.contains i &&
+        (ends i).any fun e => frontier.any fun f => (e - f).len < 2.5
       if more.isEmpty then break
-      taken := taken ++ more.toArray
-      frontier := more.foldl (fun acc i => acc.push ink[i]!.1[0]! |>.push ink[i]!.1.back!) #[]
-    let mut loopInk := taken.map (ink[·]!)
-    if !loopInk.isEmpty then
-      let strikes := ink.filter fun (pts, _, _) => pts.size == 2 &&
-        loopInk.any fun (q, _, _) => q.any fun v => (v - (pts[0]! + pts[1]!) * 0.5).len < 3.0
-      loopInk := loopInk ++ strikes
-      let feet := sc.heads.filter fun h => (h[0]! - ⟨c.x + 4.0, c.y - NODE_R - 2.0⟩).len < 1.5
-      if feet.size > 1 then
-        throw s!"{feet.size} loops on the state at ({fmt1 c.x}, {fmt1 c.y}), drawn on top of each other"
-      -- along a loop: the angle from straight up about its middle, which
-      -- grows from its left foot over the top to its right foot
-      let q : P := ⟨c.x, c.y - 20.0⟩
-      let param (p : P) : Float := -(Float.atan2 (q.x - p.x) (q.y - p.y))
-      let comp ← readComposite sc o loopInk param true
-      steps := steps.push (comp, curSt)
+      taken := taken ++ more
+      frontier := more.flatMap ends |>.filter fun e => (e - c).len ≥ 10.0
+    let lines := taken.toArray.map (ink[·]!)
+    let strikes := ink.filter fun (pts, _, _) => pts.size == 2 &&
+      lines.any fun (q, _, _) => q.any fun v => (v - (pts[0]! + pts[1]!) * 0.5).len < 3.0
+    if !tips.isEmpty then
+      for t in tips do
+        if (tips.filter fun u => (u - t).len < 1.0).size > 1 then
+          throw s!"loops on the state at ({fmt1 c.x}, {fmt1 c.y}) drawn on top of each other"
+      let owner (q : P) : Nat := Id.run do
+        let mut best := 0
+        for k in [0:tips.size] do
+          if cw (ang q - 8.0) (ang tips[k]!) < cw (ang q - 8.0) (ang tips[best]!) then best := k
+        return best
+      let far (pts : Polyline) : P := pts.foldl (fun m q => if (q - c).len > (m - c).len then q else m) pts[0]!
+      let mut loops : Array (P × Array (Polyline × String × String)) := tips.map fun t => (t, #[])
+      for l in lines do loops := loops.modify (owner (far l.1)) fun (t, ls) => (t, ls.push l)
+      for l in strikes do loops := loops.modify (owner ((l.1[0]! + l.1[1]!) * 0.5)) fun (t, ls) => (t, ls.push l)
+      -- read above the line first, then below, each left to right
+      let axis (ls : Array (Polyline × String × String)) : P :=
+        (ls.foldl (fun (acc : P) l => acc + mean l.1) (⟨0.0, 0.0⟩ : P)) * (1.0 / (max 1 ls.size).toFloat) - c
+      let order := loops.filter (!·.2.isEmpty) |>.qsort fun a b =>
+        let p := axis a.2; let q := axis b.2
+        if (p.y < 0.0) != (q.y < 0.0) then p.y < 0.0 else p.x < q.x
+      if order.size != tips.size then throw s!"a loop head at ({fmt1 c.x}, {fmt1 c.y}) with no loop"
+      for (t, ls) in order do
+        steps := steps.push (← readLoop sc o c t ls, curSt)
     -- the next state: the stretches from this one to it
     let starts := ink.any fun (pts, _, _) =>
       close (amin (xs pts)) (c.x + NODE_R + 2.0) 1.0 && (pts[0]!.y - c.y).abs < 3.0
