@@ -382,6 +382,14 @@ def routeBinder (sc : Scene) (g : Grid) (b : Binder) (others : Array Polyline) (
       let v := g.at (t + d * sc.app) vert
       conn := conn.push (v, cConn + pref)
       adj := adj.modify v (·.push (tn, cConn + pref))
+    -- a state whose four sides are all taken (arrows both ways, loops above
+    -- and below) is met diagonally, between them
+    if conn.isEmpty then
+      for (sx, sy, pref) in [(1.0, 1.0, 2.0), (-1.0, 1.0, 2.25), (1.0, -1.0, 2.5), (-1.0, -1.0, 2.75)] do
+        if !sc.sideFree t ⟨sx * 0.7071067811865476, sy * 0.7071067811865476⟩ then continue
+        let v := g.at ⟨if sx > 0.0 then t.x + sc.app else t.x - sc.app, if sy > 0.0 then t.y + sc.app else t.y - sc.app⟩ false
+        conn := conn.push (v, cConn + pref)
+        adj := adj.modify v (·.push (tn, cConn + pref))
     extra := extra.push conn
   let gr : Graph := { adj := adj ++ extra }
   let some (cost, edges) := steiner gr terms root

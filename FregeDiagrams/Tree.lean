@@ -280,6 +280,47 @@ def DrawOpts.gapAbove (o : DrawOpts) (i : Nat) (base : Float) : Float :=
 def DrawOpts.child (o : DrawOpts) (i : Nat) (gapable : Bool := false) : DrawOpts :=
   { o with block := blockPath o.block i, gapable }
 
+/-- The loops of a leaf: for each step that is a loop, the circle's number of
+loops `k` and the loop's place `j` among them (in the order written). -/
+def loopSlots (states : Array String) : Array (Option (Nat × Nat)) := Id.run do
+  let mut out : Array (Option (Nat × Nat)) := #[]
+  let mut start := 0
+  for i in [1:states.size] do
+    if bare states[i]! == bare states[i-1]! then
+      let mut e := i
+      while e + 1 < states.size && bare states[e+1]! == bare states[i]! do e := e + 1
+      out := out.push (some (e - start, i - start - 1))
+    else
+      start := i
+      out := out.push none
+  return out
+
+/-- Where loop `j` of `k` on one state goes: its angle in degrees, clockwise
+from straight up, and whether it is drawn narrow.  One loop is above the
+state, as always.  Two are both above, narrow and turned apart, left then
+right, so that the state can still be reached from below.  From three on,
+two are above and the rest below (arrows run along the line, so its two ends
+are taken), left to right. -/
+def loopPlace (k j : Nat) : Float × Bool :=
+  let nu := min k 2
+  let nl := k - nu
+  let spread (n i : Nat) : Float := if n == 1 then 0.0 else -32.0 + 64.0 * i.toFloat / (n - 1).toFloat
+  if j < nu then (spread nu j, nu > 1)
+  else (180.0 - spread nl (j - nu), nl > 1 || k ≥ 3)
+
+/-- A loop on the state at `(p, y)`, at angle `deg` (clockwise from up). -/
+def loopPts (p y deg : Float) (narrow : Bool) : Polyline :=
+  if deg == 0.0 && !narrow then
+    bezier ⟨p - 4.0, y - NODE_R - 2.0⟩ ⟨p - 18.0, y - 32.0⟩ ⟨p, y - 30.0⟩ 15 ++
+      (bezier ⟨p, y - 30.0⟩ ⟨p + 18.0, y - 32.0⟩ ⟨p + 4.0, y - NODE_R - 2.0⟩ 15).extract 1
+  else
+    let (fx, cxo, top) := if narrow then (2.0, 11.0, 28.0) else (4.0, 18.0, 30.0)
+    let a := deg * 3.141592653589793 / 180.0
+    let ca := Float.cos a; let sa := Float.sin a
+    let r (vx vy : Float) : P := ⟨p + (vx * ca - vy * sa), y + (vx * sa + vy * ca)⟩
+    bezier (r (-fx) (-(NODE_R + 2.0))) (r (-cxo) (-(top + 2.0))) (r 0.0 (-top)) 15 ++
+      (bezier (r 0.0 (-top)) (r cxo (-(top + 2.0))) (r fx (-(NODE_R + 2.0))) 15).extract 1
+
 mutual
 /-- Width, extent above and extent below the stroke of a tree (with its
 `stroke` hint, if any). -/
@@ -297,7 +338,11 @@ partial def measureBody (o : DrawOpts := {}) : Tree → Float × Float × Float
         isLoop := true
         continue
       w := w + relLen r
-    return (STUB + w + 10.0, if isLoop then 36.0 else 22.0, 8.0)
+    -- a state with three loops or more has some below; one with two has
+    -- its name below
+    let ks := (loopSlots states.toArray).filterMap id |>.map (·.1)
+    let dn := if ks.any (· ≥ 3) then 36.0 else if ks.contains 2 then 22.0 else 8.0
+    return (STUB + w + 10.0, if isLoop then 36.0 else 22.0, dn)
   | .text s => (STUB + 6.6 * s.length.toF + 8.0, 12.0, 6.0)
   | .q kind var body =>
     let (w, up, dn) := measure (o.child 0) body
@@ -336,15 +381,16 @@ def drawLeaf (s : String) (steps : List (Composite × String)) (x y : Float) (co
   let mut cx := x + STUB + 8.0
   out := out.push (.bar #[⟨x + STUB, y⟩, ⟨cx - NODE_R, y⟩])
   let mut pos : Array Float := #[]
+  let slots := loopSlots states
   for i in [0:states.size] do
     let st := states[i]!
     if i != 0 then
       let r := steps[i-1]!.1
-      if bare st == bare states[i-1]! then
-        -- a loop on the previous state
+      if let some (k, j) := slots[i-1]! then
+        -- a loop on the previous state, in its place among that state's loops
         let p := pos.back!
-        let pts := bezier ⟨p - 4.0, y - NODE_R - 2.0⟩ ⟨p - 18.0, y - 32.0⟩ ⟨p, y - 30.0⟩ 15 ++
-          (bezier ⟨p, y - 30.0⟩ ⟨p + 18.0, y - 32.0⟩ ⟨p + 4.0, y - NODE_R - 2.0⟩ 15).extract 1
+        let (deg, narrow) := loopPlace k j
+        let pts := loopPts p y deg narrow
         -- stretch by stretch, as an arrow: a composite loop keeps every
         -- stretch (it was drawn solid, as `R`, before 0.15.0)
         out := out ++ sh (stretches pts r col o.relDash) ++ sh (beads pts r col) ++ sh (relLabels pts r col)
@@ -381,10 +427,13 @@ def drawLeaf (s : String) (steps : List (Composite × String)) (x y : Float) (co
     let repeated := i != 0 && (List.range states.size).any fun j => bare states[j]! == lab0 && j != i
     -- a looped state (its loop is above) is labelled beside the dot, so that
     -- a link arriving from below meets the dot, not the name
-    let (lx, ly, anchor) := if repeated then (cx + 9.0, y + 4.0, "start") else (cx, y - 9.0, "middle")
+    -- with two loops, both above, it goes below (links are placed apart)
+    let twoLoops := occs.length == 3
+    let (lx, ly, anchor) := if twoLoops then (cx, y + 18.0, "middle")
+      else if repeated then (cx + 9.0, y + 4.0, "start") else (cx, y - 9.0, "middle")
     -- the name of a linked state is placed after routing, clear of the links
     if o.links && lab != "" && binder.isSome then
-      out := out.push (.label { pos := ⟨cx, y⟩, text := lab, color := col, looped := repeated })
+      out := out.push (.label { pos := ⟨cx, y⟩, text := lab, color := col, looped := repeated || twoLoops })
       continue
     out := out.push (.shape (.text ⟨lx, ly⟩ lab col 12 anchor))
   return out

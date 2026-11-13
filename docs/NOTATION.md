@@ -230,9 +230,13 @@ distinguish, by design:
 - a text with a meaning from the text alone (only the text is shown);
 - `s ⊑ t` from `s ≤ t°`, and `s R s°` from `s° R s°`.
 
-Two cases are not yet readable: two loops on one state are drawn on top of
-each other, and a large negative `namedy` moves a bound name out of its
-notch.
+Several loops on one state are fanned out: in view B, two are both above the
+state, turned apart, and its name goes below; from three on, the rest go
+below. They are read above first, then below, each left to right. In view A
+they are spaced evenly round the state, the first at its `loop` angle.
+
+One case is not yet readable: a large negative `namedy` moves a bound name
+out of its notch.
 
 ## Where this notation departs from Frege's
 
