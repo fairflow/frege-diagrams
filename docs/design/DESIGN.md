@@ -1,5 +1,7 @@
 # FregeDiagrams: design
 
+*The design of the next stage (a formal reference for each layer, `.fgd` as the source of truth, styles, proof states) is [NEXT-STAGE.md](NEXT-STAGE.md).*
+
 **Status, 2026-11-09.** §1 (one language, two views), §2 (figures as Lean
 terms) and the LaTeX output are IMPLEMENTED; the Lean executable replaced an
 earlier Python generator, whose output it reproduces byte for byte. §3
