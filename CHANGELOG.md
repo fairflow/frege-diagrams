@@ -7,6 +7,7 @@ with the commit it runs from.
 
 ## 0.11.1 (unreleased)
 
+* VS Code: a Lean file opened in a window whose folder is another project now finds its own project's `framediag`, the nearest folder above the file with a lakefile, instead of failing to build in the file's own folder ("could not build framediag in …/Diagrams").
 * Docs: after installing the VS Code extension, reload every open window (VS Code does not start a new extension in windows already open).
 
 ## 0.11.0 · 0d82ee4 · 2026-11-12 22:53 UTC · tag `v0.11.0`
