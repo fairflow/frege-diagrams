@@ -16,6 +16,7 @@ import FregeDiagrams.Latex
 import FregeDiagrams.Edit
 import FregeDiagrams.Lint
 import FregeDiagrams.Claims
+import FregeDiagrams.Spec
 
 namespace FregeDiagrams.Test
 
@@ -561,3 +562,39 @@ def dashSrc : String := "default dash <= \". \"\nfig a [dash t \"-- \", dash R m
 #guard errOf "default dash t \"-\"\nfig a = s <= t" != "ok"
 #guard (dashFigs "fig a [dash zz \"- \"] = all t. s <= t").head!.lint.size == 1
 #guard (FregeDiagrams.applyEdit "fig a [dash zz \"- \"] = all t. s <= t" "a" (.unDash 0)).toOption == some "fig a = all t. s <= t"
+
+/-! ## The reference for view A (`FregeDiagrams.Spec`, NEXT-STAGE.md §3.3)
+
+`Fig.checkA` compares view A with what the formula says (A1 arrows and loops,
+A2 states, A3 notches, A4 colours), stated independently of the drawing code. -/
+
+namespace FregeDiagrams.Test.SpecA
+open FregeDiagrams
+
+def figA (s : String) : Fig := ((parseFile s).toOption.bind (·.head?)).getD default
+
+-- the examples satisfy A1–A5
+#guard exampleFigs.all fun d => d.checkA.isEmpty && d.checkCanvasA.isEmpty
+
+-- fixed in 0.13.0, found by the checker on generated figures:
+-- a loop keeps every stretch of its composite (was: only the first)
+#guard (figA "fig l = s R;<=° s").checkA == []
+#guard (((figA "fig l = s R;<=° s").toDiagram).items.toList.filterMap fun | .loop _ r _ _ => some r | _ => none) == [[.R, .sqle]]
+-- a state bound by `ex` is red in every panel of the binder's scope (was: its own panel only)
+#guard (figA "fig m = ex t. (s R t | s <= t)").checkA == []
+#guard (((figA "fig m = ex t. (s R t | s <= t)").toDiagram).nodes.toList.filter (·.id.startsWith "t/")).all (·.new)
+-- a state with two position hints is drawn once, at the last (was: twice)
+#guard (figA "fig a [s@(10,10), s@(50,50)] = s R t").checkA == []
+#guard (((figA "fig a [s@(10,10), s@(50,50)] = s R t").toDiagram).nodes.toList.filter (·.id == "s/1")).map (·.x) == [50]
+#guard ((figA "fig a [s@(10,10), s@(50,50)] = s R t").lint.map (·.sev == .warning)) == #[true]
+
+-- OPEN (a decision is pending): a quantifier whose state no arrow enters has
+-- no notch, so view A does not show it
+#guard (figA "fig q = all t. t R s").checkA == ["A3 all t (panel 1) has no notch: no arrow enters a state it binds"]
+
+-- on 2000 generated figures (both views forced), A1, A2 and A4 hold; the only
+-- violations are those of A3 above
+#guard (Test.randomFigs 2000 2026).all fun (f : Fig) =>
+  ({ f with hints := { f.hints with views := .both } } : Fig).checkA.all (·.startsWith "A3 ")
+
+end FregeDiagrams.Test.SpecA

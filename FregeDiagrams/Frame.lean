@@ -189,7 +189,7 @@ structure Edge where
 inductive Item where
   | edge (e : Edge)
   /-- a self-loop on a state, leaving in direction `angle` (degrees). -/
-  | loop (a : String) (rel : Rel) (concl : Bool) (angle : Float)
+  | loop (a : String) (rel : Composite) (concl : Bool) (angle : Float)
   /-- free text at integer coordinates. -/
   | text (x y : Int) (s color : String) (size : Nat) (anchor : String) (italic : Bool)
 
@@ -234,7 +234,7 @@ def node (d : Diagram) (id : String) (x y : Int) (label : Option String := none)
 def edge (d : Diagram) (e : Edge) : Diagram := { d with items := d.items.push (.edge e) }
 
 /-- Add a self-loop. -/
-def loop (d : Diagram) (a : String) (rel : Rel := .R) (concl : Bool := false)
+def loop (d : Diagram) (a : String) (rel : Composite := [.R]) (concl : Bool := false)
     (angle : Float := -90.0) : Diagram :=
   { d with items := d.items.push (.loop a rel concl angle) }
 
@@ -499,7 +499,7 @@ def renderEdge (d : Diagram) (e : Edge) : Array Shape := Id.run do
       out := out ++ stroke #[src, src + r * Lw] r0 color 1.1 (relDashFor d.relDash r0)
   return out
 
-def renderLoop (d : Diagram) (a : String) (rel : Rel) (concl : Bool) (angle : Float) :
+def renderLoop (d : Diagram) (a : String) (rels : Composite) (concl : Bool) (angle : Float) :
     Array Shape :=
   let n := d.find a
   let c := P.ofInt n.x n.y
@@ -514,7 +514,9 @@ def renderLoop (d : Diagram) (a : String) (rel : Rel) (concl : Bool) (angle : Fl
   let ctl1 := top + p * (2.0 * r)
   let ctl2 := top + p * (-2.0 * r)
   let pts := bezier start ctl1 top 20 ++ (bezier top ctl2 stop 20).extract 1
-  stroke pts rel color (dash := relDashFor d.relDash rel) ++ arrowHead pts color
+  -- stretch by stretch, as an arrow: a composite loop keeps every stretch
+  stretches pts rels color d.relDash ++ beads pts rels color ++
+    (if rels.length > 1 then relLabels pts rels color else #[]) ++ arrowHead pts color
 
 /-- The dot of a state (and its cross). -/
 def renderDot (n : State) : Array String := Id.run do
